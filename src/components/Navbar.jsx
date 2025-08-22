@@ -11,13 +11,11 @@ const Navbar = () => {
   const navRef = useRef(null);
   const location = useLocation();
 
-  // Cierra menús y panel móvil al navegar
   useEffect(() => {
     setMobileOpen(false);
     setOpenMenu(null);
   }, [location.pathname]);
 
-  // Cierra al hacer click fuera
   useEffect(() => {
     const onDocClick = (e) => {
       if (navRef.current && !navRef.current.contains(e.target)) {
@@ -28,7 +26,6 @@ const Navbar = () => {
     return () => document.removeEventListener("click", onDocClick);
   }, []);
 
-  // Helpers hover con pequeño delay anti-parpadeo
   const openByHover = (id) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     setOpenMenu(id);
@@ -41,7 +38,6 @@ const Navbar = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
   };
   const toggleMenu = (id) => setOpenMenu((prev) => (prev === id ? null : id));
-
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -91,7 +87,7 @@ const Navbar = () => {
               className="nav-link dropdown-toggle"
               aria-haspopup="true"
               aria-expanded={openMenu === "nosotros"}
-              onClick={() => toggleMenu("nosotros")} // soporte touch/móvil
+              onClick={() => toggleMenu("nosotros")}
             >
               Nosotros <span className="caret" />
             </button>
@@ -103,7 +99,11 @@ const Navbar = () => {
               onMouseLeave={closeByHover}
             >
               <li role="none">
-                <Link to="/enfoque" role="menuitem" className="dropdown-item">
+                <Link
+                  to="/sobre-plinius"
+                  role="menuitem"
+                  className="dropdown-item"
+                >
                   Sobre Plinius
                 </Link>
               </li>
@@ -137,7 +137,7 @@ const Navbar = () => {
               className="nav-link dropdown-toggle"
               aria-haspopup="true"
               aria-expanded={openMenu === "quehacemos"}
-              onClick={() => toggleMenu("quehacemos")} // soporte touch/móvil
+              onClick={() => toggleMenu("quehacemos")}
             >
               Qué hacemos <span className="caret" />
             </button>
@@ -163,6 +163,16 @@ const Navbar = () => {
                 </Link>
               </li>
             </ul>
+          </li>
+
+          {/* Simulador (nuevo) */}
+          <li className="nav-item">
+            <Link
+              to="/simulador"
+              className={`nav-link ${isActive("/simulador") ? "active" : ""}`}
+            >
+              Simulador
+            </Link>
           </li>
 
           {/* Ingresar */}

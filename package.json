@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
+    "build": "export VITE_APP_BUILD=${VERCEL_GIT_COMMIT_REF:-local}@${VERCEL_GIT_COMMIT_SHA:-$(git rev-parse --short HEAD)} && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
