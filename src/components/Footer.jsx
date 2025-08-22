@@ -314,9 +314,6 @@ const Footer = () => {
                 </Link>
               </li>
             </ul>
-            <div className="meta-build">
-              Build <span className="badge">{build}</span>
-            </div>
           </div>
 
           <div className="f-col">
