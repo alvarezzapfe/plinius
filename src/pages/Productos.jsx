@@ -5,672 +5,632 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../assets/css/products.css";
 
-const TABS = [
-  { id: "simple", label: "Crédito simple", emoji: "💳" },
-  { id: "arrenda", label: "Arrendamiento puro", emoji: "🧰" },
-  { id: "puente", label: "Financiamiento puente", emoji: "🏗️" },
-  { id: "capital", label: "Capital", emoji: "📈" },
-  { id: "asesoria", label: "Asesoría estratégica", emoji: "🧠" },
-];
+// ------------ Helpers ------------
+const pesos = (x, max = 0) =>
+  new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: max,
+  }).format(x);
 
-const PRODUCTS = [
-  {
-    id: "simple",
-    name: "Crédito simple",
-    ticketRel: 3, // 1..5
-    speedDays: 9, // días estimados
-    radar: { flex: 4, gar: 3, compl: 2, dil: 0, cost: 3 },
-  },
-  {
-    id: "arrenda",
-    name: "Arrendamiento",
-    ticketRel: 4,
-    speedDays: 12,
-    radar: { flex: 3, gar: 4, compl: 3, dil: 0, cost: 3 },
-  },
-  {
-    id: "puente",
-    name: "Puente",
-    ticketRel: 5,
-    speedDays: 20,
-    radar: { flex: 2, gar: 5, compl: 5, dil: 0, cost: 5 },
-  },
-  {
-    id: "capital",
-    name: "Capital",
-    ticketRel: 3,
-    speedDays: 45,
-    radar: { flex: 4, gar: 0, compl: 4, dil: 5, cost: 2 }, // cost bajo = menos “costo financiero”, pero hay dilución
-  },
-  {
-    id: "asesoria",
-    name: "Asesoría",
-    ticketRel: 2,
-    speedDays: 14,
-    radar: { flex: 5, gar: 0, compl: 3, dil: 0, cost: 2 },
-  },
-];
-
-const Term = ({ label, value, sub }) => (
-  <div className="term">
-    <span className="t-label">{label}</span>
-    <span className="t-value">{value}</span>
-    {sub && <span className="t-sub">{sub}</span>}
-  </div>
-);
-
-const Bullet = ({ children }) => (
-  <li className="b-item">
-    <span className="b-ico" aria-hidden>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M5 12l4 4L19 6"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-    <span className="b-txt">{children}</span>
-  </li>
-);
-
-const Badge = ({ children, tone = "neutral" }) => (
-  <span className={`p-badge ${tone}`}>{children}</span>
-);
-
-/* ---------- Charts (SVG puros) ---------- */
-
-// Escala util para barras
+const pct = (x, digits = 1) => `${x.toFixed(digits)}%`;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-// Bar chart simple horizontal
-function BarChart({ title, unit, data, selectedId }) {
-  const maxV = Math.max(...data.map((d) => d.value), 1);
+function pagoMensual(M, tasaAnual, nMeses) {
+  const r = tasaAnual / 100 / 12;
+  if (r === 0) return M / nMeses;
+  return (M * r) / (1 - Math.pow(1 + r, -nMeses));
+}
+
+// ------------ Constantes UI ------------
+const TABS = [
+  { id: "simple", label: "Crédito simple" },
+  { id: "arrendamiento", label: "Arrendamiento puro" },
+  { id: "asesoria", label: "Asesoría estratégica" },
+  { id: "bursatilizacion", label: "Bursatilización" },
+];
+
+const PLAZOS = [12, 18, 24, 36, 48];
+
+// ------------ SVG Micro-charts ------------
+function BarChart({ data, w = 260, h = 120, pad = 22, format = (v) => v }) {
+  // data: [{label, value}]
+  const max = Math.max(...data.map((d) => d.value), 1);
+  const barW = (w - pad * 2) / data.length - 10;
+
   return (
-    <div className="chart-card">
-      <div className="chart-head">
-        <h4>{title}</h4>
-        {unit && <span className="ch-unit">{unit}</span>}
-      </div>
-      <div className="bars">
-        {data.map((d) => {
-          const w = (d.value / maxV) * 100;
-          const sel = d.id === selectedId;
-          return (
-            <div key={d.id} className={`bar-row ${sel ? "sel" : ""}`}>
-              <span className="bar-label">{d.label}</span>
-              <div className="bar-track" role="img" aria-label={`${d.label}: ${d.value}${unit || ""}`}>
-                <div
-                  className="bar-fill"
-                  style={{ width: `${w}%` }}
-                  aria-hidden
-                />
-              </div>
-              <span className="bar-val">{d.value}</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="chart-note">Valores indicativos, no constituyen oferta.</div>
-    </div>
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mini-chart">
+      <line
+        x1={pad}
+        y1={h - pad}
+        x2={w - pad}
+        y2={h - pad}
+        stroke="currentColor"
+        opacity="0.25"
+      />
+      {data.map((d, i) => {
+        const x = pad + i * ((w - pad * 2) / data.length) + 5;
+        const hh = ((h - pad * 2) * d.value) / max;
+        const y = h - pad - hh;
+        return (
+          <g key={d.label}>
+            <rect x={x} y={y} width={barW} height={hh} rx="6" className="bar" />
+            <text x={x + barW / 2} y={h - 6} className="t-label">
+              {d.label}
+            </text>
+            <text x={x + barW / 2} y={y - 6} className="t-value">
+              {format(d.value)}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
-// Radar chart 5 ejes
-function RadarChart({ title, categories, valuesById, selectedId }) {
-  const size = 260;
-  const pad = 24;
-  const R = (size - pad * 2) / 2;
-  const cx = size / 2;
-  const cy = size / 2;
+function LineChart({ points, w = 320, h = 140, pad = 24, format = (v) => v }) {
+  // points: [{x, y, label}]
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
 
-  const steps = 5; // rejilla
-  const angle = (i) => ((-90 + (360 / categories.length) * i) * Math.PI) / 180;
+  const scaleX = (x) =>
+    pad + ((x - minX) / Math.max(maxX - minX, 1)) * (w - pad * 2);
+  const scaleY = (y) =>
+    h - pad - ((y - minY) / Math.max(maxY - minY, 1)) * (h - pad * 2);
 
-  const toPoint = (val, i) => {
-    const r = (val / 5) * R;
-    const a = angle(i);
-    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
-  };
-
-  // Path de un set de valores
-  const pathFor = (vals) => {
-    const pts = vals.map((v, i) => toPoint(v, i));
-    const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p[0]},${p[1]}`).join(" ");
-    return d + " Z";
-  };
-
-  const selected = valuesById[selectedId];
+  const pathD = points
+    .map((p, i) => `${i ? "L" : "M"} ${scaleX(p.x)} ${scaleY(p.y)}`)
+    .join(" ");
 
   return (
-    <div className="chart-card">
-      <div className="chart-head">
-        <h4>{title}</h4>
-      </div>
-      <div className="radar-wrap">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Radar comparativo">
-          {/* Grid concéntrica */}
-          {[...Array(steps).keys()].map((s) => {
-            const r = ((s + 1) / steps) * R;
-            return (
-              <circle key={s} cx={cx} cy={cy} r={r} className="rg-ring" />
-            );
-          })}
-          {/* Ejes */}
-          {categories.map((_, i) => {
-            const [x, y] = toPoint(5, i);
-            return <line key={i} x1={cx} y1={cy} x2={x} y2={y} className="rg-axis" />;
-          })}
-
-          {/* Todos (tenue) */}
-          {Object.entries(valuesById).map(([id, vals]) => {
-            const isSel = id === selectedId;
-            return (
-              <path
-                key={id}
-                d={pathFor(vals)}
-                className={`rg-poly ${isSel ? "sel" : ""}`}
-              />
-            );
-          })}
-        </svg>
-
-        {/* Labels alrededor */}
-        <div className="radar-labels">
-          {categories.map((c, i) => {
-            const [x, y] = toPoint(5.6, i); // un poco fuera del radio
-            const style = { left: x, top: y };
-            return (
-              <span key={c} className="radar-label" style={style}>
-                {c}
-              </span>
-            );
-          })}
-        </div>
-      </div>
-      <div className="legend">
-        {PRODUCTS.map((p) => (
-          <span key={p.id} className={`lg-dot ${p.id === selectedId ? "sel" : ""}`}>
-            <i /> {p.name}
-          </span>
-        ))}
-      </div>
-      <div className="chart-note">Escala 1–5. Ilustrativo.</div>
-    </div>
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mini-chart">
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        opacity="0.25"
+        strokeWidth="1"
+        points={`${pad},${h - pad} ${w - pad},${h - pad}`}
+      />
+      <path d={pathD} className="line" />
+      {points.map((p, i) => (
+        <g key={i}>
+          <circle cx={scaleX(p.x)} cy={scaleY(p.y)} r="3" className="dot" />
+          <text x={scaleX(p.x)} y={scaleY(p.y) - 8} className="t-value">
+            {format(p.y)}
+          </text>
+          <text x={scaleX(p.x)} y={h - 6} className="t-label">
+            {p.label ?? p.x}
+          </text>
+        </g>
+      ))}
+    </svg>
   );
 }
 
+function Donut({ parts, w = 160, h = 160 }) {
+  // parts: [{label, value}]
+  const cx = w / 2;
+  const cy = h / 2;
+  const r = Math.min(w, h) / 2 - 10;
+  const total = Math.max(
+    parts.reduce((s, p) => s + p.value, 0),
+    1
+  );
+  let angle = -Math.PI / 2;
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mini-chart">
+      {parts.map((p, idx) => {
+        const slice = (p.value / total) * Math.PI * 2;
+        const x1 = cx + r * Math.cos(angle);
+        const y1 = cy + r * Math.sin(angle);
+        const x2 = cx + r * Math.cos(angle + slice);
+        const y2 = cy + r * Math.sin(angle + slice);
+        const large = slice > Math.PI ? 1 : 0;
+        const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+        angle += slice;
+        return <path key={idx} d={d} className={`arc arc-${idx}`} />;
+      })}
+      <circle cx={cx} cy={cy} r={r * 0.55} className="donut-hole" />
+      <text x={cx} y={cy} className="donut-text">
+        Mix
+      </text>
+    </svg>
+  );
+}
+
+// ------------ Página ------------
 export default function Productos() {
+  // UI
   const [tab, setTab] = useState("simple");
-  const [selectedCol, setSelectedCol] = useState(0); // 0: ninguna; 1..5 columnas
+  const tabIndex = TABS.findIndex((t) => t.id === tab);
 
-  const tabIndex = useMemo(() => TABS.findIndex((t) => t.id === tab), [tab]);
-  const selectedId = useMemo(() => {
-    const map = ["", "simple", "arrenda", "puente", "capital", "asesoria"];
-    return map[selectedCol] || "";
-  }, [selectedCol]);
+  // Inputs financieros
+  const [monto, setMonto] = useState(1_200_000);
+  const [plazo, setPlazo] = useState(24);
+  const [tasa, setTasa] = useState(24);
+  const [fee, setFee] = useState(3.5);
+
+  // Cálculos comunes
+  const pago = useMemo(
+    () => pagoMensual(monto, tasa, plazo),
+    [monto, tasa, plazo]
+  );
+  const comApertura = useMemo(() => (monto * fee) / 100, [monto, fee]);
+  const totalCredito = useMemo(
+    () => pago * plazo + comApertura,
+    [pago, plazo, comApertura]
+  );
+
+  // Arrendamiento (aprox igual fórmula; se puede ajustar con residual si quieres después)
+  const renta = pago;
+  const totalArr = useMemo(
+    () => renta * plazo + comApertura,
+    [renta, plazo, comApertura]
+  );
 
   // Datos charts
-  const chartSpeed = useMemo(
-    () =>
-      PRODUCTS.map((p) => ({
-        id: p.id,
-        label: p.name,
-        value: p.speedDays,
-      })),
-    []
-  );
+  const linePoints = useMemo(() => {
+    // pago vs plazo
+    return [12, 18, 24, 36, 48].map((p) => ({
+      x: p,
+      y: pagoMensual(monto, tasa, p),
+      label: `${p}m`,
+    }));
+  }, [monto, tasa]);
 
-  const chartTicket = useMemo(
-    () =>
-      PRODUCTS.map((p) => ({
-        id: p.id,
-        label: p.name,
-        value: p.ticketRel * 20, // 1..5 => 20..100
-      })),
-    []
-  );
+  const donutParts = useMemo(() => {
+    // Aprox: intereses = total - monto - com
+    const intereses = clamp(totalCredito - monto - comApertura, 0, Infinity);
+    const principal = monto;
+    const com = comApertura;
+    return [
+      { label: "Intereses", value: intereses },
+      { label: "Principal", value: principal },
+      { label: "Comisión", value: com },
+    ];
+  }, [totalCredito, monto, comApertura]);
 
-  const radarVals = useMemo(() => {
-    const obj = {};
-    PRODUCTS.forEach((p) => {
-      obj[p.id] = [p.radar.flex, p.radar.gar, p.radar.compl, p.radar.dil, p.radar.cost];
-    });
-    return obj;
-  }, []);
+  const compBars = useMemo(() => {
+    return [
+      { label: "Crédito", value: totalCredito },
+      { label: "Arrend.", value: totalArr },
+    ];
+  }, [totalCredito, totalArr]);
+
+  // Card selection visual (texto amarillo)
+  const [activeCard, setActiveCard] = useState("simple");
 
   return (
-    <div className="app-container products">
+    <div className="app-container">
       <Navbar />
 
-      {/* HERO */}
-      <header className="p-hero">
-        <div className="p-bg" aria-hidden />
-        <div className="p-grid" aria-hidden />
-        <div className="p-hero-wrap">
-          <h1>Productos</h1>
-          <p className="p-sub">
-            Líneas de crédito, arrendamiento, puente, capital y asesoría con
-            ejecución ágil y claridad contractual. Elige el instrumento ideal para tu PyME.
-          </p>
+      <main className="products">
+        <section className="p-hero">
+          <div className="p-wrap">
+            <h1>
+              Productos <span className="neon">Plinius</span>
+            </h1>
+            <p className="p-sub">
+              Financiamiento claro y operativo para PyMEs: elige el vehículo que
+              mejor se adapta a tu flujo y objetivos.
+            </p>
 
-          <div className="p-tabs" role="tablist" aria-label="Selecciona un producto">
-            <div
-              className="p-tab-indicator"
-              style={
-                {
-                  "--idx": tabIndex,
-                  "--count": TABS.length,
-                } as React.CSSProperties
-              }
-              aria-hidden
-            />
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={tab === t.id}
-                className={`p-tab ${tab === t.id ? "active" : ""}`}
-                onClick={() => setTab(t.id)}
-              >
-                <span className="p-tab-ico" aria-hidden>
-                  {t.emoji}
-                </span>
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="p-mini-help" aria-hidden>
-            <span className="dot" /> Tip: usa la tabla comparativa para resaltar un producto (clic).
-          </div>
-        </div>
-      </header>
-
-      {/* DETALLES POR TAB */}
-      <main className="p-wrap">
-        {/* CRÉDITO SIMPLE */}
-        {tab === "simple" && (
-          <section className="p-card">
-            <div className="p-head">
-              <div className="p-headline">
-                <Badge>Liquidez operativa</Badge>
-                <h2>Crédito simple</h2>
-              </div>
-              <p className="p-lead">
-                Capital de trabajo, reposición de inventario y expansión con
-                pagos mensuales y condiciones transparentes.
-              </p>
-              <div className="p-kpis">
-                <div className="kpi">
-                  <span className="k-label">Ticket</span>
-                  <span className="k-value">$0.5–5M MXN</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Plazos</span>
-                  <span className="k-value">12–48 m</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Costo</span>
-                  <span className="k-value">18%–36% + 3–5%</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Garantías</span>
-                  <span className="k-value">Sí/No</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-body">
-              <div className="p-terms">
-                <Term label="Ticket" value="$500 mil – $5 millones MXN" />
-                <Term label="Plazos" value="12, 18, 24, 36, 48 meses" />
-                <Term label="Tasa" value="18% – 36% anual" sub="según riesgo" />
-                <Term label="Comisión" value="3% – 5%" sub="apertura" />
-                <Term label="Garantías" value="Sí / No" sub="según perfil" />
-              </div>
-
-              <div className="p-elig">
-                <h3 id="elig-simple">Elegibilidad</h3>
-                <ul className="b-list" aria-labelledby="elig-simple">
-                  <Bullet>Antigüedad del negocio ≥ 2 años</Bullet>
-                  <Bullet>Estados financieros y flujo positivo</Bullet>
-                  <Bullet>Buró y cumplimiento fiscal al día</Bullet>
-                  <Bullet>Documentación básica completa</Bullet>
-                </ul>
-              </div>
-
-              <div className="p-actions">
-                <Link to="/#simulador" className="btn btn-neon">Simular</Link>
-                <Link to="/login" className="btn btn-outline">Solicitar</Link>
-                <Link to="/terminos" className="btn btn-ghost">Ver términos</Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ARRENDAMIENTO */}
-        {tab === "arrenda" && (
-          <section className="p-card">
-            <div className="p-head">
-              <div className="p-headline">
-                <Badge tone="info">Capex eficiente</Badge>
-                <h2>Arrendamiento puro</h2>
-              </div>
-              <p className="p-lead">
-                Adquiere equipo/activos sin descapitalizarte. Estructura fiscal
-                eficiente y pagos predecibles.
-              </p>
-              <div className="p-kpis">
-                <div className="kpi">
-                  <span className="k-label">Ticket</span>
-                  <span className="k-value">$0.5–8M MXN</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Plazos</span>
-                  <span className="k-value">12–48 m</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Costo</span>
-                  <span className="k-value">18%–34% + 3–5%</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Garantías</span>
-                  <span className="k-value">El activo</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-body">
-              <div className="p-terms">
-                <Term label="Ticket" value="$500 mil – $8 millones MXN" />
-                <Term label="Plazos" value="12, 18, 24, 36, 48 meses" />
-                <Term label="Tasa" value="18% – 34% anual" sub="según activo" />
-                <Term label="Comisión" value="3% – 5%" />
-                <Term label="Garantías" value="Principalmente el activo" />
-              </div>
-
-              <div className="p-elig">
-                <h3 id="elig-arr">Elegibilidad</h3>
-                <ul className="b-list" aria-labelledby="elig-arr">
-                  <Bullet>Activos con vida útil ≥ al plazo</Bullet>
-                  <Bullet>Flujo de caja estable para renta</Bullet>
-                  <Bullet>Seguro/aforo cuando aplique</Bullet>
-                  <Bullet>Documentación del proveedor</Bullet>
-                </ul>
-              </div>
-
-              <div className="p-actions">
-                <Link to="/#simulador" className="btn btn-neon">Simular</Link>
-                <Link to="/login" className="btn btn-outline">Solicitar</Link>
-                <Link to="/terminos" className="btn btn-ghost">Ver términos</Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* PUENTE */}
-        {tab === "puente" && (
-          <section className="p-card">
-            <div className="p-head">
-              <div className="p-headline">
-                <Badge tone="warn">Eventos & crecimiento</Badge>
-                <h2>Financiamiento puente</h2>
-              </div>
-              <p className="p-lead">
-                Liquidez temporal para adquisiciones, expansión o necesidades
-                extraordinarias con plan de salida claro.
-              </p>
-              <div className="p-kpis">
-                <div className="kpi">
-                  <span className="k-label">Ticket</span>
-                  <span className="k-value">$100–250M MXN</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Plazos</span>
-                  <span className="k-value">6–24 m</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Costo</span>
-                  <span className="k-value">Caso por caso</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Garantías</span>
-                  <span className="k-value">Sí</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-body">
-              <div className="p-terms">
-                <Term label="Ticket" value="$100 – $250 millones MXN" />
-                <Term label="Plazos" value="6 – 24 meses" />
-                <Term label="Tasa" value="Caso por caso" sub="según riesgo" />
-                <Term label="Comisión" value="Estructuración & éxito" />
-                <Term label="Garantías" value="Colaterales/aforos" />
-              </div>
-
-              <div className="p-elig">
-                <h3 id="elig-puente">Elegibilidad</h3>
-                <ul className="b-list" aria-labelledby="elig-puente">
-                  <Bullet>Plan de salida (refi/venta/flujo) definido</Bullet>
-                  <Bullet>Gobierno corporativo y reporting</Bullet>
-                  <Bullet>LTV objetivo ≤ 65% (cuando aplique)</Bullet>
-                  <Bullet>Due diligence completo</Bullet>
-                </ul>
-              </div>
-
-              <div className="p-actions">
-                <Link to="/login" className="btn btn-neon">Hablar con un asesor</Link>
-                <Link to="/terminos" className="btn btn-ghost">Ver términos</Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* CAPITAL */}
-        {tab === "capital" && (
-          <section className="p-card">
-            <div className="p-head">
-              <div className="p-headline">
-                <Badge tone="success">Growth equity</Badge>
-                <h2>Capital</h2>
-              </div>
-              <p className="p-lead">
-                Inversión minoritaria para acelerar crecimiento con disciplina
-                financiera y acompañamiento estratégico.
-              </p>
-              <div className="p-kpis">
-                <div className="kpi">
-                  <span className="k-label">Ticket</span>
-                  <span className="k-value">$5–30M MXN</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Horizonte</span>
-                  <span className="k-value">3–5 años</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Estructura</span>
-                  <span className="k-value">Equity / convertibles</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Co-inv.</span>
-                  <span className="k-value">Crowdlink / LPs</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-body">
-              <div className="p-terms">
-                <Term label="Ticket" value="$5 – $30 millones MXN" />
-                <Term label="Horizonte" value="3 – 5 años" />
-                <Term label="Estructura" value="Equity / notes convertibles" />
-                <Term label="Acompañamiento" value="Gobierno & KPIs" />
-                <Term label="Co-inversión" value="Crowdlink / LPs" />
-              </div>
-
-              <div className="p-elig">
-                <h3 id="elig-cap">Elegibilidad</h3>
-                <ul className="b-list" aria-labelledby="elig-cap">
-                  <Bullet>PMF y unit economics sanos</Bullet>
-                  <Bullet>Equipo fundador con track record</Bullet>
-                  <Bullet>Plan de crecimiento y KPIs claros</Bullet>
-                  <Bullet>Auditoría y data room</Bullet>
-                </ul>
-              </div>
-
-              <div className="p-actions">
-                <Link to="/login" className="btn btn-neon">Aplicar</Link>
-                <Link to="/terminos" className="btn btn-ghost">Ver términos</Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ASESORÍA */}
-        {tab === "asesoria" && (
-          <section className="p-card">
-            <div className="p-head">
-              <div className="p-headline">
-                <Badge tone="neutral">CFO-as-a-Service</Badge>
-                <h2>Asesoría financiera estratégica</h2>
-              </div>
-              <p className="p-lead">
-                Diagnóstico 360°, modelación financiera, estructura de capital,
-                preparación para deuda/capital y acompañamiento a mercado.
-              </p>
-              <div className="p-kpis">
-                <div className="kpi">
-                  <span className="k-label">Modalidad</span>
-                  <span className="k-value">Proyecto / Retainer</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Duración</span>
-                  <span className="k-value">4–12 semanas</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Entregables</span>
-                  <span className="k-value">Modelo + deck</span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Honorarios</span>
-                  <span className="k-value">Fijo / éxito</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-body">
-              <div className="p-terms">
-                <Term label="Alcance" value="Diagnóstico y plan 90 días" />
-                <Term label="Modelo" value="3 estados + escenarios" />
-                <Term label="Capital" value="Deuda/Equity readiness" />
-                <Term label="Mercado" value="Bursatilización BMV" sub="advisory" />
-                <Term label="M&A" value="Buy/Sell-side" sub="teaser + DD list" />
-              </div>
-
-              <div className="p-elig">
-                <h3 id="elig-ase">Casos típicos</h3>
-                <ul className="b-list" aria-labelledby="elig-ase">
-                  <Bullet>Reestructura de pasivos y covenants</Bullet>
-                  <Bullet>Planeación de crecimiento y CAPEX</Bullet>
-                  <Bullet>Preparación para fondeo (data room)</Bullet>
-                  <Bullet>Salida a mercado (BMV) o proceso M&A</Bullet>
-                </ul>
-              </div>
-
-              <div className="p-actions">
-                <Link to="/login" className="btn btn-neon">Agendar diagnóstico</Link>
-                <Link to="/terminos" className="btn btn-ghost">Ver términos</Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* CHARTS */}
-        <section className="p-charts">
-          <BarChart
-            title="Velocidad de decisión (días estimados)"
-            unit="d"
-            data={chartSpeed}
-            selectedId={selectedId}
-          />
-          <BarChart
-            title="Ticket típico (escala relativa)"
-            unit=""
-            data={chartTicket}
-            selectedId={selectedId}
-          />
-          <RadarChart
-            title="Atributos comparativos"
-            categories={["Flexibilidad", "Garantías", "Complejidad", "Dilución", "Costo relativo"]}
-            valuesById={radarVals}
-            selectedId={selectedId}
-          />
-        </section>
-
-        {/* COMPARATIVA */}
-        <section className="p-compare">
-          <h3>Comparativa rápida</h3>
-          <div
-            className={`cmp-table selcol-${selectedCol}`}
-            role="table"
-            aria-label="Comparativa de productos"
-          >
-            <div className="cmp-row cmp-head" role="row">
-              <div className="c c-sticky" role="columnheader">Criterio</div>
-              {["Crédito simple","Arrendamiento","Puente","Capital","Asesoría"].map((h, i) => (
+            {/* Tabs */}
+            <div className="tabs" role="tablist" aria-label="Tipos de producto">
+              {TABS.map((t) => (
                 <button
-                  key={h}
-                  type="button"
-                  role="columnheader"
-                  className={`c c-head ${selectedCol === i+1 ? "sel" : ""}`}
-                  onClick={() => setSelectedCol(selectedCol === i+1 ? 0 : i+1)}
-                  title="Seleccionar columna"
+                  key={t.id}
+                  role="tab"
+                  aria-selected={tab === t.id}
+                  className={`tab-btn ${tab === t.id ? "active" : ""}`}
+                  onClick={() => setTab(t.id)}
                 >
-                  {h}
+                  {t.label}
                 </button>
               ))}
+              {/* Indicador con CSS vars (string) */}
+              <span
+                className="tab-indicator"
+                style={{
+                  "--idx": String(tabIndex),
+                  "--count": String(TABS.length),
+                }}
+                aria-hidden
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Cards de producto rápidas */}
+        <section className="p-cards">
+          <div className="p-wrap grid">
+            <article
+              className={`p-card ${activeCard === "simple" ? "active" : ""}`}
+              onClick={() => {
+                setActiveCard("simple");
+                setTab("simple");
+              }}
+            >
+              <header>
+                <h3 className="p-title">Crédito simple</h3>
+                <span className="p-chip">Tasa {pct(tasa, 1)}</span>
+              </header>
+              <p className="p-text">
+                Liquidez inmediata para capital de trabajo, con pagos fijos y
+                condiciones transparentes.
+              </p>
+              <ul className="p-list">
+                <li>Plazos: 12–48 meses</li>
+                <li>Comisión de apertura: {pct(fee, 1)}</li>
+                <li>Desembolso ágil</li>
+              </ul>
+              <div className="p-cta">Seleccionar</div>
+            </article>
+
+            <article
+              className={`p-card ${
+                activeCard === "arrendamiento" ? "active" : ""
+              }`}
+              onClick={() => {
+                setActiveCard("arrendamiento");
+                setTab("arrendamiento");
+              }}
+            >
+              <header>
+                <h3 className="p-title">Arrendamiento puro</h3>
+                <span className="p-chip">Plazo {plazo}m</span>
+              </header>
+              <p className="p-text">
+                Renta deducible de activos productivos, optimizando caja y
+                contabilidad.
+              </p>
+              <ul className="p-list">
+                <li>Pagos mensuales estimados</li>
+                <li>Documentación guiada</li>
+                <li>Flexibilidad en plazos</li>
+              </ul>
+              <div className="p-cta">Seleccionar</div>
+            </article>
+
+            <article
+              className={`p-card ${activeCard === "asesoria" ? "active" : ""}`}
+              onClick={() => {
+                setActiveCard("asesoria");
+                setTab("asesoria");
+              }}
+            >
+              <header>
+                <h3 className="p-title">Asesoría estratégica</h3>
+                <span className="p-chip">Consultoría</span>
+              </header>
+              <p className="p-text">
+                Estructuración financiera, planeación de deuda y soporte en
+                procesos de fondeo e inversión.
+              </p>
+              <ul className="p-list">
+                <li>Diagnóstico y plan de acción</li>
+                <li>Optimización de obligaciones</li>
+                <li>Acompañamiento con inversionistas</li>
+              </ul>
+              <div className="p-cta">Solicitar</div>
+            </article>
+
+            <article
+              className={`p-card ${
+                activeCard === "bursatilizacion" ? "active" : ""
+              }`}
+              onClick={() => {
+                setActiveCard("bursatilizacion");
+                setTab("bursatilizacion");
+              }}
+            >
+              <header>
+                <h3 className="p-title">Bursatilización</h3>
+                <span className="p-chip">Mercado</span>
+              </header>
+              <p className="p-text">
+                Asesoría para estructurar y listar vehículos de financiamiento
+                en el mercado mexicano.
+              </p>
+              <ul className="p-list">
+                <li>Estructura a medida</li>
+                <li>Gobierno y compliance</li>
+                <li>Relación con intermediarios</li>
+              </ul>
+              <div className="p-cta">Conocer más</div>
+            </article>
+          </div>
+        </section>
+
+        {/* Panel según tab */}
+        <section className="p-panel">
+          <div className="p-wrap panel-grid">
+            {/* Columna izquierda: controles (solo para crédito/arrendamiento) */}
+            <div className="panel-left">
+              {(tab === "simple" || tab === "arrendamiento") && (
+                <>
+                  <div className="ctrl">
+                    <div className="ctrl-row">
+                      <label htmlFor="monto">Monto</label>
+                      <span className="mono">{pesos(monto)}</span>
+                    </div>
+                    <input
+                      id="monto"
+                      type="range"
+                      min={100_000}
+                      max={10_000_000}
+                      step={50_000}
+                      value={monto}
+                      onChange={(e) => setMonto(Number(e.target.value))}
+                    />
+                    <div className="ctrl-hints">
+                      <span>{pesos(100_000)}</span>
+                      <span>{pesos(10_000_000)}</span>
+                    </div>
+                  </div>
+
+                  <div className="ctrl">
+                    <div className="ctrl-row">
+                      <label>Plazo</label>
+                      <span className="mono">{plazo} meses</span>
+                    </div>
+                    <div className="seg" role="radiogroup" aria-label="Plazo">
+                      {PLAZOS.map((p) => (
+                        <label
+                          key={p}
+                          className={`seg-btn ${plazo === p ? "active" : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name="plazo"
+                            value={p}
+                            checked={plazo === p}
+                            onChange={() => setPlazo(p)}
+                          />
+                          {p} m
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="ctrl">
+                    <div className="ctrl-row">
+                      <label htmlFor="tasa">Tasa anual</label>
+                      <span className="mono">{pct(tasa, 1)}</span>
+                    </div>
+                    <input
+                      id="tasa"
+                      type="range"
+                      min={18}
+                      max={36}
+                      step={0.5}
+                      value={tasa}
+                      onChange={(e) => setTasa(Number(e.target.value))}
+                    />
+                    <div className="ctrl-hints">
+                      <span>18%</span>
+                      <span>36%</span>
+                    </div>
+                  </div>
+
+                  <div className="ctrl">
+                    <div className="ctrl-row">
+                      <label htmlFor="fee">Comisión de apertura</label>
+                      <span className="mono">{pct(fee, 1)}</span>
+                    </div>
+                    <input
+                      id="fee"
+                      type="range"
+                      min={3}
+                      max={5}
+                      step={0.1}
+                      value={fee}
+                      onChange={(e) => setFee(Number(e.target.value))}
+                    />
+                    <div className="ctrl-hints">
+                      <span>3%</span>
+                      <span>5%</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {tab === "asesoria" && (
+                <div className="advisory">
+                  <h3>Asesoría estratégica</h3>
+                  <p>
+                    Servicio de consultoría financiera para diseñar tu
+                    estructura de capital, plan de deuda y narrativa de
+                    inversión. Entregables claros y ejecutables.
+                  </p>
+                  <ul className="ticks">
+                    <li>Diagnóstico financiero y KPIs clave</li>
+                    <li>Mapa de fondeo y calendario de ejecución</li>
+                    <li>Soporte en mesas con fondeadores</li>
+                  </ul>
+                  <Link to="/contacto" className="btn btn-neon">
+                    Agendar diagnóstico
+                  </Link>
+                </div>
+              )}
+
+              {tab === "bursatilizacion" && (
+                <div className="advisory">
+                  <h3>Bursatilización</h3>
+                  <p>
+                    Acompañamiento integral para diseñar, validar y listar
+                    vehículos de financiamiento en el mercado mexicano.
+                  </p>
+                  <ul className="ticks">
+                    <li>Estructuración y gobierno</li>
+                    <li>Análisis de riesgos y documentación</li>
+                    <li>Relación con intermediarios y listados</li>
+                  </ul>
+                  <Link to="/contacto" className="btn btn-outline">
+                    Solicitar información
+                  </Link>
+                </div>
+              )}
             </div>
 
-            {[
-              ["Uso típico", "Cap. de trabajo", "Activos productivos", "Eventos / expansión", "Crecimiento", "CFO-as-a-Service"],
-              ["Ticket", "$0.5–5M MXN", "$0.5–8M MXN", "$100–250M MXN", "$5–30M MXN", "N/A"],
-              ["Plazos", "12–48 m", "12–48 m", "6–24 m", "3–5 años", "4–12 sem"],
-              ["Garantías", "Sí/No", "El activo", "Sí", "No aplica", "No aplica"],
-              ["Costo", "18%–36% + 3–5%", "18%–34% + 3–5%", "Caso por caso", "Dilución", "Fijo + éxito"],
-              ["Velocidad (días)", "~9", "~12", "~20", "~45", "~14"],
-            ].map((row, ridx) => (
-              <div className="cmp-row" role="row" key={ridx}>
-                {row.map((cell, cidx) => {
-                  const isHead = cidx === 0;
-                  const colIndex = cidx; // 0..5
-                  const sel = !isHead && selectedCol === colIndex;
-                  return isHead ? (
-                    <div key={cidx} className="c c-sticky" role="rowheader">
-                      {cell}
+            {/* Columna derecha: resultados / charts */}
+            <div className="panel-right">
+              {(tab === "simple" || tab === "arrendamiento") && (
+                <>
+                  <div className="kpi-grid">
+                    <div className="kpi">
+                      <span className="k-label">
+                        {tab === "arrendamiento"
+                          ? "Renta mensual (est.)"
+                          : "Pago mensual (est.)"}
+                      </span>
+                      <span className="k-value">{pesos(pago)}</span>
                     </div>
-                  ) : (
-                    <button
-                      key={cidx}
-                      type="button"
-                      className={`c c-cell ${sel ? "sel" : ""}`}
-                      data-col={colIndex}
-                      onClick={() => setSelectedCol(selectedCol === colIndex ? 0 : colIndex)}
-                      title="Resaltar columna"
-                    >
-                      {cell}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+                    <div className="kpi">
+                      <span className="k-label">Comisión apertura</span>
+                      <span className="k-value">{pesos(comApertura)}</span>
+                    </div>
+                    <div className="kpi">
+                      <span className="k-label">Total (aprox)</span>
+                      <span className="k-value">
+                        {tab === "arrendamiento"
+                          ? pesos(totalArr)
+                          : pesos(totalCredito)}
+                      </span>
+                    </div>
+                  </div>
 
-          <div className="cmp-cta">
-            <Link to="/#simulador" className="btn btn-outline">Simular crédito</Link>
-            <Link to="/login" className="btn btn-neon">Hablar con un asesor</Link>
+                  <div className="charts-grid">
+                    <div className="chart-card">
+                      <h4 className="chart-title">Pago vs Plazo</h4>
+                      <LineChart
+                        points={linePoints}
+                        format={(v) => pesos(v, 0)}
+                      />
+                    </div>
+
+                    <div className="chart-card">
+                      <h4 className="chart-title">Distribución de costos</h4>
+                      <div className="donut-wrap">
+                        <Donut parts={donutParts} />
+                        <ul className="legend">
+                          <li>
+                            <span className="swatch swatch-0" />
+                            Intereses
+                          </li>
+                          <li>
+                            <span className="swatch swatch-1" />
+                            Principal
+                          </li>
+                          <li>
+                            <span className="swatch swatch-2" />
+                            Comisión
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="chart-card">
+                      <h4 className="chart-title">Comparativo total</h4>
+                      <BarChart data={compBars} format={(v) => pesos(v, 0)} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {(tab === "asesoria" || tab === "bursatilizacion") && (
+                <div className="info-card">
+                  <h4>Entregables & Alcance</h4>
+                  <ul className="grid-2">
+                    <li>Brief ejecutivo y objetivos</li>
+                    <li>Métricas operativas & financieras</li>
+                    <li>Mapa de riesgos y mitigantes</li>
+                    <li>Documentación y governance</li>
+                  </ul>
+                  <div className="cta-inline">
+                    <Link to="/terminos" className="btn btn-outline">
+                      Ver términos
+                    </Link>
+                    <Link to="/login" className="btn btn-neon">
+                      Iniciar proceso
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Comparativa rica */}
+        <section className="p-compare">
+          <div className="p-wrap">
+            <h2>Comparativa de vehículos</h2>
+            <div className="compare-table">
+              <div className="c-row c-head">
+                <div className="c-col">Atributo</div>
+                <div className="c-col">Crédito simple</div>
+                <div className="c-col">Arrendamiento puro</div>
+                <div className="c-col">Asesoría</div>
+              </div>
+
+              <div className="c-row">
+                <div className="c-col">Destino</div>
+                <div className="c-col">Capital de trabajo, expansión</div>
+                <div className="c-col">Activos productivos, equipo</div>
+                <div className="c-col">Estructura y planeación financiera</div>
+              </div>
+
+              <div className="c-row">
+                <div className="c-col">Plazo</div>
+                <div className="c-col">12–48 meses</div>
+                <div className="c-col">12–48 meses</div>
+                <div className="c-col">Por proyecto</div>
+              </div>
+
+              <div className="c-row">
+                <div className="c-col">Pagos</div>
+                <div className="c-col">Fijos mensuales</div>
+                <div className="c-col">Rentas mensuales</div>
+                <div className="c-col">Hitos y entregables</div>
+              </div>
+
+              <div className="c-row">
+                <div className="c-col">Comisión apertura</div>
+                <div className="c-col">3–5%</div>
+                <div className="c-col">3–5%</div>
+                <div className="c-col">N/A</div>
+              </div>
+
+              <div className="c-row">
+                <div className="c-col">Documentación</div>
+                <div className="c-col">Contrato & garantías (según caso)</div>
+                <div className="c-col">Contrato de arrendamiento</div>
+                <div className="c-col">Alcance, cronograma, NDA</div>
+              </div>
+
+              <div className="c-row">
+                <div className="c-col">Tiempo estimado</div>
+                <div className="c-col">Ágil (según expediente)</div>
+                <div className="c-col">Ágil (según proveedor)</div>
+                <div className="c-col">Kickoff en 3–5 días</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="p-cta-final">
+          <div className="p-wrap ctas">
+            <Link to="/login" className="btn btn-neon">
+              Iniciar solicitud
+            </Link>
+            <Link to="/terminos" className="btn btn-outline">
+              Términos y condiciones
+            </Link>
           </div>
         </section>
       </main>
