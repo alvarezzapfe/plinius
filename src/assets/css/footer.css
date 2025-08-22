@@ -28,8 +28,10 @@ html.theme-light {
   --bstrong: rgba(0, 0, 0, 0.18);
 }
 
+/* ---------- FOOTER CON CLICK-FIX ---------- */
 .footer {
   position: relative;
+  z-index: 12; /* 👈 asegura clics por encima de capas absolutas del hero */
   background: linear-gradient(
       180deg,
       rgba(255, 255, 255, 0.02),
@@ -66,7 +68,7 @@ html.theme-light {
   box-shadow: 0 0 40px rgba(215, 255, 0, 0.1);
 }
 
-/* Toolbar (tech controls) */
+/* ---------- TOOLBAR (TECH CONTROLS) ---------- */
 .f-toolbar {
   display: flex;
   align-items: center;
@@ -184,7 +186,7 @@ html.theme-light .tog-knob {
   place-items: center;
 }
 
-/* Brand */
+/* ---------- MARCA ---------- */
 .f-brand {
   text-align: center;
   margin-bottom: 16px;
@@ -222,7 +224,7 @@ html.theme-light .chip {
   border-color: rgba(0, 0, 0, 0.12);
 }
 
-/* Grid */
+/* ---------- GRID ---------- */
 .f-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -254,6 +256,7 @@ html.theme-light .f-col {
   font-size: 14px;
   letter-spacing: 0.2px;
 }
+
 .f-list {
   list-style: none;
   padding: 0;
@@ -266,6 +269,7 @@ html.theme-light .f-col {
   gap: 10px;
   align-items: flex-start;
 }
+
 .ic {
   width: 28px;
   height: 28px;
@@ -279,6 +283,7 @@ html.theme-light .f-col {
   margin-top: 2px;
 }
 
+/* Links */
 .f-link {
   color: #cfd5dd;
   text-decoration: none;
@@ -307,6 +312,7 @@ html.theme-light .f-kicker {
   color: #1b2430;
 }
 
+/* Badges */
 .f-badges {
   display: flex;
   gap: 8px;
@@ -330,7 +336,6 @@ html.theme-light .f-kicker {
 html.theme-light .badge.soft {
   background: rgba(0, 0, 0, 0.04);
 }
-
 .meta-build {
   margin-top: 10px;
   color: #aeb4bf;
@@ -340,7 +345,39 @@ html.theme-light .badge.soft {
   border-style: solid;
 }
 
-/* Status drawer */
+/* ---------- SOCIAL (CLICKABLE + HOVER) ---------- */
+.f-social {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.s-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bstrong);
+  color: #e9ecf1;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease,
+    background 0.15s ease, box-shadow 0.15s ease;
+  will-change: transform;
+}
+.s-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.s-btn svg {
+  pointer-events: none;
+} /* evita que el SVG intercepte el click */
+
+/* ---------- STATUS DRAWER ---------- */
 .status-drawer {
   position: relative;
   margin: 10px 0 0;
@@ -361,7 +398,6 @@ html.theme-light .badge.soft {
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
   border-color: rgba(255, 255, 255, 0.22);
 }
-
 .sd-head {
   display: flex;
   align-items: center;
@@ -391,7 +427,6 @@ html.theme-light .badge.soft {
   color: #aeb4bf;
   margin-left: auto;
 }
-
 .sd-list {
   list-style: none;
   padding: 8px 12px;
@@ -430,7 +465,6 @@ html.theme-light .badge.soft {
 html.theme-light .sd-state {
   color: #2c3642;
 }
-
 .sd-actions {
   display: flex;
   gap: 8px;
@@ -465,7 +499,7 @@ html.theme-light .sd-state {
   border-color: rgba(255, 255, 255, 0.28);
 }
 
-/* Divider & bottom */
+/* ---------- DIVIDER & BOTTOM ---------- */
 .f-divider {
   border: none;
   height: 1px;
@@ -479,7 +513,6 @@ html.theme-light .sd-state {
 html.theme-light .f-divider {
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0) 70%);
 }
-
 .f-bottom {
   display: flex;
   align-items: center;
@@ -518,11 +551,12 @@ html.theme-light .f-mini:hover {
   border-bottom-color: rgba(0, 0, 0, 0.4);
 }
 
-/* Back to top */
+/* ---------- BACK TO TOP (sobre todo) ---------- */
 .to-top {
   position: fixed;
   right: 16px;
   bottom: 16px;
+  z-index: 20; /* 👈 encima de overlays */
   width: 42px;
   height: 42px;
   border-radius: 12px;
@@ -542,7 +576,7 @@ html.theme-light .f-mini:hover {
   opacity: 1;
 }
 
-/* Focus visible */
+/* ---------- FOCUS VISIBLE ---------- */
 .f-link:focus-visible,
 .s-btn:focus-visible,
 .to-top:focus-visible,

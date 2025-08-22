@@ -107,6 +107,12 @@ body {
     transform: translateY(-18px);
   }
 }
+/* Las capas de background son decorativas: no deben capturar clics */
+.heroB-bg,
+.heroB-grid {
+  pointer-events: none;
+  z-index: 0; /* explícito, por si acaso */
+}
 
 .heroB-wrap {
   position: relative;

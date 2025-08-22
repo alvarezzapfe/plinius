@@ -73,8 +73,7 @@ const Footer = () => {
     incident: "Incidente",
   }[status.overall];
 
-  // 🔧 FIX: evita import.meta; usa solo process.env
-  // reemplaza cualquier línea previa que calcule "build" por ESTA:
+  // Build string (agnóstico al bundler)
   const build =
     (typeof import.meta !== "undefined" &&
       import.meta.env &&
@@ -201,7 +200,11 @@ const Footer = () => {
                     />
                   </svg>
                 </span>
-                <a href="mailto:contacto@crowdlink.mx" className="f-link">
+                <a
+                  href="mailto:contacto@crowdlink.mx"
+                  className="f-link"
+                  rel="noopener noreferrer"
+                >
                   contacto@crowdlink.mx
                 </a>
               </li>
@@ -225,7 +228,7 @@ const Footer = () => {
                 <a
                   className="f-link"
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   href="https://maps.google.com/?q=Torre Esmeralda III, Blvd. Manuel Ávila Camacho 32, Sky Lobby B, Lomas de Chapultepec I, Miguel Hidalgo, CDMX 11000"
                 >
                   Torre Esmeralda III, Blvd. Manuel Ávila Camacho 32, Sky Lobby
@@ -233,12 +236,14 @@ const Footer = () => {
                 </a>
               </li>
             </ul>
+
+            {/* Social */}
             <div className="f-social">
               <a
                 className="s-btn"
                 href="https://www.linkedin.com"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 aria-label="LinkedIn"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -254,7 +259,7 @@ const Footer = () => {
                 className="s-btn"
                 href="https://x.com"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 aria-label="X"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -278,6 +283,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                {/* Ancla a sección en Home */}
                 <a href="/#que" className="f-link">
                   ¿Qué hacemos?
                 </a>
@@ -320,7 +326,7 @@ const Footer = () => {
                 <a
                   href="https://www.crowdlink.mx"
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="f-link ext"
                 >
                   Crowdlink
@@ -356,9 +362,10 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="#terminos" className="f-link">
+                {/* 👇 Navegación interna por Router */}
+                <Link to="/terminos" className="f-link">
                   Términos y condiciones
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#cookies" className="f-link">
@@ -427,9 +434,10 @@ const Footer = () => {
             <a href="#aviso" className="f-mini">
               Privacidad
             </a>
-            <a href="#terminos" className="f-mini">
+            {/* 👇 Usa Link aquí también */}
+            <Link to="/terminos" className="f-mini">
               Términos
-            </a>
+            </Link>
             <a href="#cookies" className="f-mini">
               Cookies
             </a>
@@ -437,6 +445,7 @@ const Footer = () => {
         </div>
       </div>
 
+      {/* Back to top */}
       <a href="#top" className="to-top" aria-label="Volver arriba">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path
