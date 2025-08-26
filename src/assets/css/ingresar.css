@@ -1,0 +1,285 @@
+/* ===== Ingresar (namespaced .ing-) ===== */
+.ing {
+  position: relative;
+  padding: 40px 12px;
+  background: var(--bg);
+}
+.ing-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(
+      48% 36% at 50% -10%,
+      rgba(215, 255, 0, 0.07),
+      transparent 60%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent), var(--bg);
+}
+.ing--center .ing-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ===== Card única ===== */
+.ing-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.02)
+    ),
+    var(--glass, #0f1319cc);
+  box-shadow: 0 0 24px rgba(215, 255, 0, 0.1);
+  backdrop-filter: blur(8px);
+  padding: 18px 16px 16px;
+  display: grid;
+  gap: 14px;
+}
+.ing-card__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), transparent 60%);
+  opacity: 0.9;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+/* Encabezado */
+.ing-head {
+  display: grid;
+  gap: 4px;
+}
+.ing-mark {
+  width: max-content;
+  display: inline-grid;
+  place-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0b0d10;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 12px rgba(215, 255, 0, 0.22);
+}
+.ing-title {
+  margin: 4px 0 0;
+  font-size: clamp(18px, 3.4vw, 22px);
+  letter-spacing: -0.01em;
+}
+.ing-sub {
+  color: #c9ced6;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Tabs */
+.ing-tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ing-tab {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.03);
+  color: #dfe4eb;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  font-size: 13px;
+}
+.ing-tab.is-active {
+  background: var(--accent);
+  color: #0b0d10;
+  box-shadow: 0 0 12px rgba(215, 255, 0, 0.22);
+}
+
+/* Social */
+.ing-social {
+  display: grid;
+}
+.ing-gbtn {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #111;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+.ing-gbtn:hover {
+  filter: brightness(0.98);
+}
+.ing-gicon {
+  display: inline-grid;
+  place-items: center;
+}
+
+/* Separador */
+.ing-sep {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 12px;
+  margin: 0;
+  color: #aeb4bf;
+  font-size: 12px;
+}
+.ing-sep::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+.ing-sep span {
+  z-index: 1;
+  padding: 0 8px;
+  background: transparent;
+}
+
+/* Formulario */
+.ing-form {
+  display: grid;
+  gap: 10px;
+}
+.ing-grid2 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 560px) {
+  .ing-grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ing-field {
+  display: grid;
+  gap: 4px;
+}
+.ing-field__label {
+  font-size: 12px;
+  color: #aab1bd;
+}
+.ing-field__input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 10px;
+  display: grid;
+}
+.ing-field__input input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--fg, #eef2f8);
+  font-size: 14px;
+}
+
+.ing-pass {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.ing-eye {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  height: 30px;
+  min-width: 76px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #e8edf4;
+  font-size: 13px;
+}
+
+.ing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ing-chk {
+  font-size: 12px;
+  color: #c9ced6;
+}
+
+/* Botones */
+.ing .btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.04);
+  color: #e8edf4;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.ing .btn:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.ing .btn-outline {
+  background: transparent;
+}
+.ing .btn-neon {
+  background: var(--accent);
+  color: #0b0d10;
+  border-color: color-mix(in srgb, var(--accent) 60%, #0b0d10 40%);
+  box-shadow: 0 0 14px rgba(215, 255, 0, 0.22);
+}
+.ing .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.w100 {
+  width: 100%;
+}
+
+/* Enlaces y nota */
+.ing-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(215, 255, 0, 0.45);
+}
+.ing-link--sm {
+  font-size: 12px;
+}
+.ing-terms {
+  color: #aeb4bf;
+  font-size: 11.5px;
+  margin: 0;
+}
+
+/* Focus visible */
+.ing .ing-tab:focus-visible,
+.ing .btn:focus-visible,
+.ing .ing-link:focus-visible,
+.ing input:focus-visible,
+.ing .ing-eye:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
