@@ -165,7 +165,7 @@ const Navbar = () => {
             </ul>
           </li>
 
-          {/* Simulador (nuevo) */}
+          {/* Simulador */}
           <li className="nav-item">
             <Link
               to="/simulador"
@@ -174,12 +174,20 @@ const Navbar = () => {
               Simulador
             </Link>
           </li>
-
-          {/* Ingresar */}
           <li className="nav-item">
             <Link
-              to="/login"
-              className={`nav-link ${isActive("/login") ? "active" : ""}`}
+              to="/pricing"
+              className={`nav-link ${isActive("/pricing") ? "active" : ""}`}
+            >
+              Pricing
+            </Link>
+          </li>
+
+          {/* Ingresar (actualizado a /ingresar) */}
+          <li className="nav-item">
+            <Link
+              to="/ingresar"
+              className={`nav-link ${isActive("/ingresar") ? "active" : ""}`}
             >
               Ingresar
             </Link>

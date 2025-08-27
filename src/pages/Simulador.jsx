@@ -723,6 +723,8 @@ export default function Simulador() {
               </div>
             </section>
           </section>
+
+          {/* === NUEVO: Botón hasta abajo para Calculadora Avanzada === */}
         </div>
       </main>
       <Footer />
