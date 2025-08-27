@@ -109,12 +109,11 @@ export default function App() {
           <div className="copy">
             <img src={Plogo} alt="Logo Plinius" className="brand" />
             <h1>
-              Crédito & <span className="neon">Arrendamiento</span> para PyMEs.
-              Más simple. Más facil.
+              Crédito & <span className="neon">Arrendamiento</span> para PyMEs
+              que quieren más.
             </h1>
             <p className="lead">
-              Crédito simple y arrendamiento con foco en flujo de efectivo.
-              Experiencia clara, decisión ágil y cumplimiento sólido.
+              Crédito simple y arrendamiento puro para crecer.
             </p>
 
             <div className="cta-row">
