@@ -197,6 +197,27 @@ export default function Pricing() {
   const next = () => setStep((s) => Math.min(s + 1, totalSteps));
   const prev = () => setStep((s) => Math.max(s - 1, 1));
 
+  // Guardar payload SOLO al iniciar solicitud
+  const savePayload = () => {
+    const payload = {
+      conGarantia,
+      tipoGarantia,
+      plazo,
+      monto,
+      ebitdaMensual,
+      valorGarantia,
+      concentracion,
+      antiguedad,
+      historial,
+    };
+    try {
+      sessionStorage.setItem(
+        "plinius_pricing_payload",
+        JSON.stringify(payload)
+      );
+    } catch {}
+  };
+
   return (
     <div className="app-container">
       <Navbar />
@@ -238,7 +259,7 @@ export default function Pricing() {
             </ol>
           </div>
 
-          {/* Card compacta (altura fija + scroll interno si hace falta) */}
+          {/* Card compacta */}
           <section className="pwz-card">
             <div className="pwz-body">
               {step === 1 && (
@@ -327,20 +348,23 @@ export default function Pricing() {
               >
                 Atrás
               </button>
+
               {step < 5 && (
                 <button type="button" className="btn btn-neon" onClick={next}>
                   Siguiente
                 </button>
               )}
+
               {step === 5 && (
                 <button
                   type="button"
                   className="btn btn-neon"
-                  onClick={() => setStep(6)}
+                  onClick={() => setStep(6)} // << Mostrar precio primero
                 >
-                  Calcular
+                  Ver precio
                 </button>
               )}
+
               {step === 6 && (
                 <div className="pwz-result-ctas">
                   <button
@@ -350,7 +374,11 @@ export default function Pricing() {
                   >
                     Editar respuestas
                   </button>
-                  <Link to="/login" className="btn btn-neon">
+                  <Link
+                    to="/ingresar?registro=1"
+                    className="btn btn-neon"
+                    onClick={savePayload} // << Guardamos payload y ahora sí vamos a registro
+                  >
                     Solicitar ahora
                   </Link>
                 </div>
@@ -359,8 +387,8 @@ export default function Pricing() {
           </section>
 
           <p className="pwz-note">
-            *Valores **indicativos** sujetos a validación y políticas de
-            crédito. CAT estimado sin IVA.
+            *Valores <strong>indicativos</strong> sujetos a validación y
+            políticas de crédito. CAT estimado sin IVA.
           </p>
         </div>
       </main>

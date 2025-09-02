@@ -30,7 +30,7 @@ function catEstimado(tasaAnual, comAperturaPct, nMeses) {
   return (ea + feeAnnualized) * 100;
 }
 
-// --- Amortización simple para gráficas ---
+// --- Amortización simple para tabla ---
 function amortizacion(M, tasaAnual, nMeses) {
   const r = tasaAnual / 100 / 12;
   const cuota = pagoMensual(M, tasaAnual, nMeses);
@@ -110,52 +110,10 @@ export default function Simulador() {
   const leverage = monto / Math.max(ebitdaMensual * 12, 1);
   const ltv = garantias ? (monto / Math.max(valorGarantia, 1)) * 100 : NaN;
 
-  // Series para gráficas
-  const pagosSerie = tabla.map((t) => t.pago);
+  // Totales para resumen tabla
   const totalIntereses = tabla.reduce((a, t) => a + t.interes, 0);
   const totalCapital = tabla.reduce((a, t) => a + t.capital, 0);
   const totalCostos = totalIntereses + comApertura;
-
-  // Line chart path (pagos)
-  const linePath = useMemo(() => {
-    const w = 300,
-      h = 120,
-      pad = 8;
-    if (!pagosSerie.length) return "";
-    const max = Math.max(...pagosSerie);
-    const min = Math.min(...pagosSerie);
-    const norm = (v) =>
-      h - pad - ((v - min) / Math.max(max - min || 1, 1)) * (h - pad * 2);
-    const dx = (w - pad * 2) / Math.max(pagosSerie.length - 1, 1);
-    return pagosSerie
-      .map((y, i) => `${i === 0 ? "M" : "L"} ${pad + dx * i} ${norm(y)}`)
-      .join(" ");
-  }, [pagosSerie]);
-
-  // Donut data
-  const donut = useMemo(() => {
-    const parts = [
-      { label: "Intereses", value: totalIntereses },
-      { label: "Comisión", value: comApertura },
-      { label: "Capital", value: totalCapital },
-    ];
-    const sum = parts.reduce((a, b) => a + b.value, 0) || 1;
-    let start = 0;
-    const arcs = parts.map((p, i) => {
-      const angle = (p.value / sum) * Math.PI * 2;
-      const end = start + angle;
-      const x1 = 80 + 60 * Math.cos(start);
-      const y1 = 80 + 60 * Math.sin(start);
-      const x2 = 80 + 60 * Math.cos(end);
-      const y2 = 80 + 60 * Math.sin(end);
-      const large = angle > Math.PI ? 1 : 0;
-      const d = `M80,80 L${x1},${y1} A60,60 0 ${large} 1 ${x2},${y2} Z`;
-      const seg = { d, i, label: p.label, value: p.value };
-      start = end;
-      return seg;
-    });
-    return { parts, arcs, sum };
-  }, [totalIntereses, comApertura, totalCapital]);
 
   // Mailto prellenado
   const mailtoHref = useMemo(() => {
@@ -187,8 +145,7 @@ export default function Simulador() {
           <header className="sim-head">
             <h1>Simulador</h1>
             <p className="sim-sub">
-              Ajusta variables y visualiza pagos, composición de costos y
-              trayectorias.
+              Ajusta variables y visualiza pagos y composición de costos.
             </p>
             <div className="sim-presets" role="group" aria-label="Escenarios">
               <button
@@ -208,7 +165,7 @@ export default function Simulador() {
 
           {/* Layout principal */}
           <section className="sim-grid">
-            {/* Col izquierda: tarjeta principal */}
+            {/* Col izquierda: tarjeta principal (SE MANTIENE IGUAL) */}
             <aside className="sim-card">
               <div className="sim-rowtop">
                 {/* Tipo */}
@@ -483,152 +440,62 @@ export default function Simulador() {
               </div>
             </aside>
 
-            {/* Col derecha: charts + PROCESO */}
+            {/* Columna derecha: UNA sola tabla + Proceso */}
             <section className="sim-right">
-              <div className="charts-grid">
-                {/* Línea: pago por mes */}
-                <div className="chart-card">
-                  <h4 className="chart-title">Trayectoria de pagos</h4>
-                  <svg
-                    className="mini-chart"
-                    viewBox="0 0 300 140"
-                    role="img"
-                    aria-label="Pagos por mes"
-                  >
-                    <path d={linePath} className="line" />
-                    {tabla.map((t, i) => {
-                      const w = 300,
-                        h = 120,
-                        pad = 8;
-                      const serie = tabla.map((x) => x.pago);
-                      const max = Math.max(...serie);
-                      const min = Math.min(...serie);
-                      const normY = (v) =>
-                        h -
-                        pad -
-                        ((v - min) / Math.max(max - min || 1, 1)) *
-                          (h - pad * 2);
-                      const dx = (w - pad * 2) / Math.max(serie.length - 1, 1);
-                      const cx = pad + dx * i;
-                      const cy = normY(t.pago);
-                      return (
-                        <circle
-                          key={i}
-                          cx={cx}
-                          cy={cy}
-                          r="2.5"
-                          className="dot"
-                        />
-                      );
-                    })}
-                    <text x="8" y="132" className="t-label">
-                      0
-                    </text>
-                    <text x="292" y="132" className="t-label">
-                      {tabla.length} m
-                    </text>
-                  </svg>
-                </div>
-
-                {/* Barras: capital vs interés (primeros meses) */}
-                <div className="chart-card">
-                  <h4 className="chart-title">Capital vs interés (inicio)</h4>
-                  <svg
-                    className="mini-chart"
-                    viewBox="0 0 300 140"
-                    role="img"
-                    aria-label="Capital e interés"
-                  >
-                    {tabla.slice(0, Math.min(12, tabla.length)).map((t, i) => {
-                      const h = 100,
-                        yBase = 120,
-                        x0 = 12,
-                        bw = 14,
-                        gap = 10;
-                      const maxPago =
-                        Math.max(...tabla.map((x) => x.pago)) || 1;
-                      const kH = (t.capital / maxPago) * h;
-                      const iH = (t.interes / maxPago) * h;
-                      const x = x0 + i * (bw * 2 + gap);
-                      return (
-                        <g key={i} transform={`translate(${x},0)`}>
-                          <rect
-                            x="0"
-                            y={yBase - kH}
-                            width={bw}
-                            height={kH}
-                            className="bar"
-                          />
-                          <rect
-                            x={bw + 2}
-                            y={yBase - iH}
-                            width={bw}
-                            height={iH}
-                            className="bar"
-                            style={{ opacity: 0.7 }}
-                          />
-                          <text
-                            x={bw}
-                            y="132"
-                            className="t-label"
-                            textAnchor="middle"
-                          >
-                            {t.mes}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                {/* Donut: composición */}
-                <div className="chart-card">
-                  <h4 className="chart-title">Composición del total</h4>
-                  <div className="donut-wrap">
-                    <svg
-                      className="mini-chart"
-                      viewBox="0 0 160 160"
-                      role="img"
-                      aria-label="Composición"
-                    >
-                      {donut.arcs.map((a) => (
-                        <path key={a.i} d={a.d} className={`arc arc-${a.i}`} />
+              {/* Tabla de amortización */}
+              <div className="amort-card">
+                <h4 className="chart-title">Calendario de pagos</h4>
+                <div className="amort-table-wrap">
+                  <table className="amort-table" role="table">
+                    <thead>
+                      <tr>
+                        <th>Mes</th>
+                        <th>Pago</th>
+                        <th>Interés</th>
+                        <th>Capital</th>
+                        <th>Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tabla.map((t) => (
+                        <tr key={t.mes}>
+                          <td className="mono">{t.mes}</td>
+                          <td className="mono">{pesos(t.pago)}</td>
+                          <td className="mono">{pesos(t.interes)}</td>
+                          <td className="mono">{pesos(t.capital)}</td>
+                          <td className="mono">{pesos(t.saldo)}</td>
+                        </tr>
                       ))}
-                      <circle cx="80" cy="80" r="40" className="donut-hole" />
-                      <text x="80" y="78" className="donut-text">
-                        {pct(
-                          (totalCostos / (totalCapital + totalCostos)) * 100,
-                          0
-                        )}
-                      </text>
-                      <text
-                        x="80"
-                        y="94"
-                        className="t-label"
-                        style={{ fontSize: 10 }}
-                      >
-                        Costos / Total
-                      </text>
-                    </svg>
-                    <ul className="legend">
-                      <li>
-                        <span className="swatch swatch-0" /> Intereses ·{" "}
-                        {pesos(totalIntereses)}
-                      </li>
-                      <li>
-                        <span className="swatch swatch-2" /> Comisión ·{" "}
-                        {pesos(comApertura)}
-                      </li>
-                      <li>
-                        <span className="swatch swatch-1" /> Capital ·{" "}
-                        {pesos(totalCapital)}
-                      </li>
-                    </ul>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="amort-summary">
+                  <div className="as-item">
+                    <span className="as-label">Intereses</span>
+                    <span className="as-value">{pesos(totalIntereses)}</span>
+                  </div>
+                  <div className="as-item">
+                    <span className="as-label">Comisión</span>
+                    <span className="as-value">{pesos(comApertura)}</span>
+                  </div>
+                  <div className="as-item">
+                    <span className="as-label">Capital</span>
+                    <span className="as-value">{pesos(totalCapital)}</span>
+                  </div>
+                  <div className="as-item total">
+                    <span className="as-label">Costos / Total</span>
+                    <span className="as-value">
+                      {pct(
+                        (totalCostos / (totalCapital + totalCostos)) * 100,
+                        0
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* NUEVA CAJA: Proceso para continuar */}
+              {/* Pasos + nuevas CTAs */}
               <div className="process">
                 <div className="process-head">
                   <div className="ph-left">
@@ -682,12 +549,11 @@ export default function Simulador() {
                     <div className="step-body">
                       <h4>Envíanos tu solicitud</h4>
                       <p>
-                        Mándanos un correo a{" "}
+                        Escríbenos a{" "}
                         <a className="mailto" href={mailtoHref}>
                           contacto@crowdlink.mx
                         </a>{" "}
-                        con tus datos y adjuntos. El correo se prellena con lo
-                        que configuraste en el simulador.
+                        con tus datos y adjuntos.
                       </p>
                     </div>
                   </li>
@@ -705,14 +571,11 @@ export default function Simulador() {
                 </ol>
 
                 <div className="process-cta">
-                  <a className="btn btn-neon" href={mailtoHref}>
-                    Enviar correo
-                  </a>
-                  <Link className="btn btn-outline" to="/productos">
-                    Ver productos
+                  <Link className="btn btn-neon" to="/login">
+                    Iniciar solicitud
                   </Link>
-                  <Link className="btn btn-outline" to="/terminos">
-                    Términos
+                  <Link className="btn btn-outline" to="/pricing">
+                    Ver pricing
                   </Link>
                 </div>
 
@@ -723,8 +586,6 @@ export default function Simulador() {
               </div>
             </section>
           </section>
-
-          {/* === NUEVO: Botón hasta abajo para Calculadora Avanzada === */}
         </div>
       </main>
       <Footer />

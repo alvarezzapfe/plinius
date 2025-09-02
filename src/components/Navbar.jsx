@@ -4,6 +4,9 @@ import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/images/logo-plinius.png";
 import "../assets/css/navbar.css";
 
+// Burbuja del asesor (AI)
+import AssistantBubble from "./AssistantBubble.jsx";
+
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState(null); // 'nosotros' | 'quehacemos' | null
@@ -41,160 +44,171 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="navbar" ref={navRef}>
-      <div className="navbar-container">
-        <Link to="/" className="navbar-logo" aria-label="Plinius inicio">
-          <img src={logo} alt="Plinius Logo" className="logo-image" />
-        </Link>
+    <>
+      <nav className="navbar" ref={navRef}>
+        <div className="navbar-container">
+          <Link to="/" className="navbar-logo" aria-label="Plinius inicio">
+            <img src={logo} alt="Plinius Logo" className="logo-image" />
+          </Link>
 
-        {/* Botón móvil */}
-        <button
-          className={`hamburger ${mobileOpen ? "is-active" : ""}`}
-          aria-label="Abrir menú"
-          aria-expanded={mobileOpen}
-          onClick={() => setMobileOpen((v) => !v)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-
-        <ul className={`navbar-links ${mobileOpen ? "open" : ""}`}>
-          {/* Inicio */}
-          <li className="nav-item">
-            <Link
-              to="/"
-              className={`nav-link ${isActive("/") ? "active" : ""}`}
-            >
-              Inicio
-            </Link>
-          </li>
-
-          {/* Nosotros (dropdown) */}
-          <li
-            className={`nav-item dropdown ${
-              openMenu === "nosotros" ? "open" : ""
-            }`}
-            onMouseEnter={() => openByHover("nosotros")}
-            onMouseLeave={closeByHover}
-            onFocus={() => openByHover("nosotros")}
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget)) closeByHover();
-            }}
+          {/* Botón móvil */}
+          <button
+            className={`hamburger ${mobileOpen ? "is-active" : ""}`}
+            aria-label="Abrir menú"
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((v) => !v)}
           >
-            <button
-              type="button"
-              className="nav-link dropdown-toggle"
-              aria-haspopup="true"
-              aria-expanded={openMenu === "nosotros"}
-              onClick={() => toggleMenu("nosotros")}
-            >
-              Nosotros <span className="caret" />
-            </button>
+            <span />
+            <span />
+            <span />
+          </button>
 
-            <ul
-              className="dropdown-menu"
-              role="menu"
-              onMouseEnter={cancelClose}
+          <ul className={`navbar-links ${mobileOpen ? "open" : ""}`}>
+            {/* Inicio */}
+            <li className="nav-item">
+              <Link
+                to="/"
+                className={`nav-link ${isActive("/") ? "active" : ""}`}
+              >
+                Inicio
+              </Link>
+            </li>
+
+            {/* Nosotros (dropdown) */}
+            <li
+              className={`nav-item dropdown ${
+                openMenu === "nosotros" ? "open" : ""
+              }`}
+              onMouseEnter={() => openByHover("nosotros")}
               onMouseLeave={closeByHover}
+              onFocus={() => openByHover("nosotros")}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) closeByHover();
+              }}
             >
-              <li role="none">
-                <Link
-                  to="/sobre-plinius"
-                  role="menuitem"
-                  className="dropdown-item"
-                >
-                  Sobre Plinius
-                </Link>
-              </li>
-              <li role="none">
-                <Link to="/equipo" role="menuitem" className="dropdown-item">
-                  Equipo
-                </Link>
-              </li>
-              <li role="none">
-                <Link to="/enfoque" role="menuitem" className="dropdown-item">
-                  Enfoque
-                </Link>
-              </li>
-            </ul>
-          </li>
+              <button
+                type="button"
+                className="nav-link dropdown-toggle"
+                aria-haspopup="true"
+                aria-expanded={openMenu === "nosotros"}
+                onClick={() => toggleMenu("nosotros")}
+              >
+                Nosotros <span className="caret" />
+              </button>
 
-          {/* Qué hacemos (dropdown) */}
-          <li
-            className={`nav-item dropdown ${
-              openMenu === "quehacemos" ? "open" : ""
-            }`}
-            onMouseEnter={() => openByHover("quehacemos")}
-            onMouseLeave={closeByHover}
-            onFocus={() => openByHover("quehacemos")}
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget)) closeByHover();
-            }}
-          >
-            <button
-              type="button"
-              className="nav-link dropdown-toggle"
-              aria-haspopup="true"
-              aria-expanded={openMenu === "quehacemos"}
-              onClick={() => toggleMenu("quehacemos")}
-            >
-              Qué hacemos <span className="caret" />
-            </button>
+              <ul
+                className="dropdown-menu"
+                role="menu"
+                onMouseEnter={cancelClose}
+                onMouseLeave={closeByHover}
+              >
+                <li role="none">
+                  <Link
+                    to="/sobre-plinius"
+                    role="menuitem"
+                    className="dropdown-item"
+                  >
+                    Sobre Plinius
+                  </Link>
+                </li>
+                <li role="none">
+                  <Link to="/equipo" role="menuitem" className="dropdown-item">
+                    Equipo
+                  </Link>
+                </li>
+                <li role="none">
+                  <Link to="/enfoque" role="menuitem" className="dropdown-item">
+                    Enfoque
+                  </Link>
+                </li>
+              </ul>
+            </li>
 
-            <ul
-              className="dropdown-menu"
-              role="menu"
-              onMouseEnter={cancelClose}
+            {/* Qué hacemos (dropdown) */}
+            <li
+              className={`nav-item dropdown ${
+                openMenu === "quehacemos" ? "open" : ""
+              }`}
+              onMouseEnter={() => openByHover("quehacemos")}
               onMouseLeave={closeByHover}
+              onFocus={() => openByHover("quehacemos")}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) closeByHover();
+              }}
             >
-              <li role="none">
-                <Link to="/productos" role="menuitem" className="dropdown-item">
-                  Productos
-                </Link>
-              </li>
-              <li role="none">
-                <Link
-                  to="/alianza-crowdlink"
-                  role="menuitem"
-                  className="dropdown-item"
-                >
-                  Alianza Crowdlink
-                </Link>
-              </li>
-            </ul>
-          </li>
+              <button
+                type="button"
+                className="nav-link dropdown-toggle"
+                aria-haspopup="true"
+                aria-expanded={openMenu === "quehacemos"}
+                onClick={() => toggleMenu("quehacemos")}
+              >
+                Qué hacemos <span className="caret" />
+              </button>
 
-          {/* Simulador */}
-          <li className="nav-item">
-            <Link
-              to="/simulador"
-              className={`nav-link ${isActive("/simulador") ? "active" : ""}`}
-            >
-              Simulador
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link
-              to="/pricing"
-              className={`nav-link ${isActive("/pricing") ? "active" : ""}`}
-            >
-              Pricing
-            </Link>
-          </li>
+              <ul
+                className="dropdown-menu"
+                role="menu"
+                onMouseEnter={cancelClose}
+                onMouseLeave={closeByHover}
+              >
+                <li role="none">
+                  <Link
+                    to="/productos"
+                    role="menuitem"
+                    className="dropdown-item"
+                  >
+                    Productos
+                  </Link>
+                </li>
+                <li role="none">
+                  <Link
+                    to="/alianza-crowdlink"
+                    role="menuitem"
+                    className="dropdown-item"
+                  >
+                    Alianza Crowdlink
+                  </Link>
+                </li>
+              </ul>
+            </li>
 
-          {/* Ingresar (actualizado a /ingresar) */}
-          <li className="nav-item">
-            <Link
-              to="/ingresar"
-              className={`nav-link ${isActive("/ingresar") ? "active" : ""}`}
-            >
-              Ingresar
-            </Link>
-          </li>
-        </ul>
-      </div>
-    </nav>
+            {/* Simulador */}
+            <li className="nav-item">
+              <Link
+                to="/simulador"
+                className={`nav-link ${isActive("/simulador") ? "active" : ""}`}
+              >
+                Simulador
+              </Link>
+            </li>
+
+            {/* NUEVO: Solicitud -> abre registro */}
+            <li className="nav-item">
+              <Link
+                to="/solicitud"
+                className={`nav-link ${isActive("/solicitud") ? "active" : ""}`}
+              >
+                Solicitud
+              </Link>
+            </li>
+
+            {/* Ingresar */}
+            <li className="nav-item">
+              <Link
+                to="/login"
+                className={`nav-link ${isActive("/login") ? "active" : ""}`}
+              >
+                Ingresar
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      {/* Burbuja fija del Asesor (AI) */}
+      <AssistantBubble />
+    </>
   );
 };
 

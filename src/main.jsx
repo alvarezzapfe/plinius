@@ -13,7 +13,7 @@ import Equipo from "./pages/Equipo.jsx";
 import SobrePlinius from "./pages/SobrePlinius.jsx";
 import Enfoque from "./pages/Enfoque.jsx";
 import Simulador from "./pages/Simulador.jsx";
-import Ingresar from "./pages/Ingresar.jsx"; // <-- NUEVO
+import Ingresar from "./pages/Ingresar.jsx";
 import Pricing from "./pages/Pricing.jsx";
 
 // Stub rápido (si luego quieres página dedicada)
@@ -37,16 +37,29 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
+        {/* Home */}
         <Route path="/" element={<App />} />
+
+        {/* Secciones */}
         <Route path="/productos" element={<Productos />} />
         <Route path="/simulador" element={<Simulador />} />
-        <Route path="/ingresar" element={<Ingresar />} /> {/* <-- NUEVO */}
         <Route path="/sobre-plinius" element={<SobrePlinius />} />
         <Route path="/equipo" element={<Equipo />} />
         <Route path="/enfoque" element={<Enfoque />} />
         <Route path="/alianza-crowdlink" element={<AlianzaCrowdlink />} />
         <Route path="/terminos" element={<Terms />} />
-        <Route path="/pricing" element={<Pricing />} />
+
+        {/* Auth */}
+        <Route path="/ingresar" element={<Ingresar />} />
+        {/* Alias por compatibilidad: /login -> /ingresar */}
+        <Route path="/login" element={<Navigate to="/ingresar" replace />} />
+
+        {/* SOLICITUD: aquí va el wizard (antes estaba redirigiendo a /ingresar) */}
+        <Route path="/solicitud" element={<Pricing />} />
+        {/* Alias legacy: /pricing -> /solicitud */}
+        <Route path="/pricing" element={<Navigate to="/solicitud" replace />} />
+
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

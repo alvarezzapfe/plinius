@@ -77,7 +77,7 @@
   }
 }
 
-/* Tarjeta principal */
+/* Tarjeta principal (izquierda) */
 .sim-card {
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -265,117 +265,76 @@ input[type="range"]::-moz-range-thumb {
   display: grid;
   gap: 12px;
 }
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-@media (max-width: 1100px) {
-  .charts-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-@media (max-width: 720px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.chart-card {
+
+/* ===== Amortización en tabla (derecha) ===== */
+.amort-card {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.02);
   padding: 12px;
 }
-.chart-title {
-  margin: 0 0 6px;
-  font-size: 14px;
-  color: var(--accent);
+.amort-table-wrap {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
-
-/* Mini charts (SVG) */
-.mini-chart {
+.amort-table {
   width: 100%;
-  height: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.amort-table thead th {
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--glass, #0f1319) 70%, transparent);
+  backdrop-filter: blur(6px);
+  text-align: left;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #dfe4eb;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+}
+.amort-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px dashed var(--border);
+  color: #e8edf4;
+}
+.amort-table tbody tr:nth-child(odd) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+.amort-table tbody tr:hover td {
+  background: rgba(215, 255, 0, 0.04);
+}
+.amort-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+.as-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.as-item.total {
+  background: linear-gradient(180deg, rgba(215, 255, 0, 0.08), transparent);
+}
+.as-label {
   display: block;
+  font-size: 11px;
+  color: #aab1bd;
+  margin-bottom: 4px;
 }
-.line {
-  stroke: var(--accent);
-  stroke-width: 2;
-  fill: none;
-}
-.dot {
-  fill: var(--accent);
-}
-.t-label {
-  font-size: 10px;
-  fill: #aeb4bf;
-}
-.bar {
-  fill: color-mix(in srgb, var(--accent) 60%, transparent);
-  transition: filter 0.15s ease;
-}
-.bar:hover {
-  filter: brightness(1.08);
-}
-
-/* Donut */
-.arc {
-  opacity: 0.95;
-  transition: filter 0.15s ease;
-}
-.arc:hover {
-  filter: brightness(1.06);
-}
-.arc-0 {
-  fill: color-mix(in srgb, var(--accent) 70%, black 30%);
-}
-.arc-1 {
-  fill: #ffd166;
-}
-.arc-2 {
-  fill: #76b6ff;
-}
-.donut-hole {
-  fill: var(--bg);
-}
-.donut-text {
+.as-value {
   font-weight: 900;
   font-size: 14px;
-  fill: var(--fg);
-  text-anchor: middle;
-}
-.legend {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-  font-size: 13px;
-  color: #d6dbe3;
-}
-.legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  display: inline-block;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.06);
-}
-.swatch-0 {
-  background: color-mix(in srgb, var(--accent) 70%, black 30%);
-}
-.swatch-1 {
-  background: #ffd166;
-}
-.swatch-2 {
-  background: #76b6ff;
 }
 
-/* ===== NUEVO: Caja de proceso / stepper ===== */
+/* ===== Caja de proceso / stepper ===== */
 .process {
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -519,12 +478,7 @@ input[type="range"]:focus-visible,
   border-radius: 10px;
 }
 
-/* ===== NUEVO: Botón inferior 'Calculadora avanzada' ===== */
-.sim-bottom {
-  margin-top: 16px;
-  display: flex;
-  justify-content: center;
-}
+/* Botones base (coinciden con estilo global del sitio) */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -551,12 +505,4 @@ input[type="range"]:focus-visible,
   color: #0b0d10;
   box-shadow: 0 0 18px rgba(215, 255, 0, 0.25);
   border-color: color-mix(in srgb, var(--accent) 60%, #0b0d10 40%);
-}
-.btn-adv {
-  background: var(--accent);
-  color: #0b0d10;
-  border-color: color-mix(in srgb, var(--accent) 60%, #0b0d10 40%);
-  box-shadow: 0 0 22px rgba(215, 255, 0, 0.35);
-  min-width: 240px;
-  font-size: 14px;
 }
