@@ -170,6 +170,22 @@ function LoginForm() {
       <button type="submit" className="btn btn-neon w100" disabled={!valid}>
         Ingresar
       </button>
+
+      {/* DEMO: Botón pequeño y centrado hacia el Dashboard */}
+      <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
+        <Link
+          to="/dashboard"
+          className="btn btn-outline"
+          style={{
+            height: 30,
+            padding: "0 10px",
+            fontSize: 12,
+            borderRadius: 8,
+          }}
+        >
+          Ir al Dashboard (demo)
+        </Link>
+      </div>
     </form>
   );
 }
@@ -254,6 +270,22 @@ function SignupForm() {
       <button type="submit" className="btn btn-neon w100" disabled={!valid}>
         Crear cuenta
       </button>
+
+      {/* DEMO: Botón pequeño y centrado hacia el Dashboard */}
+      <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
+        <Link
+          to="/dashboard"
+          className="btn btn-outline"
+          style={{
+            height: 30,
+            padding: "0 10px",
+            fontSize: 12,
+            borderRadius: 8,
+          }}
+        >
+          Ir al Dashboard (demo)
+        </Link>
+      </div>
     </form>
   );
 }
