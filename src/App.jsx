@@ -71,7 +71,7 @@ export default function App() {
   const cat = useMemo(() => catEstimado(tasa, fee, plazo), [tasa, fee, plazo]);
 
   // Métricas CFA
-  const servicioDeudaMensual = pago; // aprox: servicio = pago (cap+int)
+  const servicioDeudaMensual = pago; // aprox
   const interesMensualAprox = monto * rMensual; // aprox primer mes
   const dscr = ebitdaMensual / Math.max(servicioDeudaMensual, 1);
   const icr = ebitdaMensual / Math.max(interesMensualAprox, 1);
@@ -82,7 +82,7 @@ export default function App() {
   const fmtX = (x) => `${x.toFixed(2)}x`;
   const fmtLTV = (x) => `${x.toFixed(0)}%`;
 
-  // Scroll reveal para secciones/cards
+  // Scroll reveal
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
@@ -100,6 +100,7 @@ export default function App() {
     <div className="app-container">
       <Navbar />
 
+      {/* ---------- HERO ---------- */}
       <main className="heroB">
         <div className="heroB-bg" aria-hidden />
         <div className="heroB-grid" aria-hidden />
@@ -120,7 +121,7 @@ export default function App() {
               <Link to="/productos" className="btn btn-neon">
                 Explorar productos
               </Link>
-              <Link to="/login" className="btn btn-outline">
+              <Link to="/ingresar" className="btn btn-outline">
                 Ingresar
               </Link>
             </div>
@@ -419,7 +420,7 @@ export default function App() {
                 <Link to="/productos" className="btn btn-outline">
                   Ver términos
                 </Link>
-                <Link to="/login" className="btn btn-neon">
+                <Link to="/solicitud" className="btn btn-neon">
                   Solicitar ahora
                 </Link>
               </div>
@@ -433,11 +434,16 @@ export default function App() {
         </div>
       </main>
 
-      {/* Divider + ¿Qué hace Plinius? */}
+      {/* ---------- ¿QUÉ HACE PLINIUS? ---------- */}
       <div className="section-divider" aria-hidden />
       <section className="what reveal">
         <div className="what-wrap">
-          <h2>¿Qué hace Plinius?</h2>
+          <div className="section-head">
+            <h2>¿Qué hace Plinius?</h2>
+            <p className="section-sub">
+              Asesoría estratégica, crédito simple, arrendamiento y más.
+            </p>
+          </div>
 
           <div className="what-grid">
             <article className="feature-card" data-icon="🎯">
@@ -490,15 +496,35 @@ export default function App() {
         </div>
       </section>
 
-      {/* Divider + TRACK RECORD */}
+      {/* ---------- TRACK RECORD (ejecutivo) ---------- */}
       <div className="section-divider" aria-hidden />
       <section className="track reveal">
         <div className="track-wrap">
-          <h2>Track record</h2>
+          <div className="section-head">
+            <h2>Track record</h2>
+            <p className="section-sub">Casos representativos.</p>
+          </div>
 
-          <div className="track-grid">
-            {/* 1. MAS AIR */}
-            <article className="deal" data-type="originacion">
+          {/* KPIs ejecutivos */}
+          <div className="track-kpis">
+            <div className="t-kpi">
+              <span className="t-label">Total fondeado</span>
+              <span className="t-value">{pesos(155_500_000, 0)} MXN</span>
+            </div>
+            <div className="t-kpi">
+              <span className="t-label">Ticket promedio</span>
+              <span className="t-value">{pesos(12_900_000, 0)}</span>
+            </div>
+            <div className="t-kpi">
+              <span className="t-label">Sectores</span>
+              <span className="t-value">Aero · Logística · Fin.</span>
+            </div>
+          </div>
+
+          {/* Grid simétrica de casos (similar al original pero más fino) */}
+          <div className="track-grid exec">
+            {/* 1 */}
+            <article className="deal exec" data-accent="accent">
               <header className="deal-head">
                 <h3 className="deal-title">MAS AIR</h3>
                 <div className="deal-chips">
@@ -506,18 +532,16 @@ export default function App() {
                   <span className="chip outline">Crédito</span>
                 </div>
               </header>
-              <div className="deal-body">
-                <div className="deal-amount">
-                  {pesos(100_000_000, 0)} <span className="unit">MXN</span>
-                </div>
-                <p className="deal-note">
-                  Originación y acompañamiento en crédito corporativo.
-                </p>
+              <div className="deal-amount">
+                {pesos(100_000_000, 0)} <span className="unit">MXN</span>
               </div>
+              <p className="deal-note">
+                Estructura corporativa; acompañamiento integral.
+              </p>
             </article>
 
-            {/* 2. INTERCAM BANCO */}
-            <article className="deal" data-type="cautelar">
+            {/* 2 */}
+            <article className="deal exec" data-accent="warn">
               <header className="deal-head">
                 <h3 className="deal-title">INTERCAM BANCO</h3>
                 <div className="deal-chips">
@@ -525,16 +549,14 @@ export default function App() {
                   <span className="chip outline">Adm. cautelar</span>
                 </div>
               </header>
-              <div className="deal-body">
-                <div className="deal-amount">Mandato regulatorio</div>
-                <p className="deal-note">
-                  Asesor en equipo de administración cautelar (IPAB / FinCEN).
-                </p>
-              </div>
+              <div className="deal-amount">Mandato regulatorio</div>
+              <p className="deal-note">
+                Soporte a IPAB / FinCEN; procesos y gobierno.
+              </p>
             </article>
 
-            {/* 3. LA PEOPLES LEAGUE */}
-            <article className="deal" data-type="inversion">
+            {/* 3 */}
+            <article className="deal exec" data-accent="good">
               <header className="deal-head">
                 <h3 className="deal-title">LA PEOPLES LEAGUE</h3>
                 <div className="deal-chips">
@@ -542,18 +564,14 @@ export default function App() {
                   <span className="chip outline">Capital</span>
                 </div>
               </header>
-              <div className="deal-body">
-                <div className="deal-amount">
-                  {pesos(8_000_000, 0)} <span className="unit">MXN</span>
-                </div>
-                <p className="deal-note">
-                  Participación de capital en etapa de crecimiento.
-                </p>
+              <div className="deal-amount">
+                {pesos(8_000_000, 0)} <span className="unit">MXN</span>
               </div>
+              <p className="deal-note">Participación de crecimiento.</p>
             </article>
 
-            {/* 4. Logística (Banca de Desarrollo) */}
-            <article className="deal" data-type="credito">
+            {/* 4 */}
+            <article className="deal exec" data-accent="accent">
               <header className="deal-head">
                 <h3 className="deal-title">Empresa de Logística</h3>
                 <div className="deal-chips">
@@ -561,31 +579,40 @@ export default function App() {
                   <span className="chip outline">Project / Corp</span>
                 </div>
               </header>
-              <div className="deal-body">
-                <div className="deal-amount">
-                  {dollars(35_000_000, 0)} <span className="unit">USD</span>
-                </div>
-                <p className="deal-note">
-                  Estructuración y fondeo con Banca de Desarrollo.
-                </p>
+              <div className="deal-amount">
+                {dollars(35_000_000, 0)} <span className="unit">USD</span>
               </div>
+              <p className="deal-note">
+                Estructuración con Banca de Desarrollo.
+              </p>
             </article>
 
-            {/* 5. M&A Neobanco */}
-            <article className="deal" data-type="ma">
+            {/* 5 */}
+            <article className="deal exec" data-accent="info">
               <header className="deal-head">
-                <h3 className="deal-title">M&A — Neobanco</h3>
+                <h3 className="deal-title">M&amp;A — Neobanco</h3>
                 <div className="deal-chips">
                   <span className="chip">M&amp;A</span>
                   <span className="chip outline">Cartera</span>
                 </div>
               </header>
-              <div className="deal-body">
-                <div className="deal-amount">Activos bancarios</div>
-                <p className="deal-note">
-                  Venta de activos de banco a nuevo adquiriente (neobanco).
-                </p>
+              <div className="deal-amount">Activos bancarios</div>
+              <p className="deal-note">Venta de activos a nuevo adquiriente.</p>
+            </article>
+
+            {/* 6 */}
+            <article className="deal exec" data-accent="accent">
+              <header className="deal-head">
+                <h3 className="deal-title">Crédito PyME</h3>
+                <div className="deal-chips">
+                  <span className="chip">Estructuración</span>
+                  <span className="chip outline">Garantía</span>
+                </div>
+              </header>
+              <div className="deal-amount">
+                {pesos(12_500_000, 0)} <span className="unit">MXN</span>
               </div>
+              <p className="deal-note">Garantía y covenants operativos.</p>
             </article>
           </div>
         </div>

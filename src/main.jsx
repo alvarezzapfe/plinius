@@ -15,6 +15,7 @@ import Enfoque from "./pages/Enfoque.jsx";
 import Simulador from "./pages/Simulador.jsx";
 import Ingresar from "./pages/Ingresar.jsx";
 import Pricing from "./pages/Pricing.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 
 // Stub rápido (si luego quieres página dedicada)
 function AlianzaCrowdlink() {
@@ -58,6 +59,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="/solicitud" element={<Pricing />} />
         {/* Alias legacy: /pricing -> /solicitud */}
         <Route path="/pricing" element={<Navigate to="/solicitud" replace />} />
+
+        <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />

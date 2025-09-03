@@ -40,6 +40,19 @@ function catEstimado(tasaAnual, comAperturaPct, nMeses) {
   const feeAnnualized = (comAperturaPct / 100) * (12 / Math.max(nMeses, 1));
   return (ea + feeAnnualized) * 100;
 }
+function amortizacion(M, tasaAnual, nMeses) {
+  const r = tasaAnual / 100 / 12;
+  const cuota = pagoMensual(M, tasaAnual, nMeses);
+  let saldo = M;
+  const filas = [];
+  for (let i = 1; i <= nMeses; i++) {
+    const interes = saldo * r;
+    const capital = Math.max(cuota - interes, 0);
+    saldo = Math.max(saldo - capital, 0);
+    filas.push({ mes: i, pago: cuota, interes, capital, saldo });
+  }
+  return filas;
+}
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const round1 = (x) => Math.round(x * 10) / 10;
 
@@ -128,11 +141,12 @@ function priceEngineWizard({
 }
 
 /* ===========================================================
-   Wizard compacto
+   Wizard compacto — Mejorado con intro y loader
    =========================================================== */
 export default function Pricing() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // <- Intro primero
   const totalSteps = 6;
+  const [loading, setLoading] = useState(false); // <- Loader entre pasos
 
   // Estado global
   const [conGarantia, setConGarantia] = useState(true);
@@ -194,8 +208,19 @@ export default function Pricing() {
     [tasaMid, precio.feePct, plazo]
   );
 
-  const next = () => setStep((s) => Math.min(s + 1, totalSteps));
-  const prev = () => setStep((s) => Math.max(s - 1, 1));
+  // Loader helper
+  const go = (fn, ms = 420) => {
+    setLoading(true);
+    setTimeout(() => {
+      setStep(fn);
+      setLoading(false);
+    }, ms);
+  };
+
+  const start = () => go(() => 1, 380);
+  const next = () => go((s) => Math.min(s + 1, totalSteps), 420);
+  const prev = () => go((s) => Math.max(s - 1, 1), 320);
+  const calc = () => go(() => 6, 650);
 
   // Guardar payload SOLO al iniciar solicitud
   const savePayload = () => {
@@ -209,6 +234,12 @@ export default function Pricing() {
       concentracion,
       antiguedad,
       historial,
+      tasaMin: precio.tasaMin,
+      tasaMax: precio.tasaMax,
+      tasaMid,
+      pagoMid,
+      feePct: precio.feePct,
+      cat,
     };
     try {
       sessionStorage.setItem(
@@ -218,6 +249,8 @@ export default function Pricing() {
     } catch {}
   };
 
+  const showStepper = step >= 1;
+
   return (
     <div className="app-container">
       <Navbar />
@@ -225,165 +258,215 @@ export default function Pricing() {
         <div className="pwz__bg" aria-hidden />
         <div className="pwz__wrap">
           <header className="pwz-head">
-            <h1>Pricing indicativo</h1>
+            <h1>Solicitud de crédito</h1>
             <p className="pwz-sub">
-              Completa los pasos. El cálculo es indicativo y puede ajustarse
-              tras revisión documental.
+              Te guiamos paso a paso. El resultado es indicativo y puede
+              ajustarse tras revisión documental.
             </p>
           </header>
 
           {/* Stepper */}
-          <div
-            className="pwz-stepper"
-            role="progressbar"
-            aria-valuemin={1}
-            aria-valuemax={totalSteps}
-            aria-valuenow={step}
+          {showStepper && (
+            <div
+              className="pwz-stepper"
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={totalSteps}
+              aria-valuenow={Math.min(step, totalSteps)}
+            >
+              <div className="pwz-stepper__bar">
+                <div
+                  className="pwz-stepper__fill"
+                  style={{
+                    width: `${
+                      (Math.max(step, 1) - 1) * (100 / (totalSteps - 1))
+                    }%`,
+                  }}
+                />
+              </div>
+              <ol className="pwz-stepper__dots">
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <li
+                    key={n}
+                    className={`dot ${n <= step ? "is-active" : ""}`}
+                    aria-label={`Paso ${n}`}
+                  />
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Card */}
+          <section
+            className="pwz-card"
+            aria-busy={loading ? "true" : "false"}
+            aria-live="polite"
           >
-            <div className="pwz-stepper__bar">
-              <div
-                className="pwz-stepper__fill"
-                style={{
-                  width: `${(step - 1) * (100 / (totalSteps - 1))}%`,
-                }}
-              />
-            </div>
-            <ol className="pwz-stepper__dots">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <li
-                  key={n}
-                  className={`dot ${n <= step ? "is-active" : ""}`}
-                  aria-label={`Paso ${n}`}
-                />
-              ))}
-            </ol>
-          </div>
+            {/* Loader overlay */}
+            {loading && (
+              <div className="pwz-loading" role="status" aria-label="Cargando">
+                <div className="spinner" />
+              </div>
+            )}
 
-          {/* Card compacta */}
-          <section className="pwz-card">
-            <div className="pwz-body">
-              {step === 1 && (
-                <Step1
-                  conGarantia={conGarantia}
-                  setConGarantia={setConGarantia}
-                  tipoGarantia={tipoGarantia}
-                  setTipoGarantia={setTipoGarantia}
-                  plazo={plazo}
-                  setPlazo={setPlazo}
-                />
-              )}
+            {/* Intro (step 0) */}
+            {step === 0 && (
+              <div className="pwz-intro">
+                <div className="intro-card">
+                  <h3>Calcula tu oferta indicativa</h3>
+                  <p>
+                    Responde algunas preguntas rápidas y obtén un rango de tasa,
+                    pago estimado y costos. No impacta buró.
+                  </p>
+                  <ul className="intro-points">
+                    <li>⏱️ 2–3 minutos</li>
+                    <li>🔒 Datos privados</li>
+                    <li>📄 Resultado descargable</li>
+                  </ul>
+                  <div className="intro-ctas">
+                    <button className="btn btn-neon" onClick={start}>
+                      Comenzar solicitud
+                    </button>
+                    <Link className="btn btn-outline" to="/simulador">
+                      Ver simulador
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
 
-              {step === 2 && (
-                <Step2
-                  monto={monto}
-                  setMonto={setMonto}
-                  ebitdaMensual={ebitdaMensual}
-                  setEbitdaMensual={setEbitdaMensual}
-                />
-              )}
+            {/* Contenido del wizard */}
+            {step >= 1 && (
+              <>
+                <div className="pwz-body">
+                  {step === 1 && (
+                    <Step1
+                      conGarantia={conGarantia}
+                      setConGarantia={setConGarantia}
+                      tipoGarantia={tipoGarantia}
+                      setTipoGarantia={setTipoGarantia}
+                      plazo={plazo}
+                      setPlazo={setPlazo}
+                    />
+                  )}
 
-              {step === 3 && conGarantia && (
-                <Step3Garantia
-                  tipoGarantia={tipoGarantia}
-                  valorGarantia={valorGarantia}
-                  setValorGarantia={setValorGarantia}
-                  ltv={ltv}
-                />
-              )}
-              {step === 3 && !conGarantia && <Step3Skip />}
+                  {step === 2 && (
+                    <Step2
+                      monto={monto}
+                      setMonto={setMonto}
+                      ebitdaMensual={ebitdaMensual}
+                      setEbitdaMensual={setEbitdaMensual}
+                    />
+                  )}
 
-              {step === 4 && (
-                <Step4Perfil
-                  concentracion={concentracion}
-                  setConcentracion={setConcentracion}
-                  antiguedad={antiguedad}
-                  setAntiguedad={setAntiguedad}
-                  historial={historial}
-                  setHistorial={setHistorial}
-                />
-              )}
+                  {step === 3 && conGarantia && (
+                    <Step3Garantia
+                      tipoGarantia={tipoGarantia}
+                      valorGarantia={valorGarantia}
+                      setValorGarantia={setValorGarantia}
+                      ltv={ltv}
+                    />
+                  )}
+                  {step === 3 && !conGarantia && <Step3Skip />}
 
-              {step === 5 && (
-                <Step5Resumen
-                  conGarantia={conGarantia}
-                  tipoGarantia={tipoGarantia}
-                  plazo={plazo}
-                  monto={monto}
-                  ebitdaMensual={ebitdaMensual}
-                  valorGarantia={valorGarantia}
-                  ltv={ltv}
-                  concentracion={concentracion}
-                  antiguedad={antiguedad}
-                  historial={historial}
-                />
-              )}
+                  {step === 4 && (
+                    <Step4Perfil
+                      concentracion={concentracion}
+                      setConcentracion={setConcentracion}
+                      antiguedad={antiguedad}
+                      setAntiguedad={setAntiguedad}
+                      historial={historial}
+                      setHistorial={setHistorial}
+                    />
+                  )}
 
-              {step === 6 && (
-                <Step6Resultado
-                  conGarantia={conGarantia}
-                  tipoGarantia={tipoGarantia}
-                  plazo={plazo}
-                  monto={monto}
-                  tasaMin={precio.tasaMin}
-                  tasaMax={precio.tasaMax}
-                  tasaMid={tasaMid}
-                  pagoMid={pagoMid}
-                  feePct={precio.feePct}
-                  comApertura={comApertura}
-                  cat={cat}
-                  dscrMid={ebitdaMensual / Math.max(pagoMid, 1)}
-                  lev={leverage}
-                  ltv={ltv}
-                />
-              )}
-            </div>
+                  {step === 5 && (
+                    <Step5Resumen
+                      conGarantia={conGarantia}
+                      tipoGarantia={tipoGarantia}
+                      plazo={plazo}
+                      monto={monto}
+                      ebitdaMensual={ebitdaMensual}
+                      valorGarantia={valorGarantia}
+                      ltv={ltv}
+                      concentracion={concentracion}
+                      antiguedad={antiguedad}
+                      historial={historial}
+                    />
+                  )}
 
-            {/* Controles */}
-            <div className="pwz-controls">
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={prev}
-                disabled={step === 1}
-              >
-                Atrás
-              </button>
+                  {step === 6 && (
+                    <Step6Resultado
+                      conGarantia={conGarantia}
+                      tipoGarantia={tipoGarantia}
+                      plazo={plazo}
+                      monto={monto}
+                      tasaMin={precio.tasaMin}
+                      tasaMax={precio.tasaMax}
+                      tasaMid={tasaMid}
+                      pagoMid={pagoMid}
+                      feePct={precio.feePct}
+                      comApertura={comApertura}
+                      cat={cat}
+                      dscrMid={ebitdaMensual / Math.max(pagoMid, 1)}
+                      lev={leverage}
+                      ltv={ltv}
+                    />
+                  )}
+                </div>
 
-              {step < 5 && (
-                <button type="button" className="btn btn-neon" onClick={next}>
-                  Siguiente
-                </button>
-              )}
-
-              {step === 5 && (
-                <button
-                  type="button"
-                  className="btn btn-neon"
-                  onClick={() => setStep(6)} // << Mostrar precio primero
-                >
-                  Ver precio
-                </button>
-              )}
-
-              {step === 6 && (
-                <div className="pwz-result-ctas">
+                {/* Controles */}
+                <div className="pwz-controls">
                   <button
                     type="button"
                     className="btn btn-outline"
-                    onClick={() => setStep(1)}
+                    onClick={prev}
+                    disabled={step === 1}
                   >
-                    Editar respuestas
+                    Atrás
                   </button>
-                  <Link
-                    to="/ingresar?registro=1"
-                    className="btn btn-neon"
-                    onClick={savePayload} // << Guardamos payload y ahora sí vamos a registro
-                  >
-                    Solicitar ahora
-                  </Link>
+
+                  {step < 5 && (
+                    <button
+                      type="button"
+                      className="btn btn-neon"
+                      onClick={next}
+                    >
+                      Siguiente
+                    </button>
+                  )}
+
+                  {step === 5 && (
+                    <button
+                      type="button"
+                      className="btn btn-neon"
+                      onClick={calc}
+                    >
+                      Ver precio
+                    </button>
+                  )}
+
+                  {step === 6 && (
+                    <div className="pwz-result-ctas">
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => go(() => 1, 320)}
+                      >
+                        Editar respuestas
+                      </button>
+                      <Link
+                        to="/ingresar?registro=1"
+                        className="btn btn-neon"
+                        onClick={savePayload}
+                      >
+                        Iniciar solicitud
+                      </Link>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </section>
 
           <p className="pwz-note">
@@ -757,6 +840,42 @@ function Step6Resultado({
   ltv,
 }) {
   const tg = TIPO_GARANTIA.find((x) => x.id === tipoGarantia);
+
+  // Amortización para mini-gráficos / tabla
+  const tabla = useMemo(
+    () => amortizacion(monto, tasaMid, plazo),
+    [monto, tasaMid, plazo]
+  );
+  const totalIntereses = useMemo(
+    () => tabla.reduce((a, t) => a + t.interes, 0),
+    [tabla]
+  );
+  const totalCapital = useMemo(
+    () => tabla.reduce((a, t) => a + t.capital, 0),
+    [tabla]
+  );
+  const totalCostos = totalIntereses + comApertura;
+  const totalPagos = pagoMid * plazo;
+
+  // Sparkline de saldo
+  const saldoSerie = tabla.map((t) => t.saldo);
+  const sparkPath = useMemo(() => {
+    if (!saldoSerie.length) return "";
+    const w = 260,
+      h = 60,
+      pad = 6;
+    const max = Math.max(...saldoSerie);
+    const min = Math.min(...saldoSerie);
+    const norm = (v) =>
+      h - pad - ((v - min) / Math.max(max - min || 1, 1)) * (h - pad * 2);
+    const dx = (w - pad * 2) / Math.max(saldoSerie.length - 1, 1);
+    return saldoSerie
+      .map((y, i) => `${i === 0 ? "M" : "L"} ${pad + dx * i} ${norm(y)}`)
+      .join(" ");
+  }, [saldoSerie]);
+
+  const [showTabla, setShowTabla] = useState(false);
+
   return (
     <div className="pwz-step">
       <h3 className="pwz-title">Resultado indicativo</h3>
@@ -798,6 +917,89 @@ function Step6Resultado({
             <span className="clabel">CAT estimado*</span>
             <div className="cvalue">{pct(cat, 1)}</div>
           </div>
+        </div>
+
+        {/* Extras visuales compactos */}
+        <div className="r-extras">
+          {/* Sparkline de saldo */}
+          <div className="spark-card">
+            <div className="spark-head">
+              <span className="clabel">Saldo vs tiempo</span>
+              <span className="spark-meta">{plazo} meses</span>
+            </div>
+            <svg
+              className="spark"
+              viewBox="0 0 260 60"
+              role="img"
+              aria-label="Saldo"
+            >
+              <path d={sparkPath} className="spark-line" />
+            </svg>
+          </div>
+
+          {/* Barra apilada capital/costos */}
+          <div className="stack-card">
+            <div className="clabel">Composición de pagos</div>
+            <div className="stack">
+              <div
+                className="stack-capital"
+                style={{ width: `${(totalCapital / totalPagos) * 100 || 0}%` }}
+                title={`Capital · ${pesos(totalCapital)}`}
+              />
+              <div
+                className="stack-costos"
+                style={{ width: `${(totalCostos / totalPagos) * 100 || 0}%` }}
+                title={`Costos (interés+comisión) · ${pesos(totalCostos)}`}
+              />
+            </div>
+            <div className="stack-legend">
+              <span>
+                <i className="sw s-cap" /> Capital {pesos(totalCapital)}
+              </span>
+              <span>
+                <i className="sw s-cst" /> Costos {pesos(totalCostos)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla colapsable de pagos */}
+        <div className="table-box">
+          <button
+            className="btn btn-outline small"
+            onClick={() => setShowTabla((v) => !v)}
+            aria-expanded={showTabla}
+            aria-controls="tabla-amort"
+          >
+            {showTabla ? "Ocultar detalle de pagos" : "Ver detalle de pagos"}
+          </button>
+
+          {showTabla && (
+            <div id="tabla-amort" className="pay-table-wrap">
+              <table className="pay-table">
+                <thead>
+                  <tr>
+                    <th>Mes</th>
+                    <th>Pago</th>
+                    <th>Interés</th>
+                    <th>Capital</th>
+                    <th>Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tabla.map((r) => (
+                    <tr key={r.mes}>
+                      <td>{r.mes}</td>
+                      <td>{pesos(r.pago)}</td>
+                      <td>{pesos(r.interes)}</td>
+                      <td>{pesos(r.capital)}</td>
+                      <td>{pesos(r.saldo)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <footer className="r-foot">

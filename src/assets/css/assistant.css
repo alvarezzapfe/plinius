@@ -138,3 +138,39 @@
   color: #aeb4bf;
   text-align: center;
 }
+
+/* ==== Ajuste de posición del Assistant (evita solaparse con el botón "subir") ==== */
+
+/* Offset base que puedes ajustar sin tocar más reglas */
+:root {
+  /* Sube la burbuja ~96px + safe area; cámbialo a 112px o 128px si lo necesitas */
+  --assistant-bottom-offset: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Intentamos cubrir los nombres más comunes del contenedor FAB del asistente */
+.assistant-bubble,
+.assistant-fab,
+.AssistantBubble,
+.assistant-launcher {
+  position: fixed;
+  right: clamp(12px, 3vw, 20px);
+  bottom: var(--assistant-bottom-offset) !important; /* fuerza el offset */
+  z-index: 60; /* por arriba del contenido, por debajo de modales si tienes */
+}
+
+/* Si tu botón de "subir" tiene clase conocida, también le damos su espacio */
+.scroll-top,
+.back-to-top,
+.btn-to-top {
+  position: fixed;
+  right: clamp(12px, 3vw, 20px);
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 59; /* justo debajo del assistant para no taparse entre sí */
+}
+
+/* Extra: en móviles muy pequeños, subimos un pelín más el assistant */
+@media (max-width: 480px) {
+  :root {
+    --assistant-bottom-offset: calc(108px + env(safe-area-inset-bottom, 0px));
+  }
+}
