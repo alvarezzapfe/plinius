@@ -9,78 +9,120 @@ const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
 export default function Ingresar() {
   const [modo, setModo] = useState("ingreso"); // "ingreso" | "registro"
+
   return (
     <div className="app-container">
       <Navbar />
-      <main className="ing ing--center">
+
+      <main className="ing">
         <div className="ing-bg" aria-hidden />
         <div className="ing-shell">
-          <div className="ing-card">
-            <div className="ing-card__accent" aria-hidden />
-
-            <header className="ing-head">
-              <span className="ing-mark">Plinius</span>
-              <h1 className="ing-title">
-                {modo === "ingreso"
-                  ? "Ingresar a tu cuenta"
-                  : "Crear cuenta empresarial"}
+          <div className="ing-layout">
+            {/* LADO IZQUIERDO: COPY / VALUE PROP */}
+            <section className="ing-side">
+              <div className="ing-pill">Plinius · Liability OS</div>
+              <h1 className="ing-side-title">
+                Centraliza tus pasivos en un solo panel.
               </h1>
-              <p className="ing-sub">
-                Crédito y arrendamiento para empresas. Acceso seguro y rápido.
+              <p className="ing-side-sub">
+                Una plataforma para administrar créditos, arrendamientos y líneas
+                de fondeo, con un motor de{" "}
+                <span className="ing-highlight">AI</span> que te ayuda a decidir
+                cuándo refinanciar, cómo extender plazos y cómo mejorar tu perfil
+                de deuda.
               </p>
-            </header>
 
-            {/* Tabs */}
-            <nav className="ing-tabs" role="tablist" aria-label="Cambiar modo">
-              <button
-                role="tab"
-                aria-selected={modo === "ingreso"}
-                className={`ing-tab ${modo === "ingreso" ? "is-active" : ""}`}
-                onClick={() => setModo("ingreso")}
+              <ul className="ing-side-list">
+                <li>Perfiles de vencimiento consolidados por banco y producto.</li>
+                <li>Alertas de pagos, covenants y refinanciamientos clave.</li>
+                <li>
+                  Recomendaciones de <strong>liability management</strong> con
+                  modelos de riesgo y cash-flow.
+                </li>
+              </ul>
+
+              <div className="ing-side-foot">
+                <p>
+                  Empieza creando tu cuenta empresarial y conecta tus fuentes de
+                  deuda. Plinius se encarga de la inteligencia.
+                </p>
+              </div>
+            </section>
+
+            {/* LADO DERECHO: CARD DE LOGIN / REGISTRO */}
+            <section className="ing-card ing-card--light">
+              <header className="ing-head">
+                <h2 className="ing-title">
+                  {modo === "ingreso"
+                    ? "Ingresar a Plinius"
+                    : "Crear cuenta empresarial"}
+                </h2>
+                <p className="ing-sub">
+                  Usa tu correo empresarial o Google para comenzar.
+                </p>
+              </header>
+
+              {/* Tabs modo ingreso / registro */}
+              <nav
+                className="ing-tabs ing-tabs--soft"
+                role="tablist"
+                aria-label="Cambiar modo"
               >
-                Ingreso
-              </button>
-              <button
-                role="tab"
-                aria-selected={modo === "registro"}
-                className={`ing-tab ${modo === "registro" ? "is-active" : ""}`}
-                onClick={() => setModo("registro")}
-              >
-                Registro
-              </button>
-            </nav>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={modo === "ingreso"}
+                  className={`ing-tab ${modo === "ingreso" ? "is-active" : ""}`}
+                  onClick={() => setModo("ingreso")}
+                >
+                  Ingresar
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={modo === "registro"}
+                  className={`ing-tab ${modo === "registro" ? "is-active" : ""}`}
+                  onClick={() => setModo("registro")}
+                >
+                  Registro
+                </button>
+              </nav>
 
-            {/* Social login */}
-            <div className="ing-social">
-              <GoogleButton onClick={handleGoogleLogin} />
-            </div>
+              {/* Social login */}
+              <div className="ing-social">
+                <GoogleButton onClick={handleGoogleLogin} />
+              </div>
 
-            <div className="ing-sep">
-              <span>o con correo</span>
-            </div>
+              <div className="ing-sep ing-sep--soft">
+                <span>o con correo</span>
+              </div>
 
-            {/* Forms */}
-            {modo === "ingreso" ? <LoginForm /> : <SignupForm />}
+              {/* Forms */}
+              {modo === "ingreso" ? <LoginForm /> : <SignupForm />}
 
-            <p className="ing-terms">
-              Al continuar aceptas los{" "}
-              <Link className="ing-link" to="/terminos">
-                Términos y Condiciones
-              </Link>
-              .
-            </p>
+              <p className="ing-terms">
+                Al continuar aceptas los{" "}
+                <Link className="ing-link ing-link--inline" to="/terminos">
+                  Términos y Condiciones
+                </Link>
+                .
+              </p>
+            </section>
           </div>
         </div>
       </main>
+
       <Footer />
     </div>
   );
 }
 
-/* ===== Helpers ===== */
+/* =====================================================
+   Google Button
+   ===================================================== */
 function GoogleButton({ onClick }) {
   return (
-    <button type="button" className="ing-gbtn" onClick={onClick}>
+    <button type="button" className="ing-gbtn ing-gbtn--soft" onClick={onClick}>
       <span className="ing-gicon" aria-hidden>
         <svg width="18" height="18" viewBox="0 0 48 48">
           <path
@@ -107,25 +149,64 @@ function GoogleButton({ onClick }) {
 }
 
 function handleGoogleLogin() {
-  // Enchufa con tu backend (OAuth 2.0 / GIS).
-  // Ejemplo simple de redirect:
+  // Conecta a tu backend (OAuth 2.0 / Google Identity Services)
   window.location.href = "/api/auth/google";
 }
 
-/* ===== Forms ===== */
+/* =====================================================
+   LoginForm – conecta con /api/auth/login
+   ===================================================== */
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [show, setShow] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
   const valid = emailRx.test(email) && pass.length >= 8;
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    // TODO: POST /api/login
+    if (!valid || loading) return;
+
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: pass,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          data?.message || "No pudimos iniciar sesión. Revisa tus datos."
+        );
+      }
+
+      const data = await res.json();
+
+      if (data.token) {
+        localStorage.setItem("plinius_token", data.token);
+      }
+
+      // Redirige al dashboard (ajusta la ruta si usas otra)
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <form className="ing-form" onSubmit={submit}>
+    <form className="ing-form ing-form--soft" onSubmit={submit}>
       <Field label="Correo empresarial">
         <input
           type="email"
@@ -159,30 +240,23 @@ function LoginForm() {
       </Field>
 
       <div className="ing-row">
-        <label className="ing-chk">
+        <label className="ing-chk ing-chk--soft">
           <input type="checkbox" defaultChecked /> <span>Recordarme</span>
         </label>
-        <Link className="ing-link ing-link--sm" to="/terminos">
+        <Link className="ing-link ing-link--sm" to="/recuperar">
           ¿Olvidaste tu contraseña?
         </Link>
       </div>
 
-      <button type="submit" className="btn btn-neon w100" disabled={!valid}>
-        Ingresar
+      {errorMsg && <p className="ing-error">{errorMsg}</p>}
+
+      <button type="submit" className="btn btn-neon w100" disabled={!valid || loading}>
+        {loading ? "Ingresando..." : "Ingresar"}
       </button>
 
-      {/* DEMO: Botón pequeño y centrado hacia el Dashboard */}
-      <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
-        <Link
-          to="/dashboard"
-          className="btn btn-outline"
-          style={{
-            height: 30,
-            padding: "0 10px",
-            fontSize: 12,
-            borderRadius: 8,
-          }}
-        >
+      {/* Demo button opcional */}
+      <div className="ing-demo">
+        <Link to="/dashboard" className="btn btn-outline ing-demo-btn">
           Ir al Dashboard (demo)
         </Link>
       </div>
@@ -190,12 +264,19 @@ function LoginForm() {
   );
 }
 
+/* =====================================================
+   SignupForm – conecta con /api/auth/signup
+   ===================================================== */
 function SignupForm() {
   const [razon, setRazon] = useState("");
   const [rfc, setRfc] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [ok, setOk] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [success, setSuccess] = useState(false);
 
   const valid =
     razon.trim().length > 3 &&
@@ -204,13 +285,52 @@ function SignupForm() {
     pass.length >= 8 &&
     ok;
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    // TODO: POST /api/signup
+    if (!valid || loading) return;
+
+    setLoading(true);
+    setErrorMsg("");
+    setSuccess(false);
+
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razonSocial: razon.trim(),
+          rfc: rfc.trim(),
+          email: email.trim(),
+          password: pass,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          data?.message || "No pudimos crear tu cuenta. Inténtalo de nuevo."
+        );
+      }
+
+      const data = await res.json();
+
+      if (data.token) {
+        localStorage.setItem("plinius_token", data.token);
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 600);
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <form className="ing-form" onSubmit={submit}>
+    <form className="ing-form ing-form--soft" onSubmit={submit}>
       <div className="ing-grid2">
         <Field label="Razón social">
           <input
@@ -253,7 +373,7 @@ function SignupForm() {
         />
       </Field>
 
-      <label className="ing-chk">
+      <label className="ing-chk ing-chk--soft">
         <input
           type="checkbox"
           checked={ok}
@@ -261,28 +381,29 @@ function SignupForm() {
         />{" "}
         <span>
           Acepto los{" "}
-          <Link className="ing-link" to="/terminos">
+          <Link className="ing-link ing-link--inline" to="/terminos">
             Términos y Condiciones
           </Link>
         </span>
       </label>
 
-      <button type="submit" className="btn btn-neon w100" disabled={!valid}>
-        Crear cuenta
+      {errorMsg && <p className="ing-error">{errorMsg}</p>}
+      {success && (
+        <p className="ing-success">
+          Cuenta creada. Redirigiendo a tu panel...
+        </p>
+      )}
+
+      <button
+        type="submit"
+        className="btn btn-neon w100"
+        disabled={!valid || loading}
+      >
+        {loading ? "Creando cuenta..." : "Crear cuenta"}
       </button>
 
-      {/* DEMO: Botón pequeño y centrado hacia el Dashboard */}
-      <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
-        <Link
-          to="/dashboard"
-          className="btn btn-outline"
-          style={{
-            height: 30,
-            padding: "0 10px",
-            fontSize: 12,
-            borderRadius: 8,
-          }}
-        >
+      <div className="ing-demo">
+        <Link to="/dashboard" className="btn btn-outline ing-demo-btn">
           Ir al Dashboard (demo)
         </Link>
       </div>
@@ -290,12 +411,14 @@ function SignupForm() {
   );
 }
 
-/* ===== Atom ===== */
+/* =====================================================
+   Field atom
+   ===================================================== */
 function Field({ label, children }) {
   return (
     <label className="ing-field">
       <span className="ing-field__label">{label}</span>
-      <div className="ing-field__input">{children}</div>
+      <div className="ing-field__input ing-field__input--soft">{children}</div>
     </label>
   );
 }

@@ -4,8 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/images/logo-plinius.png";
 import "../assets/css/navbar.css";
 
-// Burbuja del asesor (AI)
-import AssistantBubble from "./AssistantBubble.jsx";
+
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -206,8 +205,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Burbuja fija del Asesor (AI) */}
-      <AssistantBubble />
+      
     </>
   );
 };
