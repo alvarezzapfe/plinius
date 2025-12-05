@@ -1,170 +1,134 @@
 /* =====================================================
    INGRESS / AUTH – NAMESPACED .ing-
+   Fondo azul con cuadritos, card centrado
    ===================================================== */
 
-/* Layout principal */
 .ing {
   position: relative;
-  min-height: calc(100dvh - 72px);
-  padding: 48px 16px 72px;
+  min-height: calc(100vh - 72px);
+  padding: 72px 16px 88px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
+/* Luz azul/verde de fondo */
 .ing-bg {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 0;
+  pointer-events: none;
   background:
     radial-gradient(
       80% 60% at 10% 0%,
-      rgba(215, 255, 0, 0.12),
+      rgba(56, 189, 248, 0.16),
       transparent 60%
     ),
     radial-gradient(
       70% 80% at 90% 10%,
-      rgba(59, 130, 246, 0.2),
+      rgba(215, 255, 0, 0.16),
       transparent 65%
     ),
-    linear-gradient(
-      180deg,
-      #020617 0%,
-      #020617 40%,
-      #020617 100%
+    radial-gradient(
+      80% 100% at 50% 100%,
+      rgba(15, 23, 42, 0.94),
+      #020617
     );
-  opacity: 0.98;
+  opacity: 0.95;
+  z-index: 0;
+}
+
+/* Cuadritos sutiles al fondo */
+.ing-grid {
+  position: absolute;
+  inset: -120px -120px;
   pointer-events: none;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(148, 163, 184, 0.28) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(148, 163, 184, 0.28) 1px,
+      transparent 1px
+    );
+  background-size: 64px 64px;
+  opacity: 0.18;
+  mask-image: radial-gradient(
+    120% 120% at 50% 10%,
+    black,
+    transparent 70%
+  );
+  z-index: 0;
 }
 
 .ing-shell {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1120px;
-}
-
-/* Grid de 2 columnas: texto + card */
-.ing-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: 32px;
-  align-items: center;
-}
-
-@media (max-width: 960px) {
-  .ing-layout {
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
+  max-width: 420px;
 }
 
 /* =====================================================
-   LADO IZQUIERDO – COPY / VALUE PROP
-   ===================================================== */
-
-.ing-side {
-  display: grid;
-  gap: 16px;
-  color: #e5e7eb;
-}
-
-.ing-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #e5e7eb;
-}
-
-.ing-side-title {
-  margin: 4px 0 0;
-  font-size: clamp(28px, 5vw, 38px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.ing-side-sub {
-  margin: 6px 0 4px;
-  max-width: 520px;
-  font-size: 15px;
-  color: #cbd5f5;
-  line-height: 1.5;
-}
-
-.ing-highlight {
-  color: var(--accent);
-  text-shadow: 0 0 18px rgba(215, 255, 0, 0.4);
-}
-
-.ing-side-list {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-  font-size: 14px;
-  color: #e5e7eb;
-}
-
-.ing-side-list li {
-  position: relative;
-  padding-left: 18px;
-}
-
-.ing-side-list li::before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  top: 1px;
-  color: var(--accent);
-  text-shadow: 0 0 14px rgba(215, 255, 0, 0.5);
-}
-
-.ing-side-foot {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #9ca3af;
-}
-
-/* =====================================================
-   CARD DERECHA – LOGIN / REGISTRO
+   CARD – LOGIN / REGISTRO
    ===================================================== */
 
 .ing-card.ing-card--light {
-  position: relative;
-  border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
   background:
     radial-gradient(
-      140% 140% at 0% 0%,
-      rgba(215, 255, 0, 0.08),
+      140% 180% at 0% 0%,
+      rgba(215, 255, 0, 0.14),
       transparent 55%
     ),
     linear-gradient(
-      145deg,
+      150deg,
       #f9fafb,
       #eef2ff
     );
   box-shadow:
-    0 18px 46px rgba(15, 23, 42, 0.55),
-    0 0 0 1px rgba(15, 23, 42, 0.05);
+    0 22px 60px rgba(15, 23, 42, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
   padding: 22px 22px 20px;
   display: grid;
   gap: 18px;
   color: #020617;
+  min-height: 460px; /* mantiene tamaño estable entre ingresar / registro */
+}
+
+/* Contenedor interior para formularios con altura fija */
+.ing-form-shell {
+  margin-top: 4px;
+  min-height: 260px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.ing-form-shell > .ing-form {
+  width: 100%;
 }
 
 /* Encabezado del card */
 .ing-head {
   display: grid;
-  gap: 4px;
+  gap: 6px;
+}
+
+.ing-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #020617;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #e5e7eb;
 }
 
 .ing-title {
@@ -182,35 +146,60 @@
 }
 
 /* =====================================================
-   TABS – INGRESO / REGISTRO
+   TABS – INGRESO / REGISTRO (más geométricos)
    ===================================================== */
 
 .ing-tabs.ing-tabs--soft {
-  display: inline-flex;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.02);
   overflow: hidden;
 }
 
 .ing-tab {
-  height: 32px;
-  padding: 0 16px;
+  position: relative;
+  flex: 1 1 0;
+  height: 36px;
+  padding: 0 18px;
   border: none;
   cursor: pointer;
   background: transparent;
-  color: #4b5563;
+  color: #6b7280;
   font-weight: 600;
   font-size: 13px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.16s ease, color 0.16s ease;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+/* subrayado fosfo en el activo */
+.ing-tab::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #a3e635);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.18s ease-out;
+  opacity: 0.9;
 }
 
 .ing-tab.is-active {
-  background: #020617;
-  color: #f9fafb;
+  background: rgba(255, 255, 255, 0.98);
+  color: #020617;
+}
+
+.ing-tab.is-active::after {
+  transform: scaleX(1);
 }
 
 /* =====================================================
@@ -234,7 +223,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 8px 24px rgba(148, 163, 184, 0.4);
+  box-shadow: 0 8px 24px rgba(148, 163, 184, 0.45);
   cursor: pointer;
 }
 
@@ -344,7 +333,7 @@
 
 .ing-eye {
   border: 1px solid rgba(148, 163, 184, 0.8);
-  background: rgba(248, 250, 252, 0.9);
+  background: rgba(248, 250, 252, 0.95);
   height: 32px;
   min-width: 80px;
   border-radius: 999px;
@@ -395,11 +384,22 @@
   text-decoration: none;
 }
 
+/* BOTÓN VERDE FOSFO ESTILO CROWDLINK */
 .ing-card--light .btn-neon {
-  background: var(--accent);
-  color: #020617;
-  border-color: color-mix(in srgb, var(--accent) 70%, #020617 30%);
-  box-shadow: 0 0 14px rgba(215, 255, 0, 0.4);
+  background: linear-gradient(135deg, #22c55e, #a3e635);
+  color: #022c22;
+  border-color: rgba(22, 163, 74, 0.95);
+  box-shadow:
+    0 0 22px rgba(74, 222, 128, 0.7),
+    0 0 0 1px rgba(15, 23, 42, 0.1);
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+.ing-card--light .btn-neon:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow:
+    0 0 26px rgba(132, 204, 22, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.16);
 }
 
 .ing-card--light .btn-outline {
@@ -415,9 +415,9 @@
 
 /* Links */
 .ing-link {
-  color: var(--accent);
+  color: #a3e635; /* verde-lima suave para links */
   text-decoration: none;
-  border-bottom: 1px dashed rgba(215, 255, 0, 0.6);
+  border-bottom: 1px dashed rgba(163, 230, 53, 0.7);
 }
 
 .ing-link--sm {
@@ -471,21 +471,26 @@
 .ing .ing-link:focus-visible,
 .ing input:focus-visible,
 .ing .ing-eye:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid #22c55e;
   outline-offset: 2px;
   border-radius: 8px;
 }
 
 /* =====================================================
-   RESPONSIVE FINO
+   RESPONSIVE
    ===================================================== */
 
-@media (max-width: 960px) {
+@media (max-width: 600px) {
   .ing {
-    padding: 32px 16px 56px;
+    padding: 64px 14px 72px;
   }
 
   .ing-card.ing-card--light {
     padding: 18px 16px 18px;
+    min-height: 440px;
+  }
+
+  .ing-form-shell {
+    min-height: 260px;
   }
 }

@@ -16,99 +16,70 @@ export default function Ingresar() {
 
       <main className="ing">
         <div className="ing-bg" aria-hidden />
+        <div className="ing-grid" aria-hidden />
+
         <div className="ing-shell">
-          <div className="ing-layout">
-            {/* LADO IZQUIERDO: COPY / VALUE PROP */}
-            <section className="ing-side">
-              <div className="ing-pill">Plinius · Liability OS</div>
-              <h1 className="ing-side-title">
-                Centraliza tus pasivos en un solo panel.
-              </h1>
-              <p className="ing-side-sub">
-                Una plataforma para administrar créditos, arrendamientos y líneas
-                de fondeo, con un motor de{" "}
-                <span className="ing-highlight">AI</span> que te ayuda a decidir
-                cuándo refinanciar, cómo extender plazos y cómo mejorar tu perfil
-                de deuda.
+          <section className="ing-card ing-card--light">
+            <header className="ing-head">
+              <div className="ing-pill">Plinius · Acceso</div>
+              <h2 className="ing-title">
+                {modo === "ingreso"
+                  ? "Ingresar a tu panel"
+                  : "Crear cuenta empresarial"}
+              </h2>
+              <p className="ing-sub">
+                Administra tus créditos y arrendamientos desde un solo lugar.
               </p>
+            </header>
 
-              <ul className="ing-side-list">
-                <li>Perfiles de vencimiento consolidados por banco y producto.</li>
-                <li>Alertas de pagos, covenants y refinanciamientos clave.</li>
-                <li>
-                  Recomendaciones de <strong>liability management</strong> con
-                  modelos de riesgo y cash-flow.
-                </li>
-              </ul>
-
-              <div className="ing-side-foot">
-                <p>
-                  Empieza creando tu cuenta empresarial y conecta tus fuentes de
-                  deuda. Plinius se encarga de la inteligencia.
-                </p>
-              </div>
-            </section>
-
-            {/* LADO DERECHO: CARD DE LOGIN / REGISTRO */}
-            <section className="ing-card ing-card--light">
-              <header className="ing-head">
-                <h2 className="ing-title">
-                  {modo === "ingreso"
-                    ? "Ingresar a Plinius"
-                    : "Crear cuenta empresarial"}
-                </h2>
-                <p className="ing-sub">
-                  Usa tu correo empresarial o Google para comenzar.
-                </p>
-              </header>
-
-              {/* Tabs modo ingreso / registro */}
-              <nav
-                className="ing-tabs ing-tabs--soft"
-                role="tablist"
-                aria-label="Cambiar modo"
+            {/* Tabs modo ingreso / registro */}
+            <nav
+              className="ing-tabs ing-tabs--soft"
+              role="tablist"
+              aria-label="Cambiar modo"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={modo === "ingreso"}
+                className={`ing-tab ${modo === "ingreso" ? "is-active" : ""}`}
+                onClick={() => setModo("ingreso")}
               >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={modo === "ingreso"}
-                  className={`ing-tab ${modo === "ingreso" ? "is-active" : ""}`}
-                  onClick={() => setModo("ingreso")}
-                >
-                  Ingresar
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={modo === "registro"}
-                  className={`ing-tab ${modo === "registro" ? "is-active" : ""}`}
-                  onClick={() => setModo("registro")}
-                >
-                  Registro
-                </button>
-              </nav>
+                Ingresar
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={modo === "registro"}
+                className={`ing-tab ${modo === "registro" ? "is-active" : ""}`}
+                onClick={() => setModo("registro")}
+              >
+                Registro
+              </button>
+            </nav>
 
-              {/* Social login */}
-              <div className="ing-social">
-                <GoogleButton onClick={handleGoogleLogin} />
-              </div>
+            {/* Social login */}
+            <div className="ing-social">
+              <GoogleButton onClick={handleGoogleLogin} />
+            </div>
 
-              <div className="ing-sep ing-sep--soft">
-                <span>o con correo</span>
-              </div>
+            <div className="ing-sep ing-sep--soft">
+              <span>o con correo</span>
+            </div>
 
-              {/* Forms */}
+            {/* Contenedor para que el tamaño sea constante */}
+            <div className="ing-form-shell">
               {modo === "ingreso" ? <LoginForm /> : <SignupForm />}
+            </div>
 
-              <p className="ing-terms">
-                Al continuar aceptas los{" "}
-                <Link className="ing-link ing-link--inline" to="/terminos">
-                  Términos y Condiciones
-                </Link>
-                .
-              </p>
-            </section>
-          </div>
+            <p className="ing-terms">
+              Al continuar aceptas los{" "}
+              <Link className="ing-link ing-link--inline" to="/terminos">
+                Términos y Condiciones
+              </Link>
+              .
+            </p>
+          </section>
         </div>
       </main>
 
@@ -186,7 +157,7 @@ function LoginForm() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(
-          data?.message || "No pudimos iniciar sesión. Revisa tus datos."
+          data?.message || "Usuario no encontrado. Verifica tus datos."
         );
       }
 
@@ -196,10 +167,9 @@ function LoginForm() {
         localStorage.setItem("plinius_token", data.token);
       }
 
-      // Redirige al dashboard (ajusta la ruta si usas otra)
       window.location.href = "/dashboard";
     } catch (err) {
-      setErrorMsg(err.message);
+      setErrorMsg(err.message || "Usuario no encontrado.");
     } finally {
       setLoading(false);
     }
@@ -214,6 +184,7 @@ function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value.trim())}
           required
+          maxLength={120}
         />
       </Field>
 
@@ -226,6 +197,7 @@ function LoginForm() {
             onChange={(e) => setPass(e.target.value)}
             minLength={8}
             required
+            maxLength={128}
           />
           <button
             type="button"
@@ -250,11 +222,14 @@ function LoginForm() {
 
       {errorMsg && <p className="ing-error">{errorMsg}</p>}
 
-      <button type="submit" className="btn btn-neon w100" disabled={!valid || loading}>
+      <button
+        type="submit"
+        className="btn btn-neon w100"
+        disabled={!valid || loading}
+      >
         {loading ? "Ingresando..." : "Ingresar"}
       </button>
 
-      {/* Demo button opcional */}
       <div className="ing-demo">
         <Link to="/dashboard" className="btn btn-outline ing-demo-btn">
           Ir al Dashboard (demo)
@@ -265,7 +240,7 @@ function LoginForm() {
 }
 
 /* =====================================================
-   SignupForm – conecta con /api/auth/signup
+   SignupForm – lista de espera (sin backend por ahora)
    ===================================================== */
 function SignupForm() {
   const [razon, setRazon] = useState("");
@@ -294,36 +269,11 @@ function SignupForm() {
     setSuccess(false);
 
     try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          razonSocial: razon.trim(),
-          rfc: rfc.trim(),
-          email: email.trim(),
-          password: pass,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          data?.message || "No pudimos crear tu cuenta. Inténtalo de nuevo."
-        );
-      }
-
-      const data = await res.json();
-
-      if (data.token) {
-        localStorage.setItem("plinius_token", data.token);
-      }
-
+      // POR AHORA: no llamamos backend real, solo simulamos alta en lista de espera
+      await new Promise((r) => setTimeout(r, 500));
       setSuccess(true);
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 600);
     } catch (err) {
-      setErrorMsg(err.message);
+      setErrorMsg("Ocurrió un error. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -339,6 +289,7 @@ function SignupForm() {
             value={razon}
             onChange={(e) => setRazon(e.target.value)}
             required
+            maxLength={140}
           />
         </Field>
         <Field label="RFC">
@@ -348,6 +299,7 @@ function SignupForm() {
             value={rfc}
             onChange={(e) => setRfc(e.target.value.toUpperCase())}
             required
+            maxLength={13}
           />
         </Field>
       </div>
@@ -359,6 +311,7 @@ function SignupForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value.trim())}
           required
+          maxLength={120}
         />
       </Field>
 
@@ -370,6 +323,7 @@ function SignupForm() {
           onChange={(e) => setPass(e.target.value)}
           minLength={8}
           required
+          maxLength={128}
         />
       </Field>
 
@@ -390,7 +344,8 @@ function SignupForm() {
       {errorMsg && <p className="ing-error">{errorMsg}</p>}
       {success && (
         <p className="ing-success">
-          Cuenta creada. Redirigiendo a tu panel...
+          Usuario registrado. Estás en la lista de espera para nuestro
+          lanzamiento en el primer trimestre de 2026 🚀
         </p>
       )}
 

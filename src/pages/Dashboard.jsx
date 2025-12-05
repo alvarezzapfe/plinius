@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../assets/css/dashboard.css";
+import LogoPlinius from "../assets/images/Plinius_Negro.png";
 
 /* =====================================================
    Iconos lineales minimalistas
@@ -167,7 +168,6 @@ const pesos = (x) =>
    DASHBOARD ROOT
    ===================================================== */
 export default function Dashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [active, setActive] = useState("overview");
   const navigate = useNavigate();
 
@@ -196,39 +196,29 @@ export default function Dashboard() {
   const healthScore = 78; // fake
 
   return (
-    <div className={`dash${sidebarOpen ? " is-open" : ""}`}>
+    <div className="dash">
       {/* SIDEBAR ================================================== */}
       <aside className="dash-nav">
         <div className="nav-head">
           <div className="brand-mark">
-            <span className="brand-dot" />
-            <span className="brand-text">Plinius</span>
+            <img
+              src={LogoPlinius}
+              alt="Plinius"
+              className="brand-logo"
+            />
           </div>
-          <button
-            className="nav-toggle"
-            onClick={() => setSidebarOpen((o) => !o)}
-            aria-label="Expandir/contraer menú"
-          >
-            <span />
-            <span />
-            <span />
-          </button>
         </div>
 
         <div className="nav-section">
           <span className="nav-label">Workspace</span>
-          <div className="nav-pill">
-            Infraestructura en Finanzas · MX
-          </div>
+          <div className="nav-pill">Infraestructura en Finanzas · MX</div>
         </div>
 
         <nav className="nav-list">
           {navItems.map((item) => (
             <button
               key={item.key}
-              className={`nav-item ${
-                active === item.key ? "active" : ""
-              }`.trim()}
+              className={`nav-item ${active === item.key ? "active" : ""}`.trim()}
               onClick={() => setActive(item.key)}
             >
               <Icon name={item.icon} />
@@ -269,15 +259,6 @@ export default function Dashboard() {
         {/* TOPBAR */}
         <div className="dash-top">
           <div className="btngrp">
-            <button
-              className="hamb"
-              onClick={() => setSidebarOpen((o) => !o)}
-              aria-label="Menú"
-            >
-              <span />
-              <span />
-              <span />
-            </button>
             <div>
               <h1 className="title">
                 {active === "overview" && "Liability Overview"}
