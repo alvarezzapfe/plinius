@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import "../assets/css/inversionistas.css";
+import "../assets/css/Inversionistas.css";
 import crowdlinkLogo from "../assets/images/crowdlink-logo.png";
 
 // --- Simulación de API ficticia Crowdlink ---
