@@ -5,24 +5,23 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../assets/css/simulator.css";
 
-// --- Utilidades de formato ---
 const pesos = (x, max = 0) =>
   new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
     maximumFractionDigits: max,
   }).format(x);
+
 const pct = (x, digits = 1) => `${x.toFixed(digits)}%`;
 
-// --- Parámetros ---
 const PLAZOS = [12, 18, 24, 36, 48];
 
-// --- Cálculos básicos ---
 function pagoMensual(M, tasaAnual, nMeses) {
   const r = tasaAnual / 100 / 12;
   if (r === 0) return M / nMeses;
   return (M * r) / (1 - Math.pow(1 + r, -nMeses));
 }
+
 function catEstimado(tasaAnual, comAperturaPct, nMeses) {
   const rm = tasaAnual / 100 / 12;
   const ea = Math.pow(1 + rm, 12) - 1;
@@ -30,7 +29,6 @@ function catEstimado(tasaAnual, comAperturaPct, nMeses) {
   return (ea + feeAnnualized) * 100;
 }
 
-// --- Amortización simple para tabla ---
 function amortizacion(M, tasaAnual, nMeses) {
   const r = tasaAnual / 100 / 12;
   const cuota = pagoMensual(M, tasaAnual, nMeses);
@@ -45,14 +43,7 @@ function amortizacion(M, tasaAnual, nMeses) {
   return filas;
 }
 
-// --- Colores UI ---
-const bandGood = "#76ff7a";
-const bandWarn = "#ffd166";
-const bandBad = "#ff6b6b";
-const colorRatio = (x) => (x >= 1.5 ? bandGood : x >= 1.2 ? bandWarn : bandBad);
-
 export default function Simulador() {
-  // Estado principal
   const [tipo, setTipo] = useState("simple"); // "simple" | "arrendamiento"
   const [garantias, setGarantias] = useState(true);
 
@@ -64,389 +55,288 @@ export default function Simulador() {
   const [ebitdaMensual, setEbitdaMensual] = useState(150_000);
   const [valorGarantia, setValorGarantia] = useState(1_800_000);
 
-  // Presets
-  const applyPreset = (mode) => {
-    if (mode === "conservador") {
-      setMonto(800_000);
-      setPlazo(18);
-      setTasa(20);
-      setFee(3);
-      setEbitdaMensual(160_000);
-      setValorGarantia(1_800_000);
-      setGarantias(true);
-    } else if (mode === "base") {
-      setMonto(1_200_000);
-      setPlazo(24);
-      setTasa(23);
-      setFee(3.5);
-      setEbitdaMensual(150_000);
-      setValorGarantia(1_800_000);
-      setGarantias(true);
-    } else if (mode === "expansivo") {
-      setMonto(2_500_000);
-      setPlazo(36);
-      setTasa(26);
-      setFee(4.5);
-      setEbitdaMensual(220_000);
-      setValorGarantia(2_800_000);
-      setGarantias(false);
-    }
-  };
-
-  // Cálculos
-  const rMensual = tasa / 100 / 12;
   const pago = useMemo(
     () => pagoMensual(monto, tasa, plazo),
     [monto, tasa, plazo]
   );
-  const comApertura = useMemo(() => (monto * fee) / 100, [monto, fee]);
-  const cat = useMemo(() => catEstimado(tasa, fee, plazo), [tasa, fee, plazo]);
-  const tabla = useMemo(
-    () => amortizacion(monto, tasa, plazo),
-    [monto, tasa, plazo]
-  );
+  const comApertura = (monto * fee) / 100;
+  const cat = catEstimado(tasa, fee, plazo);
+  const tabla = amortizacion(monto, tasa, plazo);
 
-  // Indicadores (solo visuales)
   const leverage = monto / Math.max(ebitdaMensual * 12, 1);
   const ltv = garantias ? (monto / Math.max(valorGarantia, 1)) * 100 : NaN;
 
-  // Totales para resumen tabla
   const totalIntereses = tabla.reduce((a, t) => a + t.interes, 0);
   const totalCapital = tabla.reduce((a, t) => a + t.capital, 0);
   const totalCostos = totalIntereses + comApertura;
 
-  // Mailto prellenado
-  const mailtoHref = useMemo(() => {
-    const subject = `Solicitud de crédito - ${
-      tipo === "simple" ? "Crédito simple" : "Arrendamiento"
-    }`;
-    const body =
-      `Hola Plinius,\n\nMe interesa continuar con el proceso.\n\n` +
-      `Datos (simulador):\n` +
-      `- Monto: ${pesos(monto)}\n` +
-      `- Plazo: ${plazo} meses\n` +
-      `- Tasa referencia: ${pct(tasa, 1)}\n` +
-      `- Comisión: ${pct(fee, 1)}\n` +
-      `- Con garantía: ${garantias ? "Sí" : "No"}\n\n` +
-      `Empresa:\n- Nombre:\n- RFC:\n- Contacto:\n\n` +
-      `Gracias.`;
-    return `mailto:contacto@crowdlink.mx?subject=${encodeURIComponent(
-      subject
-    )}&body=${encodeURIComponent(body)}`;
-  }, [tipo, monto, plazo, tasa, fee, garantias]);
+  // Score simple para UX (no es modelo real)
+  const flujoRatio = ebitdaMensual / Math.max(pago, 1);
+  const flujoScore = flujoRatio > 1.7 ? 0.4 : flujoRatio > 1.3 ? 0.28 : 0.12;
+  const ltvScore = !garantias
+    ? 0.12
+    : ltv < 55
+    ? 0.35
+    : ltv < 75
+    ? 0.26
+    : 0.12;
+  const levScore = leverage < 3.5 ? 0.35 : leverage < 5 ? 0.24 : 0.1;
+
+  const score = Math.min(1, flujoScore + ltvScore + levScore);
+
+  const creditLabel =
+    score > 0.8 ? "Muy saludable" : score > 0.6 ? "Aprobable" : "En zona de riesgo";
+
+  const creditColor =
+    score > 0.8 ? "#8fff7a" : score > 0.6 ? "#ffd166" : "#ff6b6b";
 
   return (
     <div className="app-container">
       <Navbar />
-      <main className="sim">
-        <div className="sim-bg" aria-hidden />
-        <div className="sim-wrap">
-          {/* Encabezado */}
-          <header className="sim-head">
-            <h1>Simulador</h1>
-            <p className="sim-sub">
-              Ajusta variables y visualiza pagos y composición de costos.
-            </p>
-            <div className="sim-presets" role="group" aria-label="Escenarios">
-              <button
-                className="chip"
-                onClick={() => applyPreset("conservador")}
-              >
-                Conservador
-              </button>
-              <button className="chip" onClick={() => applyPreset("base")}>
-                Base
-              </button>
-              <button className="chip" onClick={() => applyPreset("expansivo")}>
-                Expansivo
-              </button>
+
+      <main className="sim-page">
+        {/* Reuse same bg as landing */}
+        <div className="hero-bg" aria-hidden />
+        <div className="hero-grid" aria-hidden />
+
+        <div className="sim-container">
+          {/* HEADER */}
+          <header className="sim-header">
+            <div>
+              <h1>Simulador inteligente</h1>
+              <p>
+                Ajusta variables, mira pagos, costo total y una lectura rápida
+                de qué tan sano es el crédito para tu empresa.
+              </p>
+            </div>
+            <div className="credit-score" style={{ borderColor: creditColor }}>
+              <span className="label">Salud del crédito</span>
+              <span className="score" style={{ color: creditColor }}>
+                {creditLabel}
+              </span>
             </div>
           </header>
 
-          {/* Layout principal */}
-          <section className="sim-grid">
-            {/* Col izquierda: tarjeta principal (SE MANTIENE IGUAL) */}
-            <aside className="sim-card">
-              <div className="sim-rowtop">
-                {/* Tipo */}
-                <div
-                  className="seg"
-                  role="radiogroup"
-                  aria-label="Tipo de financiamiento"
-                >
-                  <label
-                    className={`seg-btn ${tipo === "simple" ? "active" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="tipo"
-                      value="simple"
-                      checked={tipo === "simple"}
-                      onChange={() => setTipo("simple")}
-                    />
-                    Crédito simple
-                  </label>
-                  <label
-                    className={`seg-btn ${
-                      tipo === "arrendamiento" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="tipo"
-                      value="arrendamiento"
-                      checked={tipo === "arrendamiento"}
-                      onChange={() => setTipo("arrendamiento")}
-                    />
-                    Arrendamiento
-                  </label>
-                </div>
+          {/* MAIN GRID */}
+          <section className="sim-grid-new">
+            {/* LEFT – SIDEBAR */}
+            <aside className="sidebar-card">
+              <h3>Parámetros del crédito</h3>
 
-                {/* Garantía */}
-                <div className="toggle" role="radiogroup" aria-label="Garantía">
+              <div className="input-block">
+                <label>Monto solicitado</label>
+                <input
+                  type="range"
+                  min={100_000}
+                  max={10_000_000}
+                  step={50_000}
+                  value={monto}
+                  onChange={(e) => setMonto(Number(e.target.value))}
+                />
+                <span className="val">{pesos(monto)}</span>
+              </div>
+
+              <div className="input-block">
+                <label>Plazo</label>
+                <div className="chips">
+                  {PLAZOS.map((p) => (
+                    <button
+                      key={p}
+                      className={plazo === p ? "chip active" : "chip"}
+                      onClick={() => setPlazo(p)}
+                    >
+                      {p} m
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="input-block">
+                <label>Tasa anual</label>
+                <input
+                  type="range"
+                  min={18}
+                  max={36}
+                  step={0.5}
+                  value={tasa}
+                  onChange={(e) => setTasa(Number(e.target.value))}
+                />
+                <span className="val">{pct(tasa)}</span>
+              </div>
+
+              <div className="input-block">
+                <label>Comisión de apertura</label>
+                <input
+                  type="range"
+                  min={3}
+                  max={5}
+                  step={0.1}
+                  value={fee}
+                  onChange={(e) => setFee(Number(e.target.value))}
+                />
+                <span className="val">{pct(fee)}</span>
+              </div>
+
+              <h3>Perfil de la empresa</h3>
+
+              <div className="input-block">
+                <label>EBITDA mensual</label>
+                <input
+                  type="range"
+                  min={30_000}
+                  max={1_500_000}
+                  step={10_000}
+                  value={ebitdaMensual}
+                  onChange={(e) => setEbitdaMensual(Number(e.target.value))}
+                />
+                <span className="val">{pesos(ebitdaMensual)}</span>
+              </div>
+
+              <div className="input-block">
+                <label>Valor de la garantía</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={20_000_000}
+                  step={50_000}
+                  value={garantias ? valorGarantia : 0}
+                  onChange={(e) => setValorGarantia(Number(e.target.value))}
+                  disabled={!garantias}
+                />
+                <span className="val">
+                  {garantias ? pesos(valorGarantia) : "Sin garantía"}
+                </span>
+              </div>
+            </aside>
+
+            {/* RIGHT – MAIN PANEL */}
+            <section className="main-panel">
+              {/* TOP CONTROLS (tipo + garantía) */}
+              <div className="panel-top-controls">
+                <div className="seg-toggle" aria-label="Tipo de producto">
                   <button
-                    type="button"
-                    className={`toggle-btn ${garantias ? "active" : ""}`}
-                    aria-pressed={garantias}
-                    onClick={() => setGarantias(true)}
-                    title="Con garantía"
+                    className={
+                      tipo === "simple" ? "seg-option active" : "seg-option"
+                    }
+                    onClick={() => setTipo("simple")}
                   >
-                    🛡 Con garantía
+                    Crédito simple
                   </button>
                   <button
-                    type="button"
-                    className={`toggle-btn ${!garantias ? "active" : ""}`}
-                    aria-pressed={!garantias}
-                    onClick={() => setGarantias(false)}
-                    title="Sin garantía"
+                    className={
+                      tipo === "arrendamiento"
+                        ? "seg-option active"
+                        : "seg-option"
+                    }
+                    onClick={() => setTipo("arrendamiento")}
                   >
-                    ∅ Sin garantía
+                    Arrendamiento
+                  </button>
+                </div>
+
+                <div
+                  className="seg-toggle seg-small"
+                  aria-label="Uso de garantías"
+                >
+                  <button
+                    className={
+                      garantias ? "seg-option active" : "seg-option"
+                    }
+                    onClick={() => setGarantias(true)}
+                  >
+                    Con garantía
+                  </button>
+                  <button
+                    className={
+                      !garantias ? "seg-option active" : "seg-option"
+                    }
+                    onClick={() => setGarantias(false)}
+                  >
+                    Sin garantía
                   </button>
                 </div>
               </div>
 
               {/* KPIs */}
-              <div className="sim-kpis">
-                <div className="kpi">
-                  <span className="k-label">Pago mensual estimado</span>
-                  <span className="k-value">{pesos(pago)}</span>
+              <div className="kpi-row">
+                <div className="kpi-card">
+                  <span className="kpi-label">Pago mensual estimado</span>
+                  <span className="kpi-value accent">
+                    {pesos(pago)}
+                  </span>
+                  <span className="kpi-caption">
+                    Incluye capital + intereses
+                  </span>
                 </div>
-                <div className="kpi">
-                  <span className="k-label">CAT estimado*</span>
-                  <span className="k-value">{pct(cat, 1)}</span>
+
+                <div className="kpi-card">
+                  <span className="kpi-label">CAT estimado*</span>
+                  <span className="kpi-value accent-soft">
+                    {pct(cat)}
+                  </span>
+                  <span className="kpi-caption">Incluye comisión anualizada</span>
                 </div>
-                <div className="kpi">
-                  <span className="k-label">Relación flujo/pago (aprox)</span>
+
+                <div className="kpi-card">
+                  <span className="kpi-label">Apalancamiento aprox.</span>
+                  <span className="kpi-value">
+                    {leverage.toFixed(2)}x
+                  </span>
+                  <span className="kpi-caption">
+                    {leverage < 4 ? "Dentro de rango" : "Zona a revisar"}
+                  </span>
+                </div>
+
+                <div className="kpi-card">
+                  <span className="kpi-label">Relación flujo / pago</span>
                   <span
-                    className="k-value"
-                    style={{
-                      color: colorRatio(ebitdaMensual / Math.max(pago, 1)),
-                    }}
+                    className={
+                      flujoRatio > 1.7
+                        ? "kpi-value good"
+                        : flujoRatio > 1.3
+                        ? "kpi-value warn"
+                        : "kpi-value bad"
+                    }
                   >
-                    {(ebitdaMensual / Math.max(pago, 1)).toFixed(2)}x
+                    {flujoRatio.toFixed(2)}x
                   </span>
-                </div>
-                <div className="kpi">
-                  <span className="k-label">Apalancamiento (aprox)</span>
-                  <span className="k-value">{(leverage || 0).toFixed(2)}x</span>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="sim-stats">
-                <div className="stat">
-                  <span className="label">Monto</span>
-                  <span className="value">{pesos(monto)}</span>
-                </div>
-                <div className="stat">
-                  <span className="label">Plazo</span>
-                  <span className="value">{plazo} meses</span>
-                </div>
-                <div className="stat">
-                  <span className="label">Tasa anual</span>
-                  <span className="value">{pct(tasa, 1)}</span>
-                </div>
-                <div className="stat">
-                  <span className="label">Comisión</span>
-                  <span className="value">
-                    {pct(fee, 1)}{" "}
-                    <span className="sub">{pesos(comApertura)}</span>
-                  </span>
-                </div>
-                <div className="stat">
-                  <span className="label">Con garantía</span>
-                  <span className="value">{garantias ? "Sí" : "No"}</span>
-                </div>
-                <div className="stat">
-                  <span className="label">LTV (si aplica)</span>
-                  <span className="value">
-                    {garantias && isFinite(ltv) ? `${ltv.toFixed(0)}%` : "N/A"}
+                  <span className="kpi-caption">
+                    Ideal &gt; 1.5x para comodidad.
                   </span>
                 </div>
               </div>
 
-              {/* Controles */}
-              <div className="sim-controls">
-                {/* Monto */}
-                <div className="ctrl">
-                  <div className="ctrl-row">
-                    <label htmlFor="monto">Monto</label>
-                    <span className="mono">{pesos(monto)}</span>
-                  </div>
-                  <input
-                    id="monto"
-                    type="range"
-                    min={100_000}
-                    max={10_000_000}
-                    step={50_000}
-                    value={monto}
-                    onChange={(e) => setMonto(Number(e.target.value))}
+              {/* INSIGHT BAR */}
+              <div className="insight-bar">
+                <div className="risk-bar">
+                  <div
+                    className="risk-fill"
+                    style={{ width: `${Math.round(score * 100)}%` }}
                   />
-                  <div className="ctrl-hints">
-                    <span>{pesos(100_000)}</span>
-                    <span>{pesos(10_000_000)}</span>
-                  </div>
                 </div>
-
-                {/* Plazo */}
-                <div className="ctrl">
-                  <div className="ctrl-row">
-                    <label>Plazo</label>
-                    <span className="mono">{plazo} meses</span>
-                  </div>
-                  <div className="seg" role="radiogroup" aria-label="Plazo">
-                    {PLAZOS.map((p) => (
-                      <label
-                        key={p}
-                        className={`seg-btn ${plazo === p ? "active" : ""}`}
-                      >
-                        <input
-                          type="radio"
-                          name="plazo"
-                          value={p}
-                          checked={plazo === p}
-                          onChange={() => setPlazo(p)}
-                        />
-                        {p} m
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tasa */}
-                <div className="ctrl">
-                  <div className="ctrl-row">
-                    <label htmlFor="tasa">Tasa anual</label>
-                    <span className="mono">{pct(tasa, 1)}</span>
-                  </div>
-                  <input
-                    id="tasa"
-                    type="range"
-                    min={18}
-                    max={36}
-                    step={0.5}
-                    value={tasa}
-                    onChange={(e) => setTasa(Number(e.target.value))}
-                  />
-                  <div className="ctrl-hints">
-                    <span>18%</span>
-                    <span>36%</span>
-                  </div>
-                </div>
-
-                {/* Comisión */}
-                <div className="ctrl">
-                  <div className="ctrl-row">
-                    <label htmlFor="fee">Comisión por apertura</label>
-                    <span className="mono">{pct(fee, 1)}</span>
-                  </div>
-                  <input
-                    id="fee"
-                    type="range"
-                    min={3}
-                    max={5}
-                    step={0.1}
-                    value={fee}
-                    onChange={(e) => setFee(Number(e.target.value))}
-                  />
-                  <div className="ctrl-hints">
-                    <span>3%</span>
-                    <span>5%</span>
-                  </div>
-                </div>
-
-                {/* Supuestos adicionales */}
-                <div className="ctrl grid2">
-                  <div>
-                    <div className="ctrl-row">
-                      <label htmlFor="ebitda">EBITDA mensual</label>
-                      <span className="mono">{pesos(ebitdaMensual)}</span>
-                    </div>
-                    <input
-                      id="ebitda"
-                      type="range"
-                      min={30_000}
-                      max={1_500_000}
-                      step={10_000}
-                      value={ebitdaMensual}
-                      onChange={(e) => setEbitdaMensual(Number(e.target.value))}
-                    />
-                    <div className="ctrl-hints">
-                      <span>{pesos(30_000)}</span>
-                      <span>{pesos(1_500_000)}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="ctrl-row">
-                      <label htmlFor="garantia">
-                        Valor garantía (si aplica)
-                      </label>
-                      <span className="mono">
-                        {garantias ? pesos(valorGarantia) : "N/A"}
-                      </span>
-                    </div>
-                    <input
-                      id="garantia"
-                      type="range"
-                      min={0}
-                      max={20_000_000}
-                      step={50_000}
-                      value={garantias ? valorGarantia : 0}
-                      onChange={(e) => setValorGarantia(Number(e.target.value))}
-                      disabled={!garantias}
-                    />
-                    <div className="ctrl-hints">
-                      <span>{pesos(0)}</span>
-                      <span>{pesos(20_000_000)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="sim-foot">
-                <span className="disclaimer">
-                  *Valores indicativos sujetos a evaluación y políticas de
-                  crédito. CAT estimado sin IVA.
+                <span className="risk-label">
+                  Match con políticas internas estimado:{" "}
+                  <strong>{Math.round(score * 100)}%</strong>
                 </span>
-                <div className="foot-actions">
-                  <Link to="/productos" className="btn btn-outline">
-                    Ver productos
-                  </Link>
-                  <Link to="/login" className="btn btn-neon">
-                    Solicitar ahora
-                  </Link>
-                </div>
               </div>
-            </aside>
 
-            {/* Columna derecha: UNA sola tabla + Proceso */}
-            <section className="sim-right">
-              {/* Tabla de amortización */}
-              <div className="amort-card">
-                <h4 className="chart-title">Calendario de pagos</h4>
-                <div className="amort-table-wrap">
-                  <table className="amort-table" role="table">
+              {/* AMORTIZATION TABLE */}
+              <div className="card amort-card-new">
+                <div className="card-head-row">
+                  <div>
+                    <h3>Calendario de pagos</h3>
+                    <p className="card-sub">
+                      Visualiza cómo se descompone cada mensualidad entre
+                      interés y capital.
+                    </p>
+                  </div>
+                  <span className="badge-small">
+                    {plazo} meses · {tipo === "simple" ? "Crédito simple" : "Arrendamiento"}
+                  </span>
+                </div>
+
+                <div className="amort-table-scroll">
+                  <table className="amort-modern">
                     <thead>
                       <tr>
                         <th>Mes</th>
@@ -459,135 +349,48 @@ export default function Simulador() {
                     <tbody>
                       {tabla.map((t) => (
                         <tr key={t.mes}>
-                          <td className="mono">{t.mes}</td>
-                          <td className="mono">{pesos(t.pago)}</td>
-                          <td className="mono">{pesos(t.interes)}</td>
-                          <td className="mono">{pesos(t.capital)}</td>
-                          <td className="mono">{pesos(t.saldo)}</td>
+                          <td>{t.mes}</td>
+                          <td>{pesos(t.pago)}</td>
+                          <td>{pesos(t.interes)}</td>
+                          <td>{pesos(t.capital)}</td>
+                          <td>{pesos(t.saldo)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
-                <div className="amort-summary">
-                  <div className="as-item">
-                    <span className="as-label">Intereses</span>
-                    <span className="as-value">{pesos(totalIntereses)}</span>
-                  </div>
-                  <div className="as-item">
-                    <span className="as-label">Comisión</span>
-                    <span className="as-value">{pesos(comApertura)}</span>
-                  </div>
-                  <div className="as-item">
-                    <span className="as-label">Capital</span>
-                    <span className="as-value">{pesos(totalCapital)}</span>
-                  </div>
-                  <div className="as-item total">
-                    <span className="as-label">Costos / Total</span>
-                    <span className="as-value">
-                      {pct(
-                        (totalCostos / (totalCapital + totalCostos)) * 100,
-                        0
-                      )}
-                    </span>
-                  </div>
+                <div className="amort-summary-new">
+                  <span>Intereses: {pesos(totalIntereses)}</span>
+                  <span>Comisión: {pesos(comApertura)}</span>
+                  <span>Capital: {pesos(totalCapital)}</span>
+                  <span>
+                    Costos / Total:{" "}
+                    {(
+                      (totalCostos / Math.max(totalCapital + totalCostos, 1)) *
+                      100
+                    ).toFixed(0)}
+                    %
+                  </span>
                 </div>
+
+                <p className="amort-footnote">
+                  *CAT estimado, sin IVA, calculado de forma indicativa. La
+                  oferta final puede variar según análisis de riesgo.
+                </p>
               </div>
 
-              {/* Pasos + nuevas CTAs */}
-              <div className="process">
-                <div className="process-head">
-                  <div className="ph-left">
-                    <span className="ph-ico" aria-hidden>
-                      🚀
-                    </span>
-                    <div>
-                      <h3>Siguiente paso para obtener tu crédito</h3>
-                      <p className="ph-sub">Guía rápida en 4 pasos</p>
-                    </div>
-                  </div>
-                  <span className="pill-time">Tiempo: 24–72h*</span>
-                </div>
-
-                <ol className="steps">
-                  <li className="step">
-                    <span className="step-num">1</span>
-                    <div className="step-body">
-                      <h4>Define tu producto y parámetros</h4>
-                      <p>
-                        Selecciona{" "}
-                        <strong>
-                          {tipo === "simple"
-                            ? "Crédito simple"
-                            : "Arrendamiento"}
-                        </strong>
-                        , ajusta monto, plazo, tasa y comisión.
-                      </p>
-                    </div>
-                  </li>
-
-                  <li className="step">
-                    <span className="step-num">2</span>
-                    <div className="step-body">
-                      <h4>Prepara documentación básica</h4>
-                      <div className="doc-chips">
-                        <span className="doc">
-                          Identificación representante
-                        </span>
-                        <span className="doc">Acta constitutiva</span>
-                        <span className="doc">Poderes</span>
-                        <span className="doc">RFC</span>
-                        <span className="doc">Estados financieros</span>
-                        <span className="doc">Comprobante de domicilio</span>
-                      </div>
-                    </div>
-                  </li>
-
-                  <li className="step">
-                    <span className="step-num">3</span>
-                    <div className="step-body">
-                      <h4>Envíanos tu solicitud</h4>
-                      <p>
-                        Escríbenos a{" "}
-                        <a className="mailto" href={mailtoHref}>
-                          contacto@crowdlink.mx
-                        </a>{" "}
-                        con tus datos y adjuntos.
-                      </p>
-                    </div>
-                  </li>
-
-                  <li className="step">
-                    <span className="step-num">4</span>
-                    <div className="step-body">
-                      <h4>Evaluación y respuesta</h4>
-                      <p>
-                        Te contactaremos para validación y siguientes pasos.
-                        Tiempos pueden variar según la información recibida.
-                      </p>
-                    </div>
-                  </li>
-                </ol>
-
-                <div className="process-cta">
-                  <Link className="btn btn-neon" to="/login">
-                    Iniciar solicitud
-                  </Link>
-                  <Link className="btn btn-outline" to="/pricing">
-                    Ver pricing
-                  </Link>
-                </div>
-
-                <p className="process-foot">
-                  *Plazo referencial y no vinculante. Sujeto a revisión de
-                  información y políticas de crédito.
-                </p>
+              {/* CTA */}
+              <div className="cta-area">
+                <Link className="btn-neon-xl" to="/ingresar">
+                  Continuar con solicitud
+                </Link>
               </div>
             </section>
           </section>
         </div>
       </main>
+
       <Footer />
     </div>
   );

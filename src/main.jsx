@@ -14,10 +14,11 @@ import SobrePlinius from "./pages/SobrePlinius.jsx";
 import Enfoque from "./pages/Enfoque.jsx";
 import Simulador from "./pages/Simulador.jsx";
 import Ingresar from "./pages/Ingresar.jsx";
-import Pricing from "./pages/Pricing.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Inversionistas from "./pages/Inversionistas.jsx";
+import Solicitud from "./pages/Solicitud.jsx"; // 👈 ESTE es el nuevo wizard
 
-// Stub rápido (si luego quieres página dedicada)
+// Stub rápido de alianza
 function AlianzaCrowdlink() {
   return (
     <div className="app-container">
@@ -52,14 +53,17 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
         {/* Auth */}
         <Route path="/ingresar" element={<Ingresar />} />
-        {/* Alias por compatibilidad: /login -> /ingresar */}
         <Route path="/login" element={<Navigate to="/ingresar" replace />} />
 
-        {/* SOLICITUD: aquí va el wizard (antes estaba redirigiendo a /ingresar) */}
-        <Route path="/solicitud" element={<Pricing />} />
-        {/* Alias legacy: /pricing -> /solicitud */}
+        {/* Solicitud (antes Pricing) */}
+        <Route path="/solicitud" element={<Solicitud />} />
+        {/* Alias legacy para enlaces viejos */}
         <Route path="/pricing" element={<Navigate to="/solicitud" replace />} />
 
+        {/* Inversionistas */}
+        <Route path="/inversionistas" element={<Inversionistas />} />
+
+        {/* Dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Catch-all */}

@@ -58,6 +58,21 @@ function Icon({ name, size = 18 }) {
           <path d="M4 18h16" />
         </svg>
       );
+    case "profile":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="9" r="3.2" />
+          <path d="M5 19.5c1.5-3 3.7-4.5 7-4.5s5.5 1.5 7 4.5" />
+        </svg>
+      );
+    case "sat":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="4" width="17" height="14" rx="2" />
+          <path d="M7 9h10M7 12h6" />
+          <path d="M9 17h6" />
+        </svg>
+      );
     case "settings":
       return (
         <svg {...common}>
@@ -190,7 +205,9 @@ export default function Dashboard() {
     { key: "timeline", label: "Timeline", icon: "timeline" },
     { key: "covenants", label: "Covenants", icon: "covenants" },
     { key: "scenarios", label: "Scenarios", icon: "scenarios" },
-    { key: "settings", label: "Settings", icon: "settings" },
+    { key: "profile", label: "Perfil", icon: "profile" },
+    { key: "satapi", label: "SAT API", icon: "sat" },
+    { key: "settings", label: "Configuración", icon: "settings" },
   ];
 
   const healthScore = 78; // fake
@@ -201,11 +218,7 @@ export default function Dashboard() {
       <aside className="dash-nav">
         <div className="nav-head">
           <div className="brand-mark">
-            <img
-              src={LogoPlinius}
-              alt="Plinius"
-              className="brand-logo"
-            />
+            <img src={LogoPlinius} alt="Plinius" className="brand-logo" />
           </div>
         </div>
 
@@ -266,6 +279,8 @@ export default function Dashboard() {
                 {active === "timeline" && "Liability Timeline"}
                 {active === "covenants" && "Covenants & Limits"}
                 {active === "scenarios" && "Scenario Lab"}
+                {active === "profile" && "Perfil de la empresa"}
+                {active === "satapi" && "Conexión SAT API"}
                 {active === "settings" && "Workspace Settings"}
               </h1>
               <p className="subtitle">
@@ -276,14 +291,6 @@ export default function Dashboard() {
           </div>
 
           <div className="right">
-            <div className="filter">
-              <span className="filter-label">Horizon</span>
-              <select>
-                <option>12 meses</option>
-                <option>24 meses</option>
-                <option>36 meses</option>
-              </select>
-            </div>
             <div className="user">
               <div className="avatar" />
               <div className="meta">
@@ -637,6 +644,195 @@ export default function Dashboard() {
               <p className="muted">
                 Aquí aparecerán los escenarios que guardes: “Swap BBVA 2026”,
                 “Reperfilamiento arrendamiento equipo”, etc.
+              </p>
+            </article>
+          </section>
+        )}
+
+        {active === "profile" && (
+          <section className="cards">
+            <article className="card">
+              <div className="card-head">
+                <h2>Perfil de la empresa</h2>
+                <span className="muted">
+                  Datos básicos para configurar tu cuenta Plinius.
+                </span>
+              </div>
+
+              <form className="form-grid">
+                <div className="form-field">
+                  <label>Razón social</label>
+                  <input
+                    type="text"
+                    placeholder="Mi Empresa, S.A. de C.V."
+                    autoComplete="organization"
+                  />
+                </div>
+                <div className="form-field">
+                  <label>RFC</label>
+                  <input
+                    type="text"
+                    placeholder="XAXX010101000"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Nombre comercial</label>
+                  <input
+                    type="text"
+                    placeholder="Marca o nombre corto"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Representante legal</label>
+                  <input
+                    type="text"
+                    placeholder="Nombre del representante legal"
+                    autoComplete="name"
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Correo de contacto</label>
+                  <input
+                    type="email"
+                    placeholder="finanzas@miempresa.com"
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Teléfono</label>
+                  <input
+                    type="tel"
+                    placeholder="+52 55 0000 0000"
+                    autoComplete="tel"
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Sector / giro</label>
+                  <select defaultValue="">
+                    <option value="" disabled>
+                      Selecciona una opción
+                    </option>
+                    <option>Manufactura</option>
+                    <option>Logística / Transporte</option>
+                    <option>Agronegocios</option>
+                    <option>Servicios</option>
+                    <option>Comercio</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label>Sitio web</label>
+                  <input
+                    type="url"
+                    placeholder="https://www.miempresa.com"
+                    autoComplete="url"
+                  />
+                </div>
+              </form>
+
+              <div className="footer-cta">
+                <button type="button" className="btn btn-outline">
+                  Cancelar
+                </button>
+                <button type="button" className="btn btn-neon">
+                  Guardar cambios
+                </button>
+              </div>
+            </article>
+          </section>
+        )}
+
+        {active === "satapi" && (
+          <section className="cards two">
+            <article className="card sat-card">
+              <div className="card-head">
+                <h2>SAT API · CIEC</h2>
+                <span className="muted">
+                  Conecta tu información fiscal para automatizar análisis de
+                  ingresos y facturación.
+                </span>
+              </div>
+
+              <div className="sat-status">
+                <span className="sat-pill sat-pill-off">Desconectado</span>
+                <p className="muted">
+                  Aún no hay conexión activa con el SAT. La integración se
+                  habilitará una vez se complete el módulo de API.
+                </p>
+              </div>
+
+              <form className="form-grid">
+                <div className="form-field">
+                  <label>RFC</label>
+                  <input type="text" placeholder="XAXX010101000" />
+                </div>
+                <div className="form-field">
+                  <label>Usuario CIEC</label>
+                  <input type="text" placeholder="Usuario SAT" />
+                </div>
+                <div className="form-field">
+                  <label>Contraseña CIEC</label>
+                  <input type="password" placeholder="••••••••" />
+                </div>
+                <div className="form-field">
+                  <label>Alias de conexión</label>
+                  <input
+                    type="text"
+                    placeholder="SAT · Mi Empresa"
+                  />
+                </div>
+              </form>
+
+              <div className="sat-disclaimer">
+                <p>
+                  Esta es una vista de interfaz. La conexión real a SAT/API se
+                  implementará en el backend con cifrado y controles de
+                  seguridad de nivel bancario.
+                </p>
+              </div>
+
+              <div className="footer-cta">
+                <button type="button" className="btn btn-outline">
+                  Probar conexión (mock)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-neon"
+                  disabled
+                  title="Pendiente de implementación técnica"
+                >
+                  Conectar con SAT
+                </button>
+              </div>
+            </article>
+
+            <article className="card sat-card-info">
+              <div className="card-head">
+                <h2>¿Qué hará Plinius con el SAT?</h2>
+              </div>
+              <ul className="sat-list">
+                <li>
+                  Lectura automática de **ingresos facturados** para validar
+                  capacidad de pago.
+                </li>
+                <li>
+                  Análisis de **temporadas y volatilidad** de facturación por
+                  mes / trimestre.
+                </li>
+                <li>
+                  Conciliación entre **líneas de crédito** y flujo real vía
+                  facturas.
+                </li>
+                <li>
+                  Alertas cuando se detecten caídas relevantes en ingresos o
+                  cambios atípicos.
+                </li>
+              </ul>
+              <p className="muted">
+                Todo presentado en dashboards tipo “underwriting”: claro, visual
+                y accionable para fondeo y refinanciamiento.
               </p>
             </article>
           </section>

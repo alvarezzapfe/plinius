@@ -1,20 +1,20 @@
 /* ========= Wizard Pricing (namespaced .pwz-) ========= */
+/* ========= Wizard Pricing (namespaced .pwz-) ========= */
 .pwz {
   position: relative;
-  padding: 24px 12px;
-  background: var(--bg);
+  min-height: calc(100dvh - 64px);
+  padding: 48px 16px;
+  /* IMPORTANTE: no pongas background aquí
+     para que se vea el mismo fondo global de App/Simulador */
+  background: transparent;
 }
+
 .pwz__bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: radial-gradient(
-      40% 30% at 50% 0%,
-      rgba(215, 255, 0, 0.06),
-      transparent 60%
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent), var(--bg);
+  /* Lo dejamos pero sin pintar nada extra */
+  display: none;
 }
+
+
 .pwz__wrap {
   position: relative;
   z-index: 1;

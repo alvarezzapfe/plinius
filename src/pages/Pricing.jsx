@@ -144,9 +144,9 @@ function priceEngineWizard({
    Wizard compacto — Mejorado con intro y loader
    =========================================================== */
 export default function Pricing() {
-  const [step, setStep] = useState(0); // <- Intro primero
+  const [step, setStep] = useState(0); // Intro primero
   const totalSteps = 6;
-  const [loading, setLoading] = useState(false); // <- Loader entre pasos
+  const [loading, setLoading] = useState(false);
 
   // Estado global
   const [conGarantia, setConGarantia] = useState(true);
@@ -222,7 +222,7 @@ export default function Pricing() {
   const prev = () => go((s) => Math.max(s - 1, 1), 320);
   const calc = () => go(() => 6, 650);
 
-  // Guardar payload SOLO al iniciar solicitud
+  // Guardar payload al iniciar solicitud
   const savePayload = () => {
     const payload = {
       conGarantia,
@@ -260,8 +260,9 @@ export default function Pricing() {
           <header className="pwz-head">
             <h1>Solicitud de crédito</h1>
             <p className="pwz-sub">
-              Te guiamos paso a paso. El resultado es indicativo y puede
-              ajustarse tras revisión documental.
+              Estructuramos crédito simple, arrendamiento y revolvente para
+              empresas en México. Responde unas preguntas y obtén una oferta
+              indicativa basada en un esquema regulado.
             </p>
           </header>
 
@@ -302,14 +303,13 @@ export default function Pricing() {
             aria-busy={loading ? "true" : "false"}
             aria-live="polite"
           >
-            {/* Loader overlay */}
             {loading && (
               <div className="pwz-loading" role="status" aria-label="Cargando">
                 <div className="spinner" />
               </div>
             )}
 
-            {/* Intro (step 0) */}
+            {/* Intro */}
             {step === 0 && (
               <div className="pwz-intro">
                 <div className="intro-card">
@@ -841,7 +841,6 @@ function Step6Resultado({
 }) {
   const tg = TIPO_GARANTIA.find((x) => x.id === tipoGarantia);
 
-  // Amortización para mini-gráficos / tabla
   const tabla = useMemo(
     () => amortizacion(monto, tasaMid, plazo),
     [monto, tasaMid, plazo]
@@ -857,7 +856,6 @@ function Step6Resultado({
   const totalCostos = totalIntereses + comApertura;
   const totalPagos = pagoMid * plazo;
 
-  // Sparkline de saldo
   const saldoSerie = tabla.map((t) => t.saldo);
   const sparkPath = useMemo(() => {
     if (!saldoSerie.length) return "";
@@ -919,9 +917,7 @@ function Step6Resultado({
           </div>
         </div>
 
-        {/* Extras visuales compactos */}
         <div className="r-extras">
-          {/* Sparkline de saldo */}
           <div className="spark-card">
             <div className="spark-head">
               <span className="clabel">Saldo vs tiempo</span>
@@ -937,7 +933,6 @@ function Step6Resultado({
             </svg>
           </div>
 
-          {/* Barra apilada capital/costos */}
           <div className="stack-card">
             <div className="clabel">Composición de pagos</div>
             <div className="stack">
@@ -963,7 +958,6 @@ function Step6Resultado({
           </div>
         </div>
 
-        {/* Tabla colapsable de pagos */}
         <div className="table-box">
           <button
             className="btn btn-outline small"
