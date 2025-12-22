@@ -1,63 +1,71 @@
+// backend/server.js
 const express = require("express");
+const cors = require("cors");
 const { Resend } = require("resend");
 
-const { solicitudSchema } = require("./plinius/solicitud.schema");
-const { subjectLine, adminHtml, userHtml } = require("./plinius/templates");
-
 const app = express();
+
+app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// Health check
-app.get("/api/health", (req, res) => res.json({ ok: true }));
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ ok: true });
+});
 
 app.post("/api/plinius/solicitud", async (req, res) => {
   try {
-    const parsed = solicitudSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        ok: false,
-        error: "Datos inválidos",
-        details: parsed.error.flatten(),
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.PLINIUS_FROM;           // ej: Plinius <no-reply@plinius.mx>
+    const toAdmin = process.env.PLINIUS_TO || "luis@plinius.mx";
+
+    if (!apiKey) return res.status(500).json({ ok: false, error: "Falta RESEND_API_KEY" });
+    if (!from) return res.status(500).json({ ok: false, error: "Falta PLINIUS_FROM" });
+
+    const payload = req.body || {};
+
+    // honeypot anti-bot
+    if (payload.website && String(payload.website).trim().length > 0) {
+      return res.status(200).json({ ok: true });
+    }
+
+    const contacto = payload.contacto || {};
+    const subject = `Solicitud Plinius: ${contacto.empresa || "Empresa"} · ${payload.monto || ""} · ${payload.plazo || ""}m`;
+
+    const resend = new Resend(apiKey);
+
+    // correo admin (siempre a Luis)
+    await resend.emails.send({
+      from,
+      to: toAdmin,
+      subject,
+      html: `<pre style="font-family:Arial;white-space:pre-wrap">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`,
+      replyTo: contacto.email
+    });
+
+    // confirmación al usuario
+    if (contacto.email) {
+      await resend.emails.send({
+        from,
+        to: contacto.email,
+        subject: "Plinius — Tu solicitud fue recibida",
+        html: `<div style="font-family:Arial">Hola ${escapeHtml(contacto.nombre || "")}. Recibimos tu solicitud. Respuesta en 24–48h.</div>`
       });
     }
 
-    const payload = parsed.data;
-
-    // Honeypot anti-bot
-    if (payload.website && payload.website.trim().length > 0) {
-      return res.json({ ok: true });
-    }
-
-    const from = process.env.PLINIUS_FROM;
-    const to = process.env.PLINIUS_TO || "luis@plinius.mx";
-
-    if (!process.env.RESEND_API_KEY) return res.status(500).json({ ok: false, error: "Falta RESEND_API_KEY" });
-    if (!from) return res.status(500).json({ ok: false, error: "Falta PLINIUS_FROM" });
-
-    // 1) Admin a Luis SIEMPRE
-    await resend.emails.send({
-      from,
-      to,
-      subject: subjectLine(payload),
-      html: adminHtml(payload),
-      replyTo: payload.contacto.email,
-    });
-
-    // 2) Confirmación al usuario
-    await resend.emails.send({
-      from,
-      to: payload.contacto.email,
-      subject: "Plinius — Tu solicitud fue recibida",
-      html: userHtml(payload),
-    });
-
-    return res.json({ ok: true });
+    return res.status(200).json({ ok: true });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ ok: false, error: "Error enviando solicitud" });
   }
 });
 
+function escapeHtml(s = "") {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+// Para Vercel serverless:
 module.exports = app;
