@@ -1,9 +1,14 @@
+/* src/index.css (global) */
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
+  /* No fuerces light dark aquí si tu app ya define tema */
   color-scheme: light dark;
+
+  /* Base defaults (los puede pisar tu App.jsx/theme) */
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
 
@@ -11,58 +16,76 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Útil para inputs/buttons nativos */
+  color-scheme: light dark;
 }
 
+/* Links básicos */
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  color: inherit;
+  text-decoration: none;
 }
 a:hover {
-  color: #535bf2;
+  text-decoration: underline;
+}
+
+/* ✅ CLAVE: app layout normal, NO “demo centered” */
+html,
+body {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+
+  /* IMPORTANTÍSIMO: esto era lo que te rompía todo */
+  display: block;
+  place-items: initial;
+
+  /* Deja que el background/tema lo defina tu app si quieres */
+  background: var(--app-bg, transparent);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Root ocupa la pantalla completa */
+#root {
+  min-height: 100vh;
+  width: 100%;
 }
 
+/* Headings neutros */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+}
+
+/* Botón global neutro: NO lo estilizamos fuerte (para no pisar tus .btnx, chips, etc.) */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* Focus visible decente */
+:focus-visible {
+  outline: 3px solid rgba(215, 255, 0, 0.45);
+  outline-offset: 3px;
+}
+
+/* Inputs baseline */
+input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Si quieres mantener modo claro como fallback */
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
     background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
   }
 }

@@ -1,85 +1,505 @@
-/* =========================
-   Paso 3: Multi-select chips
-========================= */
-.sol-selectBlock{
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
-  padding: 12px;
-  background: rgba(255,255,255,0.02);
-  display: grid;
-  gap: 10px;
+/* src/assets/css/Solicitud.css */
+/* ✅ Importante: NO seteamos background del body ni del main */
+
+:root{
+  --ink: #0b1b3a;
+  --muted: rgba(11,27,58,.72);
+
+  --blue: #2a7cff;
+  --blue2: #78c6ff;
+
+  --card: rgba(255,255,255,.78);
+  --card2: rgba(255,255,255,.58);
+  --border: rgba(30,90,180,.14);
+  --shadow: 0 30px 90px rgba(18,54,120,.16);
+
+  --y: rgba(215, 255, 0, 0.18);
+  --y2: rgba(215, 255, 0, 0.09);
+
+  --ok:#12b981;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+
+  --r: 22px;
 }
 
-.sol-selectHead{
+/* Page wrapper */
+.solPage{
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background: transparent; /* ✅ respeta tu index.css / App theme */
+  overflow: hidden;
+}
+
+/* Overlays (sutiles, no oscurecen) */
+.solOverlayGrid{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(42,124,255,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(42,124,255,0.10) 1px, transparent 1px);
+  background-size: 72px 72px;
+  opacity: .22;
+  mask-image: radial-gradient(60% 55% at 50% 26%, #000 55%, transparent 100%);
+}
+
+.solOverlaySquares{
+  position:absolute;
+  inset:-120px;
+  pointer-events:none;
+  opacity: .55;
+  transform: rotate(-8deg);
+  background-image:
+    linear-gradient(var(--y) 0 0),
+    linear-gradient(90deg, var(--y) 0 0);
+  background-size: 120px 120px, 120px 120px;
+  background-position: 14px 20px, 14px 20px;
+  background-repeat: repeat;
+  mask-image: radial-gradient(60% 55% at 50% 26%, #000 44%, transparent 100%);
+}
+
+/* Container */
+.solWrap{
+  position: relative;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 28px 18px 44px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* Header */
+.solHeader{
+  width:100%;
+  max-width: 920px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap: 14px;
+  margin: 10px 0 12px;
+}
+
+.solH1{
+  margin: 0;
+  font-size: 40px;
+  letter-spacing: -0.9px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.solSub{
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--muted);
+}
+
+/* Health */
+.solHealth{
+  min-width: 210px;
+  padding: 12px 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.70);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 26px rgba(18,54,120,.10);
+}
+.solHealthTop{
   display:flex;
   justify-content:space-between;
   align-items:center;
   gap:10px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+}
+.solHealthLabel{
+  margin-top: 6px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.solHealth.ok{ border-color: rgba(18,185,129,.22); }
+.solHealth.warn{ border-color: rgba(245,158,11,.22); }
+.solHealth.bad{ border-color: rgba(239,68,68,.22); }
+
+/* Card */
+.solCard{
+  width:100%;
+  max-width: 920px;
+  border-radius: var(--r);
+  background: linear-gradient(180deg, var(--card), var(--card2));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow:hidden;
 }
 
-.sol-selectTitle{
-  font-weight: 900;
-  color: #e8edf4;
-  letter-spacing: 0.2px;
+/* Progress */
+.solProg{
+  padding: 14px 18px 0;
 }
-
-.sol-selectReq{
-  font-size: 11px;
-  font-weight: 900;
-  padding: 4px 10px;
+.solProgBar{
+  height: 8px;
   border-radius: 999px;
-  color: #0b0d10;
-  background: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 70%, #0b0d10 30%);
+  background: rgba(42,124,255,.10);
+  border: 1px solid rgba(42,124,255,.16);
+  overflow:hidden;
+}
+.solProgFill{
+  height:100%;
+  width:0%;
+  background: linear-gradient(90deg, rgba(42,124,255,.95), rgba(120,198,255,.65));
 }
 
-.sol-selectHint{
-  font-size: 11px;
-  font-weight: 900;
-  padding: 4px 10px;
+/* ✅ fixed body height so steps don’t change size */
+.solBody{
+  padding: 18px;
+  height: 620px;          /* fijo escritorio */
+  overflow: hidden;
+}
+.solPane{
+  height: 100%;
+  overflow: auto;
+  padding: 6px 6px 10px;
+}
+.solPane::-webkit-scrollbar{ width: 10px; }
+.solPane::-webkit-scrollbar-thumb{
+  background: rgba(11,27,58,.18);
   border-radius: 999px;
-  color: #dfe4eb;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
+  border: 2px solid rgba(255,255,255,.60);
 }
+.solPane::-webkit-scrollbar-track{ background: rgba(42,124,255,.06); }
 
-.sol-chipGrid{
+/* Common headings inside card */
+.solTopRow{
   display:flex;
-  flex-wrap: wrap;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.solKicker{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(42,124,255,.95);
+  letter-spacing: .2px;
+}
+.solTitle{
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.solHint{
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--muted);
+}
+
+.solH2{
+  margin: 10px 0 0;
+  font-size: 28px;
+  letter-spacing: -.4px;
+  color: var(--ink);
+}
+.solP{
+  margin: 10px 0 0;
+  font-weight: 850;
+  color: var(--muted);
+}
+
+/* Buttons (since your global button reset is neutral) */
+.btnx{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 8px;
+  border: 1px solid rgba(42,124,255,0.18);
+  background: rgba(255,255,255,0.72);
+  color: var(--ink);
+  text-decoration:none;
+  cursor:pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.btnx:hover{
+  transform: translateY(-1px);
+  border-color: rgba(42,124,255,0.28);
+  box-shadow: 0 10px 24px rgba(42,124,255,0.12);
+}
+.btnx.primary{
+  background: rgba(42,124,255,0.12);
+  border-color: rgba(42,124,255,0.35);
+}
+.btnx.ghost{
+  background: rgba(255,255,255,0.55);
+}
+
+/* Actions row */
+.solActions{
+  margin-top: 18px;
+  display:flex;
+  justify-content:space-between;
   gap: 10px;
 }
+.solActions .btnx{ min-width: 170px; }
 
-.solOpt{
-  height: 36px;
+/* Landing / success bits */
+.solHeroTop, .solSuccessTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.solHeroLogo{ height: 28px; width:auto; }
+.solPill{
+  height: 26px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.02);
-  color: #e8edf4;
+  display:flex;
+  align-items:center;
   font-weight: 900;
-  cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
-}
-
-.solOpt:hover{
-  transform: translateY(-1px);
-  border-color: rgba(255,255,255,0.22);
-}
-
-.solOpt.active{
-  background: rgba(215,255,0,0.10);
-  border-color: color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,0.20) 45%);
-  box-shadow: 0 0 18px rgba(215,255,0,0.12);
-  color: #e8edf4;
-}
-
-.sol-inlineWarn{
   font-size: 12px;
-  color: #ffd166;
-  font-weight: 800;
+  background: rgba(42,124,255,0.10);
+  border: 1px solid rgba(42,124,255,0.18);
+  color: var(--ink);
+}
+.solBullets{
+  margin-top: 14px;
+  display:grid;
+  gap: 8px;
+}
+.solBullet{
+  border: 1px solid rgba(42,124,255,0.14);
+  background: rgba(255,255,255,0.55);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.solFootNote{
+  margin-top: 12px;
+  color: rgba(11,27,58,.55);
+  font-weight: 900;
+  font-size: 12px;
 }
 
-/* Honeypot hidden */
+.solBrand{ display:flex; align-items:center; gap: 10px; }
+.solBrandLogo{ height: 28px; width:auto; }
+.solBrandK{ font-weight: 900; color: var(--ink); line-height:1; }
+.solBrandS{ font-weight: 900; color: rgba(11,27,58,.55); font-size: 12px; margin-top: 2px; }
+
+/* Tiles */
+.solTiles{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.solTile{
+  border: 1px solid rgba(42,124,255,0.16);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.55);
+  padding: 12px;
+}
+.solTileT{ font-size: 12px; font-weight: 900; color: rgba(11,27,58,.55); }
+.solTileV{ margin-top: 4px; font-weight: 900; color: var(--ink); font-size: 18px; }
+.solTileS{ margin-top: 6px; font-weight: 900; color: var(--muted); font-size: 12px; }
+
+/* Step 1 products */
+.solProducts{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.solProd{
+  text-align:left;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(42,124,255,0.18);
+  background: rgba(255,255,255,0.62);
+  cursor:pointer;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.solProd:hover{
+  transform: translateY(-1px);
+  border-color: rgba(42,124,255,0.28);
+  box-shadow: 0 12px 22px rgba(42,124,255,0.10);
+}
+.solProd.active{
+  background: rgba(42,124,255,0.10);
+  border-color: rgba(42,124,255,0.40);
+  box-shadow: 0 12px 26px rgba(42,124,255,0.14);
+}
+.solProdT{ font-weight: 900; color: var(--ink); }
+.solProdD{ margin-top: 6px; color: var(--muted); font-weight: 900; font-size: 13px; }
+
+/* Segments / chips */
+.solRow{ margin-top: 14px; }
+.solLabel{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.solSeg{ display:flex; gap: 10px; }
+.solSegBtn, .solChip{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(42,124,255,0.18);
+  background: rgba(255,255,255,0.62);
+  color: var(--ink);
+  font-weight: 900;
+  cursor:pointer;
+}
+.solSegBtn.active, .solChip.active{
+  background: rgba(42,124,255,0.12);
+  border-color: rgba(42,124,255,0.40);
+}
+.solChips{ display:flex; flex-wrap:wrap; gap: 10px; }
+
+/* Step 2 boxes */
+.solGrid2{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+.solBox{
+  border: 1px solid rgba(42,124,255,0.16);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255,255,255,0.55);
+}
+.solBoxTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.solBoxTop span{ font-weight: 900; font-size: 12px; color: var(--muted); }
+.solBoxTop strong{ font-weight: 900; color: var(--ink); }
+.solBoxHint{
+  margin-top: 6px;
+  display:flex;
+  justify-content:space-between;
+  color: rgba(11,27,58,.55);
+  font-size: 12px;
+  font-weight: 900;
+}
+.solKpi .solKpiRow{
+  display:flex;
+  justify-content:space-between;
+  padding: 6px 0;
+}
+.solKpi .solKpiRow span{ color: var(--muted); font-weight: 900; font-size: 12px; }
+.solKpi .solKpiRow strong{ color: var(--ink); font-weight: 900; }
+.solTiny{ margin-top: 6px; font-size: 12px; font-weight: 900; color: rgba(11,27,58,.55); }
+
+/* Step 3 accordion */
+.solAcc{ display:grid; gap: 10px; margin-top: 8px; }
+.solDet{
+  border: 1px solid rgba(42,124,255,0.16);
+  background: rgba(255,255,255,0.55);
+  border-radius: 18px;
+  overflow:hidden;
+}
+.solSum{
+  list-style:none;
+  cursor:pointer;
+  padding: 12px 12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 10px;
+  user-select:none;
+}
+.solSum::-webkit-details-marker{ display:none; }
+.solSumL{ display:flex; align-items:center; gap: 10px; }
+.solSumT{ font-weight: 900; color: var(--ink); }
+.solTag{
+  font-size: 11px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(42,124,255,0.18);
+  background: rgba(42,124,255,0.10);
+  color: var(--ink);
+}
+.solTag.opt{
+  background: rgba(255,255,255,0.50);
+  border-color: rgba(42,124,255,0.12);
+  color: rgba(11,27,58,.55);
+}
+.solSumR{ font-weight: 900; font-size: 12px; color: rgba(11,27,58,.55); }
+
+.solOpts{
+  border-top: 1px solid rgba(42,124,255,0.12);
+  padding: 10px 12px 12px;
+  display:grid;
+  gap: 8px;
+}
+.solOpt{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(42,124,255,0.10);
+  background: rgba(255,255,255,0.55);
+  cursor:pointer;
+  font-weight: 900;
+  color: var(--ink);
+}
+.solOpt:hover{
+  border-color: rgba(42,124,255,0.20);
+  box-shadow: 0 10px 18px rgba(42,124,255,0.10);
+}
+.solOpt.on{
+  background: rgba(42,124,255,0.10);
+  border-color: rgba(42,124,255,0.30);
+}
+.solOpt input{
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+}
+
+.solWarn{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(245,158,11,.95);
+  padding: 6px 2px 0;
+}
+
+.solMini{
+  border: 1px solid rgba(42,124,255,0.14);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.60);
+  padding: 12px;
+}
+.solMiniRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(42,124,255,0.14);
+}
+.solMiniRow:last-child{ border-bottom:none; }
+.solMiniRow span{ color: rgba(11,27,58,.55); font-weight: 900; font-size: 12px; }
+.solMiniRow strong{ color: var(--ink); font-weight: 900; }
+
+/* Step 4 form */
 .hp{
   position:absolute;
   left:-9999px;
@@ -88,57 +508,548 @@
   width:0;
   pointer-events:none;
 }
-
-/* =========================
-   Success screen (más bonita)
-========================= */
-.sol-success{
-  padding: 18px;
+.solForm{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+.solField label{
+  display:block;
+  margin-bottom: 8px;
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--muted);
+}
+.solField input{
+  width:100%;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(42,124,255,0.16);
+  background: rgba(255,255,255,0.72);
+  color: var(--ink);
+  padding: 0 12px;
+  font-weight: 900;
+}
+.solField input:focus{
+  outline:none;
+  border-color: rgba(42,124,255,0.40);
+  box-shadow: 0 0 0 4px rgba(42,124,255,0.12);
 }
 
-.sol-successTop{
+.solSummary{
+  border: 1px solid rgba(42,124,255,0.16);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255,255,255,0.60);
+}
+.solSumRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(42,124,255,0.14);
+}
+.solSumRow:last-of-type{ border-bottom:none; }
+.solSumRow span{ color: rgba(11,27,58,.55); font-weight: 900; font-size: 12px; }
+.solSumRow strong{ color: var(--ink); font-weight: 900; }
+
+.solError{
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(239,68,68,0.10);
+  border: 1px solid rgba(239,68,68,0.20);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.solMissing{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(245,158,11,0.10);
+  border: 1px solid rgba(245,158,11,0.18);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+/* Stepper (nodos) */
+.solStepper{
+  width:100%;
+  max-width: 920px;
+  margin-top: 14px;
+}
+.solStepList{
+  list-style:none;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
 }
-
-.sol-successLogo{
-  height: 28px;
-  width: auto;
-  opacity: 0.95;
-  filter: drop-shadow(0 0 14px rgba(215,255,0,0.14));
-}
-
-.sol-successBadge{
-  height: 26px;
-  padding: 0 12px;
+.solStep{
+  position: relative;
+  flex: 1;
   display:flex;
   align-items:center;
+  gap: 10px;
+}
+.solStepBtn{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(42,124,255,0.16);
+  background: rgba(255,255,255,0.55);
+  cursor:pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  width: 100%;
+}
+.solStepBtn:hover{
+  transform: translateY(-1px);
+  border-color: rgba(42,124,255,0.26);
+  box-shadow: 0 10px 20px rgba(42,124,255,0.12);
+}
+.solStepBtn:disabled{ opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.solDot{
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
-  background: rgba(215,255,0,0.10);
-  border: 1px solid rgba(215,255,0,0.20);
-  color: #e8edf4;
+  background: rgba(42,124,255,0.18);
+  border: 2px solid rgba(42,124,255,0.22);
+}
+.solStepNum{
+  font-weight: 900;
+  color: rgba(11,27,58,.60);
+  width: 16px;
+}
+.solStepTitle{
+  font-weight: 900;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.solLine{
+  position:absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 2px;
+  background: rgba(42,124,255,0.14);
+}
+
+.solStep.active .solStepBtn{
+  background: rgba(42,124,255,0.10);
+  border-color: rgba(42,124,255,0.40);
+}
+.solStep.active .solDot{
+  background: rgba(42,124,255,0.55);
+  border-color: rgba(42,124,255,0.50);
+}
+.solStep.done .solStepBtn{
+  background: rgba(18,185,129,0.08);
+  border-color: rgba(18,185,129,0.22);
+}
+.solStep.done .solDot{
+  background: rgba(18,185,129,0.55);
+  border-color: rgba(18,185,129,0.45);
+}
+
+/* Bottom note */
+.solBottom{
+  width:100%;
+  max-width: 920px;
+  margin-top: 10px;
+  text-align:center;
+  color: rgba(11,27,58,.55);
   font-weight: 900;
   font-size: 12px;
 }
 
-.sol-successP{
-  margin-top: 8px;
-  color: #c9ced6;
-  line-height: 1.55;
+/* Responsive */
+@media (min-width: 860px){
+  .solProducts{ grid-template-columns: repeat(3, 1fr); }
+  .solGrid2{ grid-template-columns: 1fr 1fr; }
+  .solForm{ grid-template-columns: 1fr 1fr; }
+  .solSummary{ grid-column: 1 / -1; }
+  .solTiles{ grid-template-columns: 1fr 1fr; }
 }
 
-.sol-successActions{
+@media (max-width: 860px){
+  .solHeader{ flex-direction:column; align-items:flex-start; }
+  .solHealth{ width:100%; max-width: 420px; }
+  .solStepList{ flex-direction:column; }
+  .solLine{ display:none; }
+  .solBody{ height: 680px; }
+}
+
+@media (max-width: 520px){
+  .solH1{ font-size: 34px; }
+  .solActions{ flex-direction:column; }
+  .solActions .btnx{ width:100%; min-width: 0; }
+  .solBody{ height: 720px; }
+}
+
+/* src/assets/css/Solicitud.css */
+/* ✅ Esta hoja NO toca index.css, pero SÍ fuerza look claro SOLO para Solicitud */
+
+.solPage{
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+
+  /* ✅ fuerza controles y default UI en claro */
+  color-scheme: light;
+
+  /* ✅ fuerza texto oscuro (evita herencia blanca del root) */
+  color: #0b1b3a;
+
+  /* ✅ background claro (aunque tu :root esté oscuro) */
+  background:
+    radial-gradient(1200px 600px at 50% -80px, rgba(120,198,255,.65), transparent 65%),
+    radial-gradient(900px 500px at 18% 18%, rgba(42,124,255,.18), transparent 60%),
+    linear-gradient(180deg, #f7fbff 0%, #eef6ff 45%, #f6fbff 100%);
+}
+
+/* overlays: grid azul + cuadritos amarillos sutiles */
+.solOverlayGrid{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(42,124,255,0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(42,124,255,0.14) 1px, transparent 1px);
+  background-size: 72px 72px;
+  opacity: .22;
+  mask-image: radial-gradient(60% 55% at 50% 26%, #000 55%, transparent 100%);
+}
+
+.solOverlaySquares{
+  position:absolute;
+  inset:-120px;
+  pointer-events:none;
+  opacity: .55;
+  transform: rotate(-8deg);
+  background-image:
+    linear-gradient(rgba(215, 255, 0, 0.18) 0 0),
+    linear-gradient(90deg, rgba(215, 255, 0, 0.18) 0 0);
+  background-size: 120px 120px, 120px 120px;
+  background-position: 14px 20px, 14px 20px;
+  background-repeat: repeat;
+  mask-image: radial-gradient(60% 55% at 50% 26%, #000 44%, transparent 100%);
+}
+
+/* Container */
+.solWrap{
+  position: relative;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 28px 18px 44px;
   display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* Header */
+.solHeader{
+  width:100%;
+  max-width: 920px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap: 14px;
+  margin: 10px 0 12px;
+}
+.solH1{
+  margin: 0;
+  font-size: 40px;
+  letter-spacing: -0.9px;
+  line-height: 1.05;
+  color: #0b1b3a;
+}
+.solSub{
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(11,27,58,.72);
+}
+
+/* Health */
+.solHealth{
+  min-width: 210px;
+  padding: 12px 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.82);
+  border: 1px solid rgba(30,90,180,.16);
+  box-shadow: 0 10px 26px rgba(18,54,120,.10);
+  color: #0b1b3a;
+}
+.solHealthTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(11,27,58,.72);
+}
+.solHealthLabel{
+  margin-top: 6px;
+  font-weight: 900;
+  color: #0b1b3a;
+}
+.solHealth.ok{ border-color: rgba(18,185,129,.22); }
+.solHealth.warn{ border-color: rgba(245,158,11,.22); }
+.solHealth.bad{ border-color: rgba(239,68,68,.22); }
+
+/* Card */
+.solCard{
+  width:100%;
+  max-width: 920px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.70));
+  border: 1px solid rgba(30,90,180,.14);
+  box-shadow: 0 30px 90px rgba(18,54,120,.16);
+  overflow:hidden;
+  color: #0b1b3a;
+}
+
+/* Progress */
+.solProg{ padding: 14px 18px 0; }
+.solProgBar{
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(42,124,255,.12);
+  border: 1px solid rgba(42,124,255,.18);
+  overflow:hidden;
+}
+.solProgFill{
+  height:100%;
+  width:0%;
+  background: linear-gradient(90deg, rgba(42,124,255,.95), rgba(120,198,255,.70));
+}
+
+/* ✅ fixed height so it doesn't jump */
+.solBody{
+  padding: 18px;
+  height: 620px;
+  overflow: hidden;
+}
+.solPane{
+  height: 100%;
+  overflow: auto;
+  padding: 6px 6px 10px;
+  color: #0b1b3a;
+}
+
+/* headings inside card */
+.solTopRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
   gap: 10px;
-  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.solKicker{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(42,124,255,.95);
+}
+.solTitle{
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #0b1b3a;
+}
+.solHint{
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(11,27,58,.72);
+}
+.solH2{
+  margin: 10px 0 0;
+  font-size: 28px;
+  letter-spacing: -.4px;
+  color: #0b1b3a;
+}
+.solP{
+  margin: 10px 0 0;
+  font-weight: 850;
+  color: rgba(11,27,58,.72);
+}
+
+/* Buttons (if you already have btnx elsewhere, this keeps them readable) */
+.btnx{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 8px;
+  border: 1px solid rgba(42,124,255,0.18);
+  background: rgba(255,255,255,0.78);
+  color: #0b1b3a;
+  text-decoration:none;
+  cursor:pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.btnx:hover{
+  transform: translateY(-1px);
+  border-color: rgba(42,124,255,0.28);
+  box-shadow: 0 10px 24px rgba(42,124,255,0.12);
+}
+.btnx.primary{
+  background: rgba(42,124,255,0.14);
+  border-color: rgba(42,124,255,0.38);
+}
+.btnx.ghost{
+  background: rgba(255,255,255,0.62);
+}
+
+.solActions{
+  margin-top: 18px;
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+}
+.solActions .btnx{ min-width: 170px; }
+
+/* Landing */
+.solHeroTop, .solSuccessTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.solHeroLogo{ height: 28px; width:auto; }
+.solPill{
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  font-weight: 900;
+  font-size: 12px;
+  background: rgba(42,124,255,0.12);
+  border: 1px solid rgba(42,124,255,0.18);
+  color: #0b1b3a;
+}
+.solBullets{ margin-top: 14px; display:grid; gap: 8px; }
+.solBullet{
+  border: 1px solid rgba(42,124,255,0.14);
+  background: rgba(255,255,255,0.68);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 900;
+  color: #0b1b3a;
+}
+.solFootNote{
+  margin-top: 12px;
+  color: rgba(11,27,58,.58);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+/* Stepper (nodos) */
+.solStepper{
+  width:100%;
+  max-width: 920px;
   margin-top: 14px;
 }
+.solStepList{
+  list-style:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+}
+.solStep{ position: relative; flex: 1; display:flex; align-items:center; }
+.solStepBtn{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(42,124,255,0.16);
+  background: rgba(255,255,255,0.62);
+  cursor:pointer;
+  width: 100%;
+  color: #0b1b3a;
+}
+.solDot{
+  width: 12px; height: 12px; border-radius: 999px;
+  background: rgba(42,124,255,0.20);
+  border: 2px solid rgba(42,124,255,0.24);
+}
+.solStepNum{ font-weight: 900; color: rgba(11,27,58,.62); width: 16px; }
+.solStepTitle{ font-weight: 900; color: #0b1b3a; font-size: 12px; }
+.solLine{
+  position:absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 2px;
+  background: rgba(42,124,255,0.14);
+}
+.solStep.active .solStepBtn{
+  background: rgba(42,124,255,0.12);
+  border-color: rgba(42,124,255,0.40);
+}
+.solStep.active .solDot{
+  background: rgba(42,124,255,0.55);
+  border-color: rgba(42,124,255,0.52);
+}
+.solStep.done .solStepBtn{
+  background: rgba(18,185,129,0.10);
+  border-color: rgba(18,185,129,0.22);
+}
+.solStep.done .solDot{
+  background: rgba(18,185,129,0.55);
+  border-color: rgba(18,185,129,0.45);
+}
 
-.sol-successMini{
-  margin-top: 12px;
+.solBottom{
+  width:100%;
+  max-width: 920px;
+  margin-top: 10px;
+  text-align:center;
+  color: rgba(11,27,58,.58);
+  font-weight: 900;
   font-size: 12px;
-  color: #aeb4bf;
+}
+
+/* Responsive */
+@media (min-width: 860px){
+  .solProducts{ grid-template-columns: repeat(3, 1fr); }
+  .solGrid2{ grid-template-columns: 1fr 1fr; }
+  .solForm{ grid-template-columns: 1fr 1fr; }
+  .solSummary{ grid-column: 1 / -1; }
+  .solTiles{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 860px){
+  .solHeader{ flex-direction:column; align-items:flex-start; }
+  .solHealth{ width:100%; max-width: 420px; }
+  .solStepList{ flex-direction:column; }
+  .solLine{ display:none; }
+  .solBody{ height: 680px; }
+}
+@media (max-width: 520px){
+  .solH1{ font-size: 34px; }
+  .solActions{ flex-direction:column; }
+  .solActions .btnx{ width:100%; min-width: 0; }
+  .solBody{ height: 720px; }
 }
