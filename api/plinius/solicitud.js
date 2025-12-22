@@ -1,103 +1,178 @@
+// api/plinius/solicitud.js
 import { Resend } from "resend";
 import { z } from "zod";
 
-export const config = { runtime: "nodejs" };
+const Email = z.string().trim().email().max(254);
+const Phone = z.string().trim().min(8).max(18);
 
-const BodySchema = z.object({
+const SolicitudSchema = z.object({
   producto: z.enum(["simple", "arrendamiento", "revolvente"]),
   conGarantia: z.boolean(),
   plazo: z.number().int().min(6).max(120),
-  monto: z.number().min(100000),
-  ventasMensuales: z.number().optional(),
-  ebitdaMensual: z.number().optional(),
-  tasaEstimada: z.number().optional(),
-  pago: z.number().optional(),
-  dscr: z.number().optional(),
-  uso: z.string().max(800).optional().default(""),
-  website: z.string().optional().default(""), // honeypot
+  monto: z.number().int().min(100000).max(100000000),
+  ventasMensuales: z.number().int().min(0).max(200000000),
+  ebitdaMensual: z.number().int().min(0).max(50000000),
+
+  tasaEstimada: z.number().min(0).max(100).optional(),
+  pago: z.number().min(0).max(100000000).optional(),
+  dscr: z.number().min(0).max(100).optional(),
+
+  objetivo: z.object({
+    uso: z.array(z.string().max(40)).min(1).max(8),
+    perfil: z.array(z.string().max(40)).max(10).default([]),
+    timing: z.string().max(40).default("normal"),
+  }),
+
   contacto: z.object({
-    empresa: z.string().min(2),
-    rfc: z.string().optional().default(""),
-    nombre: z.string().min(2),
-    email: z.string().email(),
-    telefono: z.string().min(8)
-  })
+    empresa: z.string().trim().min(2).max(120),
+    rfc: z.string().trim().max(13).optional().default(""),
+    nombre: z.string().trim().min(2).max(80),
+    email: Email,
+    telefono: Phone,
+  }),
+
+  website: z.string().optional().default(""),
+  createdAt: z.string().optional(),
 });
+
+function json(res, status, data) {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.end(JSON.stringify(data));
+}
 
 function escapeHtml(s = "") {
   return String(s)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function sanitizeText(s = "", max = 600) {
+  // quita control chars + limita
+  const cleaned = String(s)
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+
+  // neutraliza ángulos para que no se “vea” como HTML
+  return cleaned.replace(/[<>]/g, "");
 }
 
 export default async function handler(req, res) {
-  // CORS (por si pega desde browser)
+  // CORS básico
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method Not Allowed" });
+  if (req.method === "OPTIONS") return res.end();
+  if (req.method !== "POST") return json(res, 405, { ok: false, error: "Method not allowed" });
 
   try {
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.PLINIUS_FROM; // Ej: "Plinius <no-reply@plinius.mx>"
     const toAdmin = process.env.PLINIUS_TO || "luis@plinius.mx";
 
-    if (!apiKey) return res.status(500).json({ ok: false, error: "Falta RESEND_API_KEY" });
-    if (!from) return res.status(500).json({ ok: false, error: "Falta PLINIUS_FROM" });
+    if (!apiKey) return json(res, 500, { ok: false, error: "Falta RESEND_API_KEY" });
+    if (!from) return json(res, 500, { ok: false, error: "Falta PLINIUS_FROM" });
 
-    // body puede venir objeto o string
-    let raw = req.body;
-    if (typeof raw === "string") {
-      try { raw = JSON.parse(raw); } catch {}
+    const raw = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+
+    // honeypot anti-bot
+    if (raw.website && String(raw.website).trim().length > 0) {
+      return json(res, 200, { ok: true });
     }
 
-    const parsed = BodySchema.safeParse(raw);
-    if (!parsed.success) {
-      return res.status(400).json({ ok: false, error: "Payload inválido", issues: parsed.error.issues });
-    }
+    // Validación fuerte
+    const parsed = SolicitudSchema.parse(raw);
 
-    const payload = parsed.data;
+    // Sanitiza campos “humanos” (defensa extra)
+    parsed.contacto.empresa = sanitizeText(parsed.contacto.empresa, 120);
+    parsed.contacto.nombre = sanitizeText(parsed.contacto.nombre, 80);
+    parsed.contacto.rfc = sanitizeText((parsed.contacto.rfc || "").toUpperCase(), 13);
+    parsed.contacto.telefono = sanitizeText(parsed.contacto.telefono, 18);
 
-    // honeypot
-    if (payload.website && payload.website.trim().length > 0) {
-      return res.status(200).json({ ok: true });
-    }
-
-    const c = payload.contacto;
-    const subject = `Solicitud Plinius: ${c.empresa} · ${payload.monto.toLocaleString("es-MX")} · ${payload.plazo}m`;
+    // Construye resumen
+    const usoLabels = parsed.objetivo.uso.join(", ");
+    const subject = `Solicitud Plinius: ${parsed.contacto.empresa} · ${parsed.monto} · ${parsed.plazo}m`;
 
     const resend = new Resend(apiKey);
 
-    // Admin (Luis)
+    // Admin (a Luis)
     await resend.emails.send({
       from,
       to: toAdmin,
       subject,
-      replyTo: c.email,
-      html: `<pre style="font-family:Arial;white-space:pre-wrap">${escapeHtml(
-        JSON.stringify(payload, null, 2)
-      )}</pre>`
+      replyTo: parsed.contacto.email, // para que Luis responda directo al solicitante
+      text:
+`Solicitud Plinius
+
+Empresa: ${parsed.contacto.empresa}
+RFC: ${parsed.contacto.rfc || "-"}
+Contacto: ${parsed.contacto.nombre}
+Email: ${parsed.contacto.email}
+Tel: ${parsed.contacto.telefono}
+
+Producto: ${parsed.producto}
+Garantía: ${parsed.conGarantia ? "Sí" : "No"}
+Plazo: ${parsed.plazo} meses
+Monto: ${parsed.monto}
+Ventas mensuales: ${parsed.ventasMensuales}
+EBITDA mensual: ${parsed.ebitdaMensual}
+
+Objetivo (uso): ${usoLabels}
+Perfil: ${parsed.objetivo.perfil.join(", ") || "-"}
+Urgencia: ${parsed.objetivo.timing}
+
+Meta (indicativo):
+Tasa estimada: ${parsed.tasaEstimada ?? "-"}
+Pago: ${parsed.pago ?? "-"}
+DSCR: ${parsed.dscr ?? "-"}
+`,
+      html: `
+<div style="font-family:Arial, sans-serif; color:#111; line-height:1.5">
+  <h2 style="margin:0 0 8px 0">Solicitud Plinius</h2>
+  <div style="margin:0 0 12px 0; color:#444">Resumen</div>
+  <pre style="background:#f6f7f9; padding:12px; border-radius:10px; white-space:pre-wrap; word-break:break-word; border:1px solid #e7e9ee">
+${escapeHtml(JSON.stringify(parsed, null, 2))}
+  </pre>
+</div>`.trim(),
     });
 
-    // Usuario
+    // Confirmación al usuario (✅ sí se puede y no es complejo)
     await resend.emails.send({
       from,
-      to: c.email,
-      subject: "Plinius — Tu solicitud fue recibida",
-      html: `<div style="font-family:Arial">
-        Hola ${escapeHtml(c.nombre)}.<br/><br/>
-        Recibimos tu solicitud. Te damos respuesta en <b>24 a 48 horas</b>.<br/><br/>
-        — Plinius
-      </div>`
+      to: parsed.contacto.email,
+      subject: "Plinius — Recibimos tu solicitud",
+      replyTo: toAdmin, // que respondan a Luis
+      text:
+`Hola ${parsed.contacto.nombre},
+
+Recibimos tu solicitud y ya la estamos revisando.
+Te respondemos lo antes posible (normalmente 24–48 horas).
+
+— Plinius
+`,
+      html: `
+<div style="font-family:Arial, sans-serif; color:#111; line-height:1.6">
+  <div style="font-weight:800; font-size:18px; margin-bottom:6px">Plinius</div>
+  <div style="font-size:16px; margin-bottom:10px">Hola ${escapeHtml(parsed.contacto.nombre)},</div>
+  <div style="margin-bottom:10px">Recibimos tu solicitud y ya la estamos revisando.</div>
+  <div style="margin-bottom:14px">Te respondemos lo antes posible (normalmente <b>24–48 horas</b>).</div>
+  <div style="color:#666; font-size:13px">Si quieres acelerar, responde este correo con estados financieros o ventas de los últimos 12 meses.</div>
+</div>`.trim(),
     });
 
-    return res.status(200).json({ ok: true });
-  } catch (e) {
-    console.error("SOLICITUD_ERROR:", e);
-    return res.status(500).json({ ok: false, error: "Error enviando solicitud" });
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    // Zod error
+    if (err?.name === "ZodError") {
+      return json(res, 400, { ok: false, error: "Payload inválido", issues: err.issues });
+    }
+    console.error(err);
+    return json(res, 500, { ok: false, error: "Error enviando solicitud" });
   }
 }

@@ -5,6 +5,9 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../assets/css/Solicitud.css";
 
+// 🔁 AJUSTA ESTE PATH AL NOMBRE REAL DE TU LOGO
+import PliniusLogo from "../assets/images/plinius.png";
+
 /* =======================
    Helpers
 ======================= */
@@ -26,9 +29,6 @@ function pagoMensual(M, tasaAnual, nMeses) {
   return (M * r) / (1 - Math.pow(1 + r, -nMeses));
 }
 
-/* =======================
-   Defaults
-======================= */
 const totalSteps = 4;
 const PLAZOS = [12, 18, 24, 36, 48];
 
@@ -45,11 +45,44 @@ const STEPS_META = [
   { n: 4, title: "Contacto", desc: "Datos mínimos para responder." },
 ];
 
+/* =======================
+   Paso 3 opciones (NO texto)
+======================= */
+const USO_OPCIONES = [
+  { id: "capital_trabajo", label: "Capital de trabajo" },
+  { id: "inventario", label: "Inventario" },
+  { id: "expansion", label: "Expansión / nuevas sucursales" },
+  { id: "capex", label: "Equipo / maquinaria (CAPEX)" },
+  { id: "logistica", label: "Logística / flotilla" },
+  { id: "refinanciamiento", label: "Refinanciamiento de pasivos" },
+  { id: "proveedores", label: "Pago a proveedores" },
+  { id: "otro", label: "Otro" },
+];
+
+const PERFIL_OPCIONES = [
+  { id: "estados_financieros", label: "Estados financieros" },
+  { id: "edo_cta", label: "Estados de cuenta" },
+  { id: "facturacion", label: "Facturación / CFDI" },
+  { id: "garantia", label: "Garantía disponible" },
+  { id: "sin_garantia", label: "Sin garantía" },
+  { id: "rfc_listo", label: "RFC/CSF a la mano" },
+];
+
+const TIMING_OPCIONES = [
+  { id: "urgente", label: "Urgente (0–7 días)" },
+  { id: "corto", label: "Corto (1–4 semanas)" },
+  { id: "normal", label: "Normal (1–3 meses)" },
+];
+
+function toggleMulti(arr, id) {
+  return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
+}
+
 export default function Solicitud() {
   const nav = useNavigate();
 
   // Step 1
-  const [step, setStep] = useState(1); // 1..4
+  const [step, setStep] = useState(1);
   const [producto, setProducto] = useState("simple");
   const [conGarantia, setConGarantia] = useState(true);
   const [plazo, setPlazo] = useState(24);
@@ -59,11 +92,10 @@ export default function Solicitud() {
   const [ventasMensuales, setVentasMensuales] = useState(1_800_000);
   const [ebitdaMensual, setEbitdaMensual] = useState(150_000);
 
-  // Step 3
-  const [uso, setUso] = useState("");
-  const [industria, setIndustria] = useState("");
-  const [antiguedadAnios, setAntiguedadAnios] = useState(0);
-  const [estado, setEstado] = useState("");
+  // Step 3 (selecciones)
+  const [usoSel, setUsoSel] = useState([]);
+  const [perfilSel, setPerfilSel] = useState([]);
+  const [timing, setTiming] = useState("normal");
 
   // Step 4 (contacto)
   const [empresa, setEmpresa] = useState("");
@@ -71,6 +103,9 @@ export default function Solicitud() {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
+
+  // Honeypot (hidden)
+  const [website, setWebsite] = useState("");
 
   // Envío
   const [sending, setSending] = useState(false);
@@ -149,22 +184,27 @@ export default function Solicitud() {
 
   const canNext1 = Boolean(producto) && Number.isFinite(plazo);
   const canNext2 = monto >= 100_000 && plazo >= 12 && ebitdaMensual >= 0 && ventasMensuales >= 0;
-  const canNext3 = uso.trim().length >= 10;
+  const canNext3 = usoSel.length >= 1; // ✅ ahora es selección, no texto
+
+  const telefonoClean = useMemo(
+    () => telefono.replace(/[^\d+]/g, "").slice(0, 18),
+    [telefono]
+  );
 
   const canSend =
     empresa.trim().length >= 2 &&
     nombre.trim().length >= 2 &&
     emailOk &&
-    telefono.trim().length >= 8;
+    telefonoClean.replace(/[^\d]/g, "").length >= 8;
 
   const missingSend = useMemo(() => {
     const m = [];
     if (empresa.trim().length < 2) m.push("Empresa");
     if (nombre.trim().length < 2) m.push("Nombre");
     if (!emailOk) m.push("Email válido");
-    if (telefono.trim().length < 8) m.push("Teléfono");
+    if (telefonoClean.replace(/[^\d]/g, "").length < 8) m.push("Teléfono");
     return m;
-  }, [empresa, nombre, emailOk, telefono]);
+  }, [empresa, nombre, emailOk, telefonoClean]);
 
   const stepPct = ((Math.min(step, totalSteps) - 1) / (totalSteps - 1)) * 100;
 
@@ -188,12 +228,23 @@ export default function Solicitud() {
       tasaEstimada,
       pago,
       dscr,
-      uso,
-      industria,
-      antiguedadAnios,
-      estado,
-      contacto: { empresa, rfc, nombre, email, telefono },
-      website: "", // honeypot anti-bot
+
+      // Paso 3 (solo selecciones)
+      objetivo: {
+        uso: usoSel,
+        perfil: perfilSel,
+        timing,
+      },
+
+      contacto: {
+        empresa,
+        rfc,
+        nombre,
+        email,
+        telefono: telefonoClean,
+      },
+
+      website, // honeypot
       createdAt: new Date().toISOString(),
     };
 
@@ -250,12 +301,18 @@ export default function Solicitud() {
           {sent ? (
             <section className="sol-center">
               <div className="sol-cardClean sol-success">
-                <h2>Tu solicitud fue recibida</h2>
-                <p>
-                  Daremos respuesta en <strong>24 a 48 horas</strong>.
+                <div className="sol-successTop">
+                  <img className="sol-successLogo" src={PliniusLogo} alt="Plinius" />
+                  <div className="sol-successBadge">Solicitud recibida</div>
+                </div>
+
+                <h2>Gracias. Ya estamos trabajando en tu solicitud.</h2>
+                <p className="sol-successP">
+                  Vamos a responderte lo antes posible. En la mayoría de los casos,
+                  te damos respuesta en <strong>24 a 48 horas</strong>.
                 </p>
 
-                <div className="sol-success-actions">
+                <div className="sol-successActions">
                   <button className="btnx primary" onClick={() => nav("/ingresar?registro=1")}>
                     Continuar
                   </button>
@@ -264,9 +321,9 @@ export default function Solicitud() {
                   </button>
                 </div>
 
-                <p className="sol-success-mini">
-                  Tip: responde al correo de confirmación con info financiera básica para acelerar tu proceso papi.
-                </p>
+                <div className="sol-successMini">
+                  Si quieres acelerar: contesta el correo con estados financieros/ventas de los últimos 12 meses.
+                </div>
               </div>
             </section>
           ) : (
@@ -289,9 +346,7 @@ export default function Solicitud() {
                           <h2 className="sol-title">Producto y condiciones</h2>
                           <p className="sol-hint">Elige lo esencial. Lo demás lo ajustamos.</p>
                         </div>
-                        <Link className="btnx ghost" to="/simulador">
-                          Volver
-                        </Link>
+                        <Link className="btnx ghost" to="/simulador">Volver</Link>
                       </div>
 
                       <div className="sol-productsClean" role="radiogroup" aria-label="Producto">
@@ -443,9 +498,7 @@ export default function Solicitud() {
                       </div>
 
                       <div className="sol-actions">
-                        <button className="btnx ghost" onClick={goPrev}>
-                          Atrás
-                        </button>
+                        <button className="btnx ghost" onClick={goPrev}>Atrás</button>
                         <button className="btnx primary" onClick={goNext} disabled={!canNext2}>
                           Siguiente
                         </button>
@@ -453,64 +506,82 @@ export default function Solicitud() {
                     </div>
                   )}
 
+                  {/* ✅ Paso 3 multi-select */}
                   {step === 3 && (
                     <div className="sol-step">
                       <div className="sol-cardTop">
                         <div>
                           <div className="sol-kicker">Paso 3 · Objetivo</div>
-                          <h2 className="sol-title">Uso del crédito</h2>
-                          <p className="sol-hint">Una frase clara nos acelera mucho.</p>
+                          <h2 className="sol-title">Selecciona tu caso</h2>
+                          <p className="sol-hint">Cero texto. Solo opciones.</p>
                         </div>
                       </div>
 
-                      <div className="form-grid">
-                        <div className="f full">
-                          <label>Uso del crédito</label>
-                          <textarea
-                            value={uso}
-                            onChange={(e) => setUso(e.target.value)}
-                            placeholder="Ej. 1.2M para inventario y expansión (2 sucursales) en 6 meses."
-                            rows={4}
-                          />
-                          <div className="mini-note">
-                            Mínimo 10 caracteres.
-                          </div>
+                      <div className="sol-selectBlock">
+                        <div className="sol-selectHead">
+                          <div className="sol-selectTitle">Uso del crédito</div>
+                          <div className="sol-selectReq">Requerido</div>
                         </div>
-
-                        <div className="f">
-                          <label>Industria (opcional)</label>
-                          <input
-                            value={industria}
-                            onChange={(e) => setIndustria(e.target.value)}
-                            placeholder="Ej. logística, retail, agro"
-                          />
+                        <div className="sol-chipGrid">
+                          {USO_OPCIONES.map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              className={`solOpt ${usoSel.includes(o.id) ? "active" : ""}`}
+                              onClick={() => setUsoSel((s) => toggleMulti(s, o.id))}
+                              aria-pressed={usoSel.includes(o.id)}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
                         </div>
+                        {usoSel.length === 0 && (
+                          <div className="sol-inlineWarn">Selecciona al menos 1 opción.</div>
+                        )}
+                      </div>
 
-                        <div className="f">
-                          <label>Antigüedad (años)</label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={99}
-                            value={antiguedadAnios}
-                            onChange={(e) => setAntiguedadAnios(Number(e.target.value))}
-                          />
+                      <div className="sol-selectBlock">
+                        <div className="sol-selectHead">
+                          <div className="sol-selectTitle">Perfil / documentación</div>
+                          <div className="sol-selectHint">Opcional</div>
                         </div>
+                        <div className="sol-chipGrid">
+                          {PERFIL_OPCIONES.map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              className={`solOpt ${perfilSel.includes(o.id) ? "active" : ""}`}
+                              onClick={() => setPerfilSel((s) => toggleMulti(s, o.id))}
+                              aria-pressed={perfilSel.includes(o.id)}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                        <div className="f">
-                          <label>Estado (opcional)</label>
-                          <input
-                            value={estado}
-                            onChange={(e) => setEstado(e.target.value)}
-                            placeholder="Ej. CDMX, EdoMex, Jalisco"
-                          />
+                      <div className="sol-selectBlock">
+                        <div className="sol-selectHead">
+                          <div className="sol-selectTitle">Urgencia</div>
+                          <div className="sol-selectHint">Opcional</div>
+                        </div>
+                        <div className="sol-chipGrid">
+                          {TIMING_OPCIONES.map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              className={`solOpt ${timing === o.id ? "active" : ""}`}
+                              onClick={() => setTiming(o.id)}
+                              aria-pressed={timing === o.id}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
                       <div className="sol-actions">
-                        <button className="btnx ghost" onClick={goPrev}>
-                          Atrás
-                        </button>
+                        <button className="btnx ghost" onClick={goPrev}>Atrás</button>
                         <button className="btnx primary" onClick={goNext} disabled={!canNext3}>
                           Siguiente
                         </button>
@@ -528,6 +599,16 @@ export default function Solicitud() {
                         </div>
                       </div>
 
+                      {/* honeypot (oculto) */}
+                      <input
+                        className="hp"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        aria-hidden="true"
+                      />
+
                       {sendError && <div className="sol-error">{sendError}</div>}
 
                       <div className="form-grid">
@@ -538,7 +619,7 @@ export default function Solicitud() {
 
                         <div className="f">
                           <label>RFC (opcional)</label>
-                          <input value={rfc} onChange={(e) => setRfc(e.target.value)} placeholder="Ej. ALA010203XX0" />
+                          <input value={rfc} onChange={(e) => setRfc(e.target.value.toUpperCase())} placeholder="Ej. ALA010203XX0" />
                         </div>
 
                         <div className="f">
@@ -553,7 +634,12 @@ export default function Solicitud() {
 
                         <div className="f">
                           <label>Teléfono</label>
-                          <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="55 1234 5678" />
+                          <input
+                            value={telefonoClean}
+                            onChange={(e) => setTelefono(e.target.value)}
+                            placeholder="55 1234 5678"
+                            inputMode="tel"
+                          />
                         </div>
 
                         <div className="summary-box">
@@ -575,7 +661,9 @@ export default function Solicitud() {
                           </div>
                           <div className="srow">
                             <span>Uso</span>
-                            <strong className="wrap">{uso.trim() || "—"}</strong>
+                            <strong className="wrap">
+                              {usoSel.map((id) => USO_OPCIONES.find((x) => x.id === id)?.label).filter(Boolean).join(", ") || "—"}
+                            </strong>
                           </div>
                           <div className="sfoot">*Indicativo. No es oferta vinculante.</div>
                         </div>
