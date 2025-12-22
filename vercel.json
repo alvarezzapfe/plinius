@@ -4,5 +4,13 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.plinius.mx" }],
+      "destination": "https://plinius.mx/$1",
+      "permanent": true
+    }
   ]
 }
