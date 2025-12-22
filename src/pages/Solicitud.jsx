@@ -6,7 +6,8 @@ import Footer from "../components/Footer";
 import "../assets/css/Solicitud.css";
 
 // 🔁 AJUSTA ESTE PATH AL NOMBRE REAL DE TU LOGO
-import PliniusLogo from "../assets/images/plinius.png";
+import PliniusLogo from "../assets/images/plinius-logo.png";
+
 
 /* =======================
    Helpers
