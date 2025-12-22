@@ -1,8 +1,4 @@
-/* src/assets/css/solicitud.css */
-
-/* Mantén el background que ya usas en App.jsx / Simulador.jsx:
-   aquí sólo estilizamos contenedores y cards.
-*/
+/* src/assets/css/Solicitud.css */
 
 .sol-page {
   position: relative;
@@ -12,7 +8,7 @@
 
 .sol-container {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -31,6 +27,7 @@
   font-size: clamp(28px, 5vw, 44px);
   font-weight: 900;
   letter-spacing: -0.02em;
+  color: #fff;
 }
 
 .sol-sub {
@@ -72,17 +69,12 @@
   color: #c9ced6;
 }
 
-/* ===== Stepper ===== */
-.sol-stepper {
+/* ===== Progress ===== */
+.sol-progress {
   margin-top: 14px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.02);
-  border-radius: 14px;
-  padding: 12px;
-  backdrop-filter: blur(8px);
 }
 
-.sol-stepper-bar {
+.sol-progress-bar {
   height: 6px;
   border-radius: 999px;
   overflow: hidden;
@@ -90,7 +82,7 @@
   border: 1px solid rgba(255,255,255,0.10);
 }
 
-.sol-stepper-fill {
+.sol-progress-fill {
   height: 100%;
   width: 0%;
   background: var(--accent);
@@ -98,53 +90,16 @@
   transition: width 220ms ease;
 }
 
-.sol-stepper-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.st {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
+/* ===== Center layout ===== */
+.sol-center {
+  max-width: 920px;
+  margin: 16px auto 0;
   display: grid;
-  place-items: center;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.04);
-  color: #dfe4eb;
-  font-weight: 900;
+  gap: 14px;
 }
 
-.st.on {
-  background: var(--accent);
-  color: #0b0d10;
-  border-color: color-mix(in srgb, var(--accent) 60%, #0b0d10 40%);
-  box-shadow: 0 0 12px rgba(215,255,0,0.20);
-}
-
-.sol-stepper-txt {
-  margin-left: auto;
-  color: #c9ced6;
-  font-size: 12.5px;
-}
-
-/* ===== Main grid ===== */
-.sol-grid {
-  display: grid;
-  grid-template-columns: 1.25fr 0.75fr;
-  gap: 16px;
-  margin-top: 16px;
-}
-@media (max-width: 980px) {
-  .sol-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ===== Main card ===== */
-.sol-card {
+/* ===== Clean Card ===== */
+.sol-cardClean {
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 18px;
   background: linear-gradient(
@@ -155,7 +110,8 @@
     rgba(15, 19, 25, 0.55);
   box-shadow: 0 0 38px rgba(215,255,0,0.10);
   backdrop-filter: blur(10px);
-  padding: 14px;
+  padding: 16px;
+  color: #fff;
 }
 
 .sol-step {
@@ -163,78 +119,82 @@
   gap: 12px;
 }
 
+.sol-cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sol-kicker {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #aab1bd;
+}
+
 .sol-title {
-  margin: 0;
-  font-size: 18px;
+  margin: 4px 0 0;
+  font-size: 20px;
   font-weight: 900;
+  color: #fff;
 }
 
 .sol-hint {
-  margin: -6px 0 0;
-  color: #aeb4bf;
+  margin: 4px 0 0;
+  color: #c9ced6;
   font-size: 13px;
 }
 
-/* ===== Products ===== */
-.sol-products {
+/* ===== Products clean ===== */
+.sol-productsClean {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
-@media (max-width: 780px) {
-  .sol-products {
+@media (max-width: 820px) {
+  .sol-productsClean {
     grid-template-columns: 1fr;
   }
 }
 
-.pbox {
+.pboxClean {
   border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 12px;
   background: rgba(255,255,255,0.02);
   text-align: left;
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+  color: #fff;
 }
 
-.pbox:hover {
+.pboxClean:hover {
   border-color: rgba(255,255,255,0.22);
   transform: translateY(-1px);
 }
 
-.pbox.active {
+.pboxClean.active {
   border-color: color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,0.18) 45%);
   background: rgba(215,255,0,0.06);
   box-shadow: 0 0 18px rgba(215,255,0,0.12);
 }
 
-.pico {
-  display: inline-grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  margin-bottom: 8px;
-  font-size: 18px;
-}
-
-.ptitle {
-  display: block;
+.ptitleClean {
   font-weight: 900;
   letter-spacing: 0.1px;
+  color: #fff;
 }
 
-.pdesc {
-  display: block;
-  margin-top: 4px;
+.pdescClean {
+  margin-top: 6px;
   color: #c9ced6;
   font-size: 12.5px;
   line-height: 1.35;
 }
 
-/* ===== Rows ===== */
+/* ===== Rows / toggles ===== */
 .sol-row {
   display: grid;
   gap: 8px;
@@ -245,7 +205,6 @@
   color: #aab1bd;
 }
 
-/* Toggle */
 .sol-toggle {
   display: inline-flex;
   border: 1px solid rgba(255,255,255,0.12);
@@ -255,11 +214,11 @@
 }
 
 .tbtn {
-  height: 32px;
+  height: 34px;
   padding: 0 12px;
   border: none;
   background: transparent;
-  color: #dfe4eb;
+  color: #fff;
   font-weight: 900;
   cursor: pointer;
 }
@@ -269,7 +228,7 @@
   box-shadow: 0 0 12px rgba(215,255,0,0.18);
 }
 
-/* Chips plazo */
+/* Chips */
 .sol-chips {
   display: flex;
   gap: 8px;
@@ -277,12 +236,12 @@
 }
 
 .chip {
-  height: 32px;
+  height: 34px;
   padding: 0 12px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.02);
-  color: #dfe4eb;
+  color: #fff;
   font-weight: 900;
   cursor: pointer;
 }
@@ -305,7 +264,7 @@
 
 .ibox {
   border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 12px;
   background: rgba(255,255,255,0.02);
 }
@@ -326,6 +285,7 @@
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-variant-numeric: tabular-nums;
+  color: #fff;
 }
 
 .ibox-hints {
@@ -337,37 +297,27 @@
 }
 
 /* Range */
-.sol-card input[type="range"] {
+.sol-cardClean input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), rgba(255, 255, 255, 0.25));
+  background: linear-gradient(90deg, var(--accent), rgba(255,255,255,0.25));
   outline: none;
 }
 
-.sol-card input[type="range"]::-webkit-slider-thumb {
+.sol-cardClean input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid #0b0d10;
-  box-shadow: 0 0 12px rgba(215, 255, 0, 0.22);
+  box-shadow: 0 0 12px rgba(215,255,0,0.22);
   cursor: pointer;
 }
 
-.sol-card input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid #0b0d10;
-  box-shadow: 0 0 12px rgba(215, 255, 0, 0.22);
-  cursor: pointer;
-}
-
-/* KPI box */
+/* KPI */
 .ibox.kpi {
   display: grid;
   gap: 10px;
@@ -386,6 +336,7 @@
 }
 .kval {
   font-weight: 900;
+  color: #fff;
 }
 
 .mini-note {
@@ -394,7 +345,7 @@
   opacity: 0.9;
 }
 
-/* ===== Step 3 form ===== */
+/* ===== Forms ===== */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -410,21 +361,43 @@
   display: grid;
   gap: 6px;
 }
+.f.full {
+  grid-column: 1 / -1;
+}
+
 .f label {
   font-size: 12.5px;
   color: #aab1bd;
   font-weight: 800;
 }
+
 .f input {
-  height: 38px;
+  height: 40px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.02);
-  color: #e8edf4;
+  color: #fff;
   padding: 0 12px;
   outline: none;
 }
+
 .f input:focus {
+  border-color: rgba(215,255,0,0.45);
+  box-shadow: 0 0 0 2px rgba(215,255,0,0.12);
+}
+
+/* textarea */
+.f textarea {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.02);
+  color: #fff;
+  padding: 10px 12px;
+  outline: none;
+  resize: vertical;
+}
+
+.f textarea:focus {
   border-color: rgba(215,255,0,0.45);
   box-shadow: 0 0 0 2px rgba(215,255,0,0.12);
 }
@@ -432,7 +405,7 @@
 .summary-box {
   grid-column: 1 / -1;
   border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 12px;
   background: rgba(255,255,255,0.02);
   display: grid;
@@ -443,10 +416,17 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  color: #dfe4eb;
+  color: #fff;
 }
 .srow span {
   color: #aab1bd;
+}
+.srow strong.wrap {
+  max-width: 58%;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sfoot {
   color: #aeb4bf;
@@ -454,7 +434,7 @@
   margin-top: 2px;
 }
 
-/* ===== Actions ===== */
+/* ===== Action buttons ===== */
 .sol-actions {
   display: flex;
   justify-content: space-between;
@@ -464,12 +444,12 @@
 }
 
 .btnx {
-  height: 38px;
+  height: 40px;
   padding: 0 14px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.03);
-  color: #e8edf4;
+  color: #fff;
   font-weight: 900;
   letter-spacing: 0.2px;
   cursor: pointer;
@@ -479,9 +459,7 @@
   justify-content: center;
 }
 
-.btnx.ghost {
-  background: transparent;
-}
+.btnx.ghost { background: transparent; }
 
 .btnx.primary {
   background: var(--accent);
@@ -495,111 +473,114 @@
   cursor: not-allowed;
 }
 
-/* ===== Side ===== */
-.sol-side {
+/* ===== Strip of 4 step tiles (below) ===== */
+.sol-stepsStrip {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 860px) {
+  .sol-stepsStrip {
+    grid-template-columns: 1fr;
+  }
 }
 
-.side-card {
+.stepTile {
   border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 18px;
+  border-radius: 16px;
+  padding: 12px;
   background: rgba(255,255,255,0.02);
-  backdrop-filter: blur(10px);
-  padding: 14px;
-}
-
-.side-top {
+  cursor: pointer;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  text-align: left;
+  color: #fff;
+  transition: border-color 120ms ease, transform 120ms ease, background 120ms ease;
 }
 
-.side-badge {
-  height: 22px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(215,255,0,0.10);
-  border: 1px solid rgba(215,255,0,0.20);
-  color: #e8edf4;
-  font-size: 11px;
-  font-weight: 900;
+.stepTile:hover {
+  border-color: rgba(255,255,255,0.22);
+  transform: translateY(-1px);
 }
 
-.side-card h3 {
-  margin: 0;
-  font-size: 15px;
+.stepTile.active {
+  border-color: color-mix(in srgb, var(--accent) 60%, rgba(255,255,255,0.18) 40%);
+  background: rgba(215,255,0,0.06);
+  box-shadow: 0 0 18px rgba(215,255,0,0.12);
 }
 
-.side-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
+.stepTile.done .stepNum {
+  background: rgba(215,255,0,0.18);
+  border-color: rgba(215,255,0,0.35);
+  color: var(--accent);
 }
 
-.side-steps li {
-  display: grid;
-  grid-template-columns: 30px 1fr;
-  gap: 10px;
-  align-items: start;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 14px;
-  padding: 10px;
-  background: rgba(255,255,255,0.02);
-}
-
-.side-steps .n {
-  width: 30px;
-  height: 30px;
+.stepNum {
+  width: 34px;
+  height: 34px;
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: var(--accent);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
   font-weight: 900;
+  color: #fff;
+  flex: 0 0 auto;
 }
 
-.side-steps strong {
-  display: block;
-  font-size: 13px;
+.stepTitle {
+  font-weight: 900;
+  color: #fff;
 }
-.side-steps span {
-  display: block;
+
+.stepDesc {
   margin-top: 2px;
   color: #c9ced6;
   font-size: 12.5px;
 }
 
-.side-kpis {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+/* ===== Errors / missing ===== */
+.sol-error {
+  border: 1px solid rgba(255,107,107,0.40);
+  background: rgba(255,107,107,0.10);
+  color: #ffd2d2;
+  border-radius: 16px;
+  padding: 10px 12px;
+  font-weight: 800;
+  font-size: 13px;
 }
 
-.sk {
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 14px;
-  padding: 10px;
-  background: rgba(255,255,255,0.02);
+.sol-missing {
+  margin-top: 6px;
+  color: #c9ced6;
+  font-size: 12.5px;
 }
-.sk .k {
-  display: block;
-  color: #aab1bd;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.sk strong {
+
+/* ===== Success ===== */
+.sol-success h2 {
+  margin: 0 0 6px;
   font-weight: 900;
+  color: #fff;
+}
+.sol-success p {
+  margin: 0;
+  color: #c9ced6;
+}
+.sol-success-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.sol-success-mini {
+  margin-top: 10px;
+  color: #aeb4bf;
+  font-size: 12px;
 }
 
-.side-foot {
-  margin: 10px 0 0;
+/* Bottom note */
+.sol-bottomNote {
+  text-align: center;
   color: #aeb4bf;
   font-size: 12px;
 }

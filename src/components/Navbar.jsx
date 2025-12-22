@@ -52,7 +52,7 @@ const Navbar = () => {
             <img src={logo} alt="Plinius Logo" className="logo-image" />
           </Link>
           <span className="navbar-tagline">
-            Somos una plataforma de crédito privado
+            Plataforma de inversionistas de crédito privado
           </span>
         </div>
 
