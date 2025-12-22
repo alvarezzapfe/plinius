@@ -1,4 +1,4 @@
-cat > api/health.ts <<'EOF'
+
 export default function handler(req: any, res: any) {
   // CORS suave (por si pruebas desde otro origen)
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -10,4 +10,4 @@ export default function handler(req: any, res: any) {
 
   return res.status(200).json({ ok: true });
 }
-EOF
+
