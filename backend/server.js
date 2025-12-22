@@ -12,7 +12,6 @@ app.get("/api/health", (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-// 🔥 debug: confirma que /api/plinius/solicitud SÍ está en backend
 app.get("/api/plinius/solicitud", (req, res) => {
   res.status(200).json({ ok: true, hint: "Use POST /api/plinius/solicitud" });
 });
@@ -22,33 +21,28 @@ app.options("/api/plinius/solicitud", (req, res) => res.status(200).end());
 app.post("/api/plinius/solicitud", async (req, res) => {
   try {
     const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.PLINIUS_FROM; // "Plinius <no-reply@plinius.mx>"
+    const from = process.env.PLINIUS_FROM;
     const toAdmin = process.env.PLINIUS_TO || "luis@plinius.mx";
 
     if (!apiKey) return res.status(500).json({ ok: false, error: "Falta RESEND_API_KEY" });
     if (!from) return res.status(500).json({ ok: false, error: "Falta PLINIUS_FROM" });
 
     const payload = req.body || {};
+    if (payload.website && String(payload.website).trim().length > 0) return res.status(200).json({ ok: true });
 
-    // honeypot anti-bot
-    if (payload.website && String(payload.website).trim().length > 0) {
-      return res.status(200).json({ ok: true });
-    }
-
-    const contacto = payload.contacto || {};
-    const empresa = String(contacto.empresa || "").trim();
-    const nombre = String(contacto.nombre || "").trim();
-    const email = String(contacto.email || "").trim();
-    const telefono = String(contacto.telefono || "").trim();
+    const c = payload.contacto || {};
+    const empresa = String(c.empresa || "").trim();
+    const nombre = String(c.nombre || "").trim();
+    const email = String(c.email || "").trim();
+    const telefono = String(c.telefono || "").trim();
 
     if (empresa.length < 2) return res.status(400).json({ ok: false, error: "Empresa requerida" });
     if (nombre.length < 2) return res.status(400).json({ ok: false, error: "Nombre requerido" });
     if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok: false, error: "Email inválido" });
     if (telefono.length < 8) return res.status(400).json({ ok: false, error: "Teléfono inválido" });
 
-    const subject = `Solicitud Plinius: ${empresa} · ${payload.monto || ""} · ${payload.plazo || ""}m`;
-
     const resend = new Resend(apiKey);
+    const subject = `Solicitud Plinius: ${empresa} · ${payload.monto || ""} · ${payload.plazo || ""}m`;
 
     await resend.emails.send({
       from,
@@ -82,5 +76,5 @@ function escapeHtml(s = "") {
     .replaceAll('"', "&quot;");
 }
 
-// ✅ export ultra compatible para @vercel/node
+// 👇 Esto es CLAVE para @vercel/node (evita ciertos crashes)
 module.exports = (req, res) => app(req, res);
