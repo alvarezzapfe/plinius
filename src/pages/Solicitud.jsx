@@ -265,7 +265,7 @@ export default function Solicitud() {
                 </div>
 
                 <p className="sol-success-mini">
-                  Tip: responde al correo de confirmación con info financiera básica para acelerar.
+                  Tip: responde al correo de confirmación con info financiera básica para acelerar tu proceso papi.
                 </p>
               </div>
             </section>
