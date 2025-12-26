@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.89.0",
     "@vercel/node": "^5.5.16",
     "cors": "^2.8.5",
     "express": "^5.2.1",
