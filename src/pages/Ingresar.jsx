@@ -9,13 +9,37 @@ import { supabase } from "../lib/supabaseClient";
 const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
 export default function Ingresar() {
-  const [modo, setModo] = useState("ingreso"); // "ingreso" | "registro"
+  const nav = useNavigate();
   const loc = useLocation();
 
-  useEffect(() => {
-    const q = new URLSearchParams(loc.search);
-    if (q.get("registro") === "1") setModo("registro");
+  const startMode = useMemo(() => {
+    const sp = new URLSearchParams(loc.search);
+    return sp.get("registro") === "1" ? "registro" : "ingreso";
   }, [loc.search]);
+
+  const [modo, setModo] = useState(startMode);
+
+  useEffect(() => setModo(startMode), [startMode]);
+
+  // ✅ si ya hay sesión, no muestres login
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      if (data?.session) nav("/dashboard");
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, s) => {
+      if (s) nav("/dashboard");
+    });
+
+    return () => {
+      mounted = false;
+      sub?.subscription?.unsubscribe?.();
+    };
+  }, [nav]);
 
   return (
     <div className="app-container">
@@ -59,7 +83,16 @@ export default function Ingresar() {
             </nav>
 
             <div className="ing-social">
-              <GoogleButton />
+              <GoogleButton
+                onClick={async () => {
+                  const redirectTo = `${window.location.origin}/dashboard`;
+                  const { error } = await supabase.auth.signInWithOAuth({
+                    provider: "google",
+                    options: { redirectTo },
+                  });
+                  if (error) alert(error.message);
+                }}
+              />
             </div>
 
             <div className="ing-sep ing-sep--soft">
@@ -67,7 +100,11 @@ export default function Ingresar() {
             </div>
 
             <div className="ing-form-shell">
-              {modo === "ingreso" ? <LoginForm /> : <SignupForm />}
+              {modo === "ingreso" ? (
+                <LoginForm onSuccess={() => nav("/dashboard")} />
+              ) : (
+                <SignupForm onSuccess={() => nav("/dashboard")} />
+              )}
             </div>
 
             <p className="ing-terms">
@@ -86,57 +123,38 @@ export default function Ingresar() {
   );
 }
 
-/* =====================================================
-   Google Button (Supabase OAuth)
-   ===================================================== */
-function GoogleButton() {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-
-  const onClick = async () => {
-    setErr("");
-    setLoading(true);
-    try {
-      const redirectTo = `${window.location.origin}/dashboard`;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo },
-      });
-      if (error) throw error;
-      // Supabase redirige, aquí normalmente no llegas
-    } catch (e) {
-      setErr(e?.message || "No se pudo iniciar con Google.");
-      setLoading(false);
-    }
-  };
-
+function GoogleButton({ onClick }) {
   return (
-    <>
-      <button type="button" className="ing-gbtn ing-gbtn--soft" onClick={onClick} disabled={loading}>
-        <span className="ing-gicon" aria-hidden>
-          <svg width="18" height="18" viewBox="0 0 48 48">
-            <path fill="#EA4335" d="M24 9.5c3.7 0 7 1.3 9.6 3.8l7.2-7.2C36.6 2.3 30.7 0 24 0 14.6 0 6.5 4.9 1.9 12.1l8.6 6.7C12.5 13.9 17.8 9.5 24 9.5z" />
-            <path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-2.7-.3-3.9H24v7.3h12.7c-.3 2-1.7 5-4.8 7.1l7.3 5.6c4.4-4 7-9.9 7-16.1z" />
-            <path fill="#FBBC05" d="M10.5 28.9c-1-3-1-6.3 0-9.3l-8.6-6.7C-1 17.8-1 30.2 1.9 36l8.6-7.1z" />
-            <path fill="#34A853" d="M24 48c6.5 0 12-2.1 16-5.7l-7.3-5.6c-2 1.4-4.7 2.4-8.7 2.4-6.2 0-11.5-4.4-13.4-10.4l-8.6 7.1C6.5 43.1 14.6 48 24 48z" />
-          </svg>
-        </span>
-        {loading ? "Conectando..." : "Continuar con Google"}
-      </button>
-      {err && <p className="ing-error">{err}</p>}
-    </>
+    <button type="button" className="ing-gbtn ing-gbtn--soft" onClick={onClick}>
+      <span className="ing-gicon" aria-hidden>
+        <svg width="18" height="18" viewBox="0 0 48 48">
+          <path
+            fill="#EA4335"
+            d="M24 9.5c3.7 0 7 1.3 9.6 3.8l7.2-7.2C36.6 2.3 30.7 0 24 0 14.6 0 6.5 4.9 1.9 12.1l8.6 6.7C12.5 13.9 17.8 9.5 24 9.5z"
+          />
+          <path
+            fill="#4285F4"
+            d="M46.1 24.6c0-1.6-.1-2.7-.3-3.9H24v7.3h12.7c-.3 2-1.7 5-4.8 7.1l7.3 5.6c4.4-4 7-9.9 7-16.1z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M10.5 28.9c-1-3-1-6.3 0-9.3l-8.6-6.7C-1 17.8-1 30.2 1.9 36l8.6-7.1z"
+          />
+          <path
+            fill="#34A853"
+            d="M24 48c6.5 0 12-2.1 16-5.7l-7.3-5.6c-2 1.4-4.7 2.4-8.7 2.4-6.2 0-11.5-4.4-13.4-10.4l-8.6 7.1C6.5 43.1 14.6 48 24 48z"
+          />
+        </svg>
+      </span>
+      Continuar con Google
+    </button>
   );
 }
 
-/* =====================================================
-   LoginForm – Supabase
-   ===================================================== */
-function LoginForm() {
-  const nav = useNavigate();
+function LoginForm({ onSuccess }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [show, setShow] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -156,13 +174,23 @@ function LoginForm() {
       });
       if (error) throw error;
 
-      // Guard opcional: si quieres token propio, NO lo necesitas.
-      // Supabase maneja session.
+      // ✅ asegura profile (si no existe) - no rompe si falla por RLS o tabla
+      if (data?.user?.id) {
+        try {
+          await supabase.from("profiles").upsert(
+            {
+              id: data.user.id,
+              email: (data.user.email || email.trim()).trim(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "id" }
+          );
+        } catch {}
+      }
 
-      if (data?.session) nav("/dashboard");
-      else nav("/dashboard"); // por seguridad
+      if (data?.session) onSuccess?.();
     } catch (err) {
-      setErrorMsg(err?.message || "No se pudo ingresar.");
+      setErrorMsg(err?.message || "No se pudo iniciar sesión.");
     } finally {
       setLoading(false);
     }
@@ -178,6 +206,7 @@ function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           required
           maxLength={120}
+          autoComplete="email"
         />
       </Field>
 
@@ -191,14 +220,9 @@ function LoginForm() {
             minLength={8}
             required
             maxLength={128}
+            autoComplete="current-password"
           />
-          <button
-            type="button"
-            className="ing-eye"
-            onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
-            title={show ? "Ocultar contraseña" : "Mostrar contraseña"}
-          >
+          <button type="button" className="ing-eye" onClick={() => setShow((s) => !s)}>
             {show ? "Ocultar" : "Mostrar"}
           </button>
         </div>
@@ -209,48 +233,38 @@ function LoginForm() {
       <button type="submit" className="btn btn-neon w100" disabled={!valid || loading}>
         {loading ? "Ingresando..." : "Ingresar"}
       </button>
-
-      <div className="ing-demo">
-        <Link to="/dashboard" className="btn btn-outline ing-demo-btn">
-          Ir al Dashboard (demo)
-        </Link>
-      </div>
     </form>
   );
 }
 
-/* =====================================================
-   SignupForm – Supabase + perfil (nombres/apellidos)
-   ===================================================== */
-function SignupForm() {
-  const nav = useNavigate();
-
+function SignupForm({ onSuccess }) {
   const [nombres, setNombres] = useState("");
-  const [apPat, setApPat] = useState("");
-  const [apMat, setApMat] = useState("");
-
-  const [razon, setRazon] = useState("");
+  const [apPaterno, setApPaterno] = useState("");
+  const [apMaterno, setApMaterno] = useState("");
+  const [empresa, setEmpresa] = useState("");
   const [rfc, setRfc] = useState("");
 
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
-
   const [ok, setOk] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const rfcOk = useMemo(() => /^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i.test(rfc.trim()), [rfc]);
+  const rfcOk = (v) => {
+    const t = (v || "").trim();
+    if (!t) return true;
+    return /^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i.test(t);
+  };
 
   const valid =
     nombres.trim().length >= 2 &&
-    apPat.trim().length >= 2 &&
-    razon.trim().length > 3 &&
-    rfcOk &&
+    apPaterno.trim().length >= 2 &&
     emailRx.test(email) &&
     pass.length >= 8 &&
-    ok;
+    ok &&
+    rfcOk(rfc);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -261,46 +275,44 @@ function SignupForm() {
     setSuccess(false);
 
     try {
-      // 1) Crear usuario en Supabase Auth
-      const redirectTo = `${window.location.origin}/dashboard`;
-
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: pass,
         options: {
-          emailRedirectTo: redirectTo,
           data: {
             nombres: nombres.trim(),
-            apellido_paterno: apPat.trim(),
-            apellido_materno: apMat.trim() || null,
-            razon_social: razon.trim(),
-            rfc: rfc.trim().toUpperCase(),
+            apellido_paterno: apPaterno.trim(),
+            apellido_materno: apMaterno.trim() || null,
+            empresa: empresa.trim() || null,
+            rfc: rfc.trim().toUpperCase() || null,
           },
         },
       });
-
       if (error) throw error;
 
-      // Si tu proyecto NO requiere confirmación de email, tendrás sesión y user.id aquí.
-      // Si SÍ requiere confirmación, esto te muestra mensaje y el usuario confirmará por correo.
-      const userId = data?.user?.id;
-
-      // 2) Intento de upsert a profiles si hay sesión inmediata
-      if (userId) {
-        await supabase.from("profiles").upsert({
-          id: userId,
-          email: email.trim().toLowerCase(),
-          nombres: nombres.trim(),
-          apellido_paterno: apPat.trim(),
-          apellido_materno: apMat.trim() || null,
-        });
+      // ✅ crea/actualiza profile (si tabla/policies existen)
+      if (data?.user?.id) {
+        try {
+          await supabase.from("profiles").upsert(
+            {
+              id: data.user.id,
+              email: email.trim(),
+              nombres: nombres.trim(),
+              apellido_paterno: apPaterno.trim(),
+              apellido_materno: apMaterno.trim() || null,
+              empresa: empresa.trim() || null,
+              rfc: rfc.trim().toUpperCase() || null,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "id" }
+          );
+        } catch {}
       }
 
       setSuccess(true);
 
-      // Si hay sesión inmediata, manda al dashboard
-      const session = (await supabase.auth.getSession()).data.session;
-      if (session) nav("/dashboard");
+      // ✅ si NO hay confirmación por email, ya hay sesión => navega
+      if (data?.session) onSuccess?.();
     } catch (err) {
       setErrorMsg(err?.message || "Ocurrió un error. Inténtalo de nuevo.");
     } finally {
@@ -312,82 +324,35 @@ function SignupForm() {
     <form className="ing-form ing-form--soft" onSubmit={submit}>
       <div className="ing-grid2">
         <Field label="Nombre(s)">
-          <input
-            type="text"
-            placeholder="Luis Armando"
-            value={nombres}
-            onChange={(e) => setNombres(e.target.value)}
-            required
-            maxLength={80}
-          />
+          <input value={nombres} onChange={(e) => setNombres(e.target.value)} required maxLength={80} />
         </Field>
         <Field label="Apellido paterno">
-          <input
-            type="text"
-            placeholder="Alvarez"
-            value={apPat}
-            onChange={(e) => setApPat(e.target.value)}
-            required
-            maxLength={60}
-          />
+          <input value={apPaterno} onChange={(e) => setApPaterno(e.target.value)} required maxLength={60} />
         </Field>
       </div>
 
       <Field label="Apellido materno (opcional)">
-        <input
-          type="text"
-          placeholder="Zapfe"
-          value={apMat}
-          onChange={(e) => setApMat(e.target.value)}
-          maxLength={60}
-        />
+        <input value={apMaterno} onChange={(e) => setApMaterno(e.target.value)} maxLength={60} />
       </Field>
 
       <div className="ing-grid2">
-        <Field label="Razón social">
-          <input
-            type="text"
-            placeholder="Mi Empresa, S.A. de C.V."
-            value={razon}
-            onChange={(e) => setRazon(e.target.value)}
-            required
-            maxLength={140}
-          />
+        <Field label="Empresa (opcional)">
+          <input value={empresa} onChange={(e) => setEmpresa(e.target.value)} maxLength={140} />
         </Field>
-        <Field label="RFC">
-          <input
-            type="text"
-            placeholder="XXX000000XXX"
-            value={rfc}
-            onChange={(e) => setRfc(e.target.value.toUpperCase())}
-            required
-            maxLength={13}
-          />
+        <Field label="RFC (opcional)">
+          <input value={rfc} onChange={(e) => setRfc(e.target.value.toUpperCase())} maxLength={13} />
         </Field>
       </div>
 
       <Field label="Correo empresarial">
-        <input
-          type="email"
-          placeholder="contacto@empresa.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          maxLength={120}
-        />
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={120} />
       </Field>
 
       <Field label="Contraseña">
-        <input
-          type="password"
-          placeholder="Mínimo 8 caracteres"
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          minLength={8}
-          required
-          maxLength={128}
-        />
+        <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={8} required maxLength={128} />
       </Field>
+
+      {!rfcOk(rfc) && <p className="ing-error">RFC inválido (deja vacío si no lo tienes).</p>}
 
       <label className="ing-chk ing-chk--soft">
         <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />{" "}
@@ -400,28 +365,15 @@ function SignupForm() {
       </label>
 
       {errorMsg && <p className="ing-error">{errorMsg}</p>}
-      {success && (
-        <p className="ing-success">
-          Cuenta creada. Si activaste confirmación por correo, revisa tu inbox para confirmar y entrar 🚀
-        </p>
-      )}
+      {success && <p className="ing-success">Cuenta creada. Ya puedes iniciar sesión ✅</p>}
 
       <button type="submit" className="btn btn-neon w100" disabled={!valid || loading}>
         {loading ? "Creando cuenta..." : "Crear cuenta"}
       </button>
-
-      <div className="ing-demo">
-        <Link to="/dashboard" className="btn btn-outline ing-demo-btn">
-          Ir al Dashboard (demo)
-        </Link>
-      </div>
     </form>
   );
 }
 
-/* =====================================================
-   Field atom
-   ===================================================== */
 function Field({ label, children }) {
   return (
     <label className="ing-field">

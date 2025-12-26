@@ -1,496 +1,445 @@
 /* =====================================================
    INGRESS / AUTH – NAMESPACED .ing-
-   Fondo azul con cuadritos, card centrado
+   Fondo azul con cuadritos, card centrado (pro)
+   Animaciones rápidas + solo transform/opacity
    ===================================================== */
 
-.ing {
-  position: relative;
-  min-height: calc(100vh - 72px);
-  padding: 72px 16px 88px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+.ing{
+  position:relative;
+  min-height:calc(100vh - 72px);
+  padding:72px 16px 88px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+
+  /* micro-perf */
+  contain: layout paint;
 }
 
-/* Luz azul/verde de fondo */
-.ing-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+:root{
+  --ing-text:#020617;
+  --ing-muted:#6b7280;
+  --ing-border:rgba(148,163,184,0.72);
+  --ing-border2:rgba(148,163,184,0.52);
+
+  --ing-card1:#f9fafb;
+  --ing-card2:#eef2ff;
+
+  --ing-dark:#020617;
+  --ing-white:#ffffff;
+
+  --ing-neon1:#22c55e;
+  --ing-neon2:#a3e635;
+
+  --ing-shadow: 0 20px 55px rgba(15,23,42,0.22);
+  --ing-shadow2: 0 10px 30px rgba(15,23,42,0.14);
+
+  --ing-r: 22px;
+  --ing-r2: 14px;
+
+  --ing-fast: 120ms;
+  --ing-med: 160ms;
+}
+
+/* =========================
+   Background layers
+========================= */
+.ing-bg{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
   background:
-    radial-gradient(
-      80% 60% at 10% 0%,
-      rgba(56, 189, 248, 0.16),
-      transparent 60%
-    ),
-    radial-gradient(
-      70% 80% at 90% 10%,
-      rgba(215, 255, 0, 0.16),
-      transparent 65%
-    ),
-    radial-gradient(
-      80% 100% at 50% 100%,
-      rgba(15, 23, 42, 0.94),
-      #020617
-    );
-  opacity: 0.95;
-  z-index: 0;
+    radial-gradient(80% 60% at 10% 0%, rgba(56,189,248,0.16), transparent 60%),
+    radial-gradient(70% 80% at 90% 10%, rgba(215,255,0,0.16), transparent 65%),
+    radial-gradient(80% 100% at 50% 100%, rgba(15,23,42,0.92), #020617);
+  opacity:0.96;
+  z-index:0;
 }
 
-/* Cuadritos sutiles al fondo */
-.ing-grid {
-  position: absolute;
-  inset: -120px -120px;
-  pointer-events: none;
+.ing-grid{
+  position:absolute;
+  inset:-120px -120px;
+  pointer-events:none;
   background-image:
-    linear-gradient(
-      to right,
-      rgba(148, 163, 184, 0.28) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(148, 163, 184, 0.28) 1px,
-      transparent 1px
-    );
-  background-size: 64px 64px;
-  opacity: 0.18;
-  mask-image: radial-gradient(
-    120% 120% at 50% 10%,
-    black,
-    transparent 70%
-  );
-  z-index: 0;
+    linear-gradient(to right, rgba(148,163,184,0.28) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148,163,184,0.28) 1px, transparent 1px);
+  background-size:64px 64px;
+  opacity:0.18;
+  mask-image: radial-gradient(120% 120% at 50% 10%, black, transparent 70%);
+  z-index:0;
 }
 
-.ing-shell {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 420px;
+/* Shell */
+.ing-shell{
+  position:relative;
+  z-index:1;
+  width:100%;
+  max-width:420px;
 }
 
 /* =====================================================
-   CARD – LOGIN / REGISTRO
+   CARD
    ===================================================== */
-
-.ing-card.ing-card--light {
-  border-radius: 22px;
-  border: 1px solid rgba(148, 163, 184, 0.55);
+.ing-card.ing-card--light{
+  border-radius:var(--ing-r);
+  border:1px solid var(--ing-border);
   background:
-    radial-gradient(
-      140% 180% at 0% 0%,
-      rgba(215, 255, 0, 0.14),
-      transparent 55%
-    ),
-    linear-gradient(
-      150deg,
-      #f9fafb,
-      #eef2ff
-    );
-  box-shadow:
-    0 22px 60px rgba(15, 23, 42, 0.9),
-    0 0 0 1px rgba(15, 23, 42, 0.06);
-  padding: 22px 22px 20px;
-  display: grid;
-  gap: 18px;
-  color: #020617;
-  min-height: 460px; /* mantiene tamaño estable entre ingresar / registro */
+    radial-gradient(140% 180% at 0% 0%, rgba(215,255,0,0.14), transparent 55%),
+    linear-gradient(150deg, var(--ing-card1), var(--ing-card2));
+  box-shadow: var(--ing-shadow), 0 0 0 1px rgba(15,23,42,0.06);
+  padding:22px 22px 20px;
+  display:grid;
+  gap:16px;
+
+  color:var(--ing-text);
+
+  /* tamaño estable entre tabs */
+  min-height:470px;
+
+  /* perf */
+  transform: translateZ(0);
 }
 
-/* Contenedor interior para formularios con altura fija */
-.ing-form-shell {
-  margin-top: 4px;
-  min-height: 260px;
-  display: flex;
-  align-items: flex-start;
+/* Form shell fijo */
+.ing-form-shell{
+  margin-top:2px;
+  min-height:268px;
+  display:flex;
+  align-items:flex-start;
+}
+.ing-form-shell > .ing-form{ width:100%; }
+
+/* Header */
+.ing-head{ display:grid; gap:6px; }
+
+.ing-pill{
+  display:inline-flex;
+  align-items:center;
+  height:24px;
+  padding:0 10px;
+  border-radius:999px;
+  background:var(--ing-dark);
+  border:1px solid rgba(148,163,184,0.72);
+  font-size:10px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:#e5e7eb;
 }
 
-.ing-form-shell > .ing-form {
-  width: 100%;
+.ing-title{
+  margin:0;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:-0.015em;
+  color:var(--ing-text);
 }
 
-/* Encabezado del card */
-.ing-head {
-  display: grid;
-  gap: 6px;
-}
-
-.ing-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: #020617;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #e5e7eb;
-}
-
-.ing-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: #020617;
-}
-
-.ing-sub {
-  margin: 0;
-  font-size: 13px;
-  color: #6b7280;
+.ing-sub{
+  margin:0;
+  font-size:13px;
+  color:var(--ing-muted);
 }
 
 /* =====================================================
-   TABS – INGRESO / REGISTRO (más geométricos)
+   TABS
    ===================================================== */
-
-.ing-tabs.ing-tabs--soft {
-  display: flex;
-  width: 100%;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: rgba(15, 23, 42, 0.02);
-  overflow: hidden;
+.ing-tabs.ing-tabs--soft{
+  display:flex;
+  width:100%;
+  border-radius:var(--ing-r2);
+  border:1px solid var(--ing-border);
+  background: rgba(15,23,42,0.02);
+  overflow:hidden;
 }
 
-.ing-tab {
-  position: relative;
-  flex: 1 1 0;
-  height: 36px;
-  padding: 0 18px;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  color: #6b7280;
-  font-weight: 600;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    background 0.16s ease,
-    color 0.16s ease;
+.ing-tab{
+  position:relative;
+  flex:1 1 0;
+  height:36px;
+  border:none;
+  cursor:pointer;
+  background:transparent;
+  color:var(--ing-muted);
+  font-weight:700;
+  font-size:13px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  transition: background var(--ing-med) ease, color var(--ing-med) ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* subrayado fosfo en el activo */
-.ing-tab::after {
-  content: "";
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 4px;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #22c55e, #a3e635);
+.ing-tab::after{
+  content:"";
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:4px;
+  height:2px;
+  border-radius:999px;
+  background: linear-gradient(90deg, var(--ing-neon1), var(--ing-neon2));
   transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.18s ease-out;
-  opacity: 0.9;
+  transform-origin:center;
+  transition: transform var(--ing-med) ease-out;
+  opacity:0.9;
 }
 
-.ing-tab.is-active {
-  background: rgba(255, 255, 255, 0.98);
-  color: #020617;
+.ing-tab.is-active{
+  background: rgba(255,255,255,0.98);
+  color: var(--ing-text);
 }
-
-.ing-tab.is-active::after {
-  transform: scaleX(1);
-}
+.ing-tab.is-active::after{ transform: scaleX(1); }
 
 /* =====================================================
-   SOCIAL LOGIN – GOOGLE
+   GOOGLE BUTTON
    ===================================================== */
+.ing-social{ display:grid; }
 
-.ing-social {
-  display: grid;
+.ing-gbtn.ing-gbtn--soft{
+  height:38px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid var(--ing-border);
+  background: var(--ing-white);
+  color:#111827;
+  font-weight:700;
+  font-size:13px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  box-shadow: 0 10px 26px rgba(148,163,184,0.35);
+  cursor:pointer;
+  transition: transform var(--ing-fast) ease, filter var(--ing-fast) ease, box-shadow var(--ing-fast) ease;
+  will-change: transform;
 }
+.ing-gbtn--soft:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(148,163,184,0.42);
+}
+.ing-gbtn--soft:active{ transform: translateY(0px) scale(0.99); }
 
-.ing-gbtn.ing-gbtn--soft {
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: #ffffff;
-  color: #111827;
-  font-weight: 600;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 8px 24px rgba(148, 163, 184, 0.45);
-  cursor: pointer;
-}
-
-.ing-gbtn--soft:hover {
-  filter: brightness(0.98);
-}
-
-.ing-gicon {
-  display: inline-grid;
-  place-items: center;
-}
+.ing-gicon{ display:inline-grid; place-items:center; }
 
 /* =====================================================
-   SEPARADOR "O CON CORREO"
+   Separator
    ===================================================== */
-
-.ing-sep.ing-sep--soft {
-  position: relative;
-  display: grid;
-  place-items: center;
-  height: 16px;
-  margin: 6px 0;
-  color: #6b7280;
-  font-size: 12px;
+.ing-sep.ing-sep--soft{
+  position:relative;
+  display:grid;
+  place-items:center;
+  height:16px;
+  margin:4px 0;
+  color: var(--ing-muted);
+  font-size:12px;
 }
-
-.ing-sep--soft::before {
-  content: "";
-  position: absolute;
-  inset: 50% 0 auto;
-  height: 1px;
+.ing-sep--soft::before{
+  content:"";
+  position:absolute;
+  inset:50% 0 auto;
+  height:1px;
   transform: translateY(-50%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(148, 163, 184, 0.9),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(148,163,184,0.92), transparent);
 }
-
-.ing-sep--soft span {
-  z-index: 1;
-  padding: 0 8px;
-  background: #f9fafb;
-  border-radius: 999px;
+.ing-sep--soft span{
+  z-index:1;
+  padding:0 8px;
+  background: var(--ing-card1);
+  border-radius:999px;
 }
 
 /* =====================================================
-   FORMULARIOS
+   Forms
    ===================================================== */
+.ing-form{ display:grid; gap:10px; }
+.ing-form--soft{ margin-top:2px; }
 
-.ing-form {
-  display: grid;
-  gap: 10px;
-}
-
-.ing-form--soft {
-  margin-top: 4px;
-}
-
-.ing-grid2 {
-  display: grid;
-  gap: 8px;
+.ing-grid2{
+  display:grid;
+  gap:8px;
   grid-template-columns: 1fr 1fr;
 }
-
-@media (max-width: 640px) {
-  .ing-grid2 {
-    grid-template-columns: 1fr;
-  }
+@media (max-width:640px){
+  .ing-grid2{ grid-template-columns:1fr; }
 }
 
 /* Field atom */
-.ing-field {
-  display: grid;
-  gap: 4px;
+.ing-field{ display:grid; gap:4px; }
+.ing-field__label{
+  font-size:12px;
+  color: var(--ing-muted);
+  font-weight:600;
 }
 
-.ing-field__label {
-  font-size: 12px;
-  color: #6b7280;
+.ing-field__input.ing-field__input--soft{
+  border-radius:10px;
+  border:1px solid rgba(148,163,184,0.86);
+  background: var(--ing-white);
+  padding:9px 10px;
+  display:grid;
+  transition: border-color var(--ing-fast) ease, box-shadow var(--ing-fast) ease;
+}
+.ing-field__input--soft:focus-within{
+  border-color: rgba(34,197,94,0.75);
+  box-shadow: 0 0 0 4px rgba(34,197,94,0.16);
 }
 
-.ing-field__input.ing-field__input--soft {
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.8);
-  background: #ffffff;
-  padding: 9px 10px;
-  display: grid;
+.ing-field__input--soft input{
+  background:transparent;
+  border:none;
+  outline:none;
+  color: var(--ing-text);
+  font-size:14px;
 }
 
-.ing-field__input--soft input {
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #020617;
-  font-size: 14px;
-}
-
-/* Password + botón ojo */
-.ing-pass {
-  display: grid;
+/* Password row */
+.ing-pass{
+  display:grid;
   grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: center;
+  gap:8px;
+  align-items:center;
 }
+.ing-eye{
+  border:1px solid rgba(148,163,184,0.86);
+  background: rgba(248,250,252,0.96);
+  height:32px;
+  min-width:78px;
+  border-radius:999px;
+  cursor:pointer;
+  color:#111827;
+  font-size:12px;
+  font-weight:700;
+  transition: transform var(--ing-fast) ease, filter var(--ing-fast) ease;
+  will-change: transform;
+}
+.ing-eye:hover{ transform: translateY(-1px); }
+.ing-eye:active{ transform: translateY(0px) scale(0.99); }
 
-.ing-eye {
-  border: 1px solid rgba(148, 163, 184, 0.8);
-  background: rgba(248, 250, 252, 0.95);
-  height: 32px;
-  min-width: 80px;
-  border-radius: 999px;
-  cursor: pointer;
-  color: #111827;
-  font-size: 12px;
-  font-weight: 500;
+/* Row */
+.ing-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:4px;
 }
-
-/* Row con recordar / enlace */
-.ing-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 4px;
+.ing-chk{
+  font-size:12px;
+  color:#4b5563;
 }
-
-.ing-chk {
-  font-size: 12px;
-  color: #4b5563;
-}
-
-.ing-chk--soft span {
-  color: #4b5563;
-}
+.ing-chk--soft span{ color:#4b5563; }
 
 /* =====================================================
-   BOTONES / LINKS / MENSAJES
+   Buttons / links / messages
    ===================================================== */
+.w100{ width:100%; }
 
-.w100 {
-  width: 100%;
-}
-
-/* Botones dentro del card light */
-.ing-card--light .btn {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 999px;
-  font-weight: 600;
-  border: 1px solid rgba(15, 23, 42, 0.85);
-  background: #020617;
+.ing-card--light .btn{
+  height:36px;
+  padding:0 16px;
+  border-radius:999px;
+  font-weight:800;
+  border:1px solid rgba(15,23,42,0.9);
+  background: var(--ing-dark);
   color: #f9fafb;
-  font-size: 13px;
-  cursor: pointer;
-  text-decoration: none;
+  font-size:13px;
+  cursor:pointer;
+  text-decoration:none;
+
+  transition: transform var(--ing-fast) ease, filter var(--ing-fast) ease, box-shadow var(--ing-fast) ease;
+  will-change: transform;
+}
+.ing-card--light .btn:hover:not(:disabled){ transform: translateY(-1px); }
+.ing-card--light .btn:active:not(:disabled){ transform: translateY(0px) scale(0.99); }
+
+.ing-card--light .btn-neon{
+  background: linear-gradient(135deg, var(--ing-neon1), var(--ing-neon2));
+  color:#022c22;
+  border-color: rgba(22,163,74,0.95);
+  box-shadow: 0 0 18px rgba(74,222,128,0.55), 0 0 0 1px rgba(15,23,42,0.08);
+  text-shadow: 0 0 4px rgba(255,255,255,0.22);
+}
+.ing-card--light .btn-neon:hover:not(:disabled){
+  filter: brightness(1.03);
+  box-shadow: 0 0 22px rgba(132,204,22,0.75), 0 0 0 1px rgba(15,23,42,0.12);
 }
 
-/* BOTÓN VERDE FOSFO ESTILO CROWDLINK */
-.ing-card--light .btn-neon {
-  background: linear-gradient(135deg, #22c55e, #a3e635);
-  color: #022c22;
-  border-color: rgba(22, 163, 74, 0.95);
-  box-shadow:
-    0 0 22px rgba(74, 222, 128, 0.7),
-    0 0 0 1px rgba(15, 23, 42, 0.1);
-  text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+.ing-card--light .btn-outline{
+  background: var(--ing-white);
+  color:#111827;
+  border-color: rgba(148,163,184,0.86);
+  box-shadow: var(--ing-shadow2);
 }
-
-.ing-card--light .btn-neon:hover:not(:disabled) {
-  filter: brightness(1.04);
-  box-shadow:
-    0 0 26px rgba(132, 204, 22, 0.9),
-    0 0 0 1px rgba(15, 23, 42, 0.16);
-}
-
-.ing-card--light .btn-outline {
-  background: #ffffff;
-  color: #111827;
-  border-color: rgba(148, 163, 184, 0.8);
-}
-
-.ing-card--light .btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.ing-card--light .btn:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+  transform:none;
 }
 
 /* Links */
-.ing-link {
-  color: #a3e635; /* verde-lima suave para links */
-  text-decoration: none;
-  border-bottom: 1px dashed rgba(163, 230, 53, 0.7);
+.ing-link{
+  color:#65a30d;
+  text-decoration:none;
+  border-bottom:1px dashed rgba(101,163,13,0.55);
+  transition: filter var(--ing-fast) ease;
+}
+.ing-link:hover{ filter: brightness(0.95); }
+.ing-link--sm{ font-size:12px; }
+.ing-link--inline{ border-bottom-style:solid; }
+
+/* Terms */
+.ing-terms{
+  margin:0;
+  font-size:11.5px;
+  color: var(--ing-muted);
 }
 
-.ing-link--sm {
-  font-size: 12px;
+/* Messages */
+.ing-error{
+  margin:2px 0 0;
+  font-size:12px;
+  color:#b91c1c;
+  font-weight:600;
+}
+.ing-success{
+  margin:2px 0 0;
+  font-size:12px;
+  color:#15803d;
+  font-weight:700;
 }
 
-.ing-link--inline {
-  border-bottom-style: solid;
+/* Demo */
+.ing-demo{
+  margin-top:8px;
+  display:flex;
+  justify-content:center;
+}
+.ing-demo-btn{
+  height:32px !important;
+  padding:0 12px !important;
+  font-size:12px !important;
+  border-radius:999px !important;
 }
 
-/* Términos abajo del card */
-.ing-terms {
-  margin: 0;
-  font-size: 11.5px;
-  color: #6b7280;
-}
-
-/* Mensajes de error / éxito */
-.ing-error {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: #b91c1c;
-}
-
-.ing-success {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: #15803d;
-}
-
-/* Botón demo */
-.ing-demo {
-  margin-top: 8px;
-  display: flex;
-  justify-content: center;
-}
-
-.ing-demo-btn {
-  height: 32px !important;
-  padding: 0 12px !important;
-  font-size: 12px !important;
-  border-radius: 999px !important;
-}
-
-/* =====================================================
-   FOCUS VISIBLE
-   ===================================================== */
-
+/* Focus */
 .ing .ing-tab:focus-visible,
 .ing .btn:focus-visible,
 .ing .ing-link:focus-visible,
 .ing input:focus-visible,
-.ing .ing-eye:focus-visible {
-  outline: 2px solid #22c55e;
+.ing .ing-eye:focus-visible{
+  outline: 2px solid rgba(34,197,94,0.9);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
-/* =====================================================
-   RESPONSIVE
-   ===================================================== */
-
-@media (max-width: 600px) {
-  .ing {
-    padding: 64px 14px 72px;
+/* Responsive */
+@media (max-width:600px){
+  .ing{ padding:64px 14px 72px; }
+  .ing-card.ing-card--light{
+    padding:18px 16px 18px;
+    min-height:455px;
   }
-
-  .ing-card.ing-card--light {
-    padding: 18px 16px 18px;
-    min-height: 440px;
-  }
-
-  .ing-form-shell {
-    min-height: 260px;
-  }
+  .ing-form-shell{ min-height:268px; }
 }

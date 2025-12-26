@@ -6,6 +6,8 @@ import Footer from "./components/Footer";
 import "./assets/css/theme.css";
 import Plogo from "./assets/images/logo2-plinius.png";
 
+
+
 const pesos = (x, max = 0) =>
   new Intl.NumberFormat("es-MX", {
     style: "currency",
