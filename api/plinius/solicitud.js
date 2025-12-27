@@ -60,6 +60,15 @@ function sanitizeText(s = "", max = 600) {
   return cleaned.replace(/[<>]/g, "");
 }
 
+function safeJsonParse(maybeString) {
+  if (typeof maybeString !== "string") return maybeString || {};
+  try {
+    return JSON.parse(maybeString);
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   // CORS básico
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -70,23 +79,31 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "Method not allowed" });
 
   try {
+    // Resend env
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.PLINIUS_FROM; // "Plinius <no-reply@plinius.mx>"
     const toAdmin = process.env.PLINIUS_TO || "luis@plinius.mx";
 
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+    // Supabase env (🔥 FIX: fallback a VITE_ si no existen server vars)
+    const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
     if (!apiKey) return json(res, 500, { ok: false, error: "Falta RESEND_API_KEY" });
     if (!from) return json(res, 500, { ok: false, error: "Falta PLINIUS_FROM" });
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY)
-      return json(res, 500, { ok: false, error: "Falta SUPABASE_URL o SUPABASE_ANON_KEY" });
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return json(res, 500, {
+        ok: false,
+        error:
+          "Falta SUPABASE_URL/SUPABASE_ANON_KEY. En Vercel tienes VITE_SUPABASE_*, o renombra a SUPABASE_* para server.",
+      });
+    }
 
-    const raw = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+    const raw = safeJsonParse(req.body);
+    if (raw === null) return json(res, 400, { ok: false, error: "JSON inválido en body" });
 
     // honeypot anti-bot
     if (raw.website && String(raw.website).trim().length > 0) {
-      return json(res, 200, { ok: true });
+      return json(res, 200, { ok: true, skipped: true });
     }
 
     // Validación fuerte
@@ -101,7 +118,6 @@ export default async function handler(req, res) {
     // ✅ Identidad del usuario (token supabase)
     const auth = req.headers.authorization || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-
     if (!token) return json(res, 401, { ok: false, error: "Falta Authorization Bearer token" });
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -131,7 +147,10 @@ export default async function handler(req, res) {
         });
       }
       if (msg.includes("could not find the table")) {
-        return json(res, 500, { ok: false, error: "No existe la tabla public.solicitudes (revisa SQL + reload schema)" });
+        return json(res, 500, {
+          ok: false,
+          error: "No existe la tabla public.solicitudes (revisa SQL + reload schema)",
+        });
       }
       return json(res, 400, { ok: false, error: insErr.message });
     }
@@ -142,8 +161,8 @@ export default async function handler(req, res) {
 
     const resend = new Resend(apiKey);
 
-    // Admin
-    await resend.emails.send({
+    // 1) Admin
+    const adminSend = await resend.emails.send({
       from,
       to: toAdmin,
       subject,
@@ -183,8 +202,18 @@ ${escapeHtml(JSON.stringify(parsed, null, 2))}
 </div>`.trim(),
     });
 
-    // Confirmación usuario
-    await resend.emails.send({
+    if (adminSend?.error) {
+      // No tiramos la solicitud; solo reportamos fallo de email
+      console.error("Resend admin error:", adminSend.error);
+      return json(res, 200, {
+        ok: true,
+        id: ins.id,
+        mail: { admin: { ok: false, error: adminSend.error?.message || String(adminSend.error) } },
+      });
+    }
+
+    // 2) Usuario
+    const userSend = await resend.emails.send({
       from,
       to: parsed.contacto.email,
       subject: "Plinius — Recibimos tu solicitud",
@@ -207,7 +236,26 @@ Normalmente respondemos en 24–48 horas.
 </div>`.trim(),
     });
 
-    return json(res, 200, { ok: true, id: ins.id });
+    if (userSend?.error) {
+      console.error("Resend user error:", userSend.error);
+      return json(res, 200, {
+        ok: true,
+        id: ins.id,
+        mail: {
+          admin: { ok: true, id: adminSend.data?.id || null },
+          user: { ok: false, error: userSend.error?.message || String(userSend.error) },
+        },
+      });
+    }
+
+    return json(res, 200, {
+      ok: true,
+      id: ins.id,
+      mail: {
+        admin: { ok: true, id: adminSend.data?.id || null },
+        user: { ok: true, id: userSend.data?.id || null },
+      },
+    });
   } catch (err) {
     if (err?.name === "ZodError") {
       return json(res, 400, { ok: false, error: "Payload inválido", issues: err.issues });
