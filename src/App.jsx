@@ -1,12 +1,10 @@
 // src/App.jsx
 import React, { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import "./assets/css/theme.css";
 import Plogo from "./assets/images/logo2-plinius.png";
-
-
 
 const pesos = (x, max = 0) =>
   new Intl.NumberFormat("es-MX", {
@@ -16,6 +14,8 @@ const pesos = (x, max = 0) =>
   }).format(x);
 
 export default function App() {
+  const location = useLocation();
+
   // Animación reveal on scroll
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
@@ -29,6 +29,19 @@ export default function App() {
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
+
+  // ✅ Scroll a secciones por hash (#sobre-plinius, #enfoque)
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = location.hash.replace("#", "");
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    // un pequeño delay para que el layout termine (navbar / fonts)
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }, [location.hash]);
 
   return (
     <div className="app-container">
@@ -176,11 +189,7 @@ export default function App() {
                               <div className="dash-chart-fill" />
                             </div>
                             <span className="dash-chart-value">
-                              {pesos(row.monto / 1000, 0).replace(
-                                "MXN",
-                                ""
-                              )}{" "}
-                              mil
+                              {pesos(row.monto / 1000, 0).replace("MXN", "")} mil
                             </span>
                           </div>
                         ))}
@@ -230,86 +239,139 @@ export default function App() {
         </div>
       </main>
 
-      {/* ---------- POR QUÉ PLINIUS ---------- */}
-      <section className="section why reveal">
+      {/* ---------- SOBRE PLINIUS ---------- */}
+      <section className="section why reveal" id="sobre-plinius">
         <div className="section-inner">
           <header className="section-head">
-            <h2>¿Por qué financiarte con Plinius?</h2>
+            <h2>Sobre Plinius</h2>
             <p className="section-sub">
-              Combinamos regulación, tecnología y criterio de crédito para
-              acompañar a tu empresa mientras crece.
+              Financiamiento empresarial con enfoque práctico: claridad, velocidad y
+              criterio de crédito basado en flujo real.
             </p>
           </header>
 
           <div className="why-grid">
             <article className="why-card">
-              <h3>Brazo de instituciones reguladas</h3>
+              <div className="why-top">
+                <h3>Financiamiento sin fricción</h3>
+                <span className="why-badge">Digital + humano</span>
+              </div>
               <p>
-                Plinius opera como brazo de dos entidades financieras reguladas
-                en México ante CNBV y Banxico, con procesos diseñados para
-                cumplir normativa sin frenar tu crecimiento.
+                Una experiencia simple para founders y equipos de finanzas:
+                solicitud clara, seguimiento en panel y comunicación directa.
               </p>
+              <ul className="why-list">
+                <li>Proceso guiado y transparente</li>
+                <li>Panel de control de créditos y vencimientos</li>
+                <li>Documentos y avances siempre visibles</li>
+              </ul>
             </article>
 
             <article className="why-card">
-              <h3>Procesos ágiles desde el día uno</h3>
+              <div className="why-top">
+                <h3>Criterio de crédito serio</h3>
+                <span className="why-badge">Cash-flow first</span>
+              </div>
               <p>
-                Nacimos con tecnología: conexión a SAT, tableros de seguimiento
-                y firma digital para que el tiempo se vaya a operar tu negocio,
-                no a perseguir papeles.
+                Analizamos capacidad de pago y estructura óptima (monto, plazo,
+                producto) para que el crédito ayude a crecer, no a ahorcar.
               </p>
+              <ul className="why-list">
+                <li>Flujos, márgenes y estacionalidad</li>
+                <li>Riesgo concentrado y dependencias</li>
+                <li>Garantías cuando agregan valor</li>
+              </ul>
             </article>
 
             <article className="why-card">
-              <h3>Crédito que crece contigo</h3>
+              <div className="why-top">
+                <h3>Productos para operar</h3>
+                <span className="why-badge">Crédito + Arrendamiento</span>
+              </div>
               <p>
-                Entendemos crédito empresarial: estructuramos montos, plazos y
-                productos para acompañar la evolución de tu empresa, no para
-                ahogarla en pagos.
+                Capital de trabajo, maquinaria, flotillas y crecimiento. Diseñamos
+                la estructura para tu operación y tu ciclo de cobranza.
               </p>
+              <ul className="why-list">
+                <li>Crédito simple para capital de trabajo</li>
+                <li>Arrendamiento puro (activos productivos)</li>
+                <li>Calendarios alineados a tu negocio</li>
+              </ul>
             </article>
           </div>
         </div>
       </section>
 
-      {/* ---------- PROCESO ---------- */}
-      <section className="section process reveal">
+      {/* ---------- ENFOQUE Y CRITERIOS ---------- */}
+      <section className="section process reveal" id="enfoque">
         <div className="section-inner">
           <header className="section-head">
-            <h2>Así de simple es obtener financiamiento</h2>
+            <h2>Enfoque y criterios</h2>
             <p className="section-sub">
-              Un flujo pensado para founders, CFOs y equipos de finanzas que ya
-              no quieren procesos eternos.
+              Esto es lo que buscamos para darte una respuesta rápida y una oferta
+              que tenga sentido.
             </p>
           </header>
 
           <div className="process-grid">
             <article className="process-card">
               <div className="process-index">1</div>
-              <h3>Cuenta y verificación</h3>
+              <h3>Enfoque de análisis</h3>
               <p>
-                Crea tu cuenta, carga datos básicos de la empresa y verifica tu
-                identidad en minutos.
+                Priorizamos la capacidad de pago real y la calidad de los flujos.
+                Menos “papel”, más lectura de negocio.
               </p>
+              <ul className="process-list">
+                <li>Flujo libre y cobertura de deuda</li>
+                <li>Calidad de ingresos y recurrencia</li>
+                <li>Uso del crédito y retorno esperado</li>
+              </ul>
             </article>
 
             <article className="process-card">
               <div className="process-index">2</div>
-              <h3>Conexión a SAT y análisis</h3>
+              <h3>Criterios base</h3>
               <p>
-                Nos conectamos a SAT, analizamos tus flujos y construimos una
-                oferta de crédito o arrendamiento a tu medida.
+                No buscamos empresas “perfectas”, buscamos empresas con fundamentos
+                y trazabilidad.
               </p>
+              <ul className="process-list">
+                <li>Antigüedad operando y evidencia de ventas</li>
+                <li>Información fiscal (SAT) y bancarización</li>
+                <li>Historial de pago y concentración de clientes</li>
+              </ul>
             </article>
 
             <article className="process-card">
               <div className="process-index">3</div>
-              <h3>Oferta, firma y desembolso</h3>
+              <h3>Oferta en 48 horas</h3>
               <p>
-                Revisa condiciones, firma tus contratos y recibe los recursos
-                directo en tu cuenta. Sin vueltas innecesarias.
+                Con datos completos, podemos cotizar rápido: monto, plazo, tasa,
+                comisiones y garantías (si aplican).
               </p>
+              <ul className="process-list">
+                <li>Pre-análisis → oferta preliminar</li>
+                <li>Validación → términos finales</li>
+                <li>Firma → desembolso / entrega de activo</li>
+              </ul>
             </article>
+          </div>
+
+          <div className="criteria-note">
+            <div className="criteria-card">
+              <h4>Tip para acelerar</h4>
+              <p>
+                Si conectas SAT y adjuntas estados de cuenta, el análisis corre más
+                rápido y la oferta sale mejor estructurada.
+              </p>
+            </div>
+            <div className="criteria-card">
+              <h4>Qué puedes esperar</h4>
+              <p>
+                Te diremos “sí”, “no” o “sí, pero así” (con estructura alternativa).
+                Siempre con razón clara.
+              </p>
+            </div>
           </div>
         </div>
       </section>

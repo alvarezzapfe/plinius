@@ -1,641 +1,531 @@
 // src/pages/Productos.jsx
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../assets/css/products.css";
 
-// ------------ Helpers ------------
+// ---------- Helpers ----------
 const pesos = (x, max = 0) =>
   new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
     maximumFractionDigits: max,
-  }).format(x);
+  }).format(Number.isFinite(x) ? x : 0);
 
-const pct = (x, digits = 1) => `${x.toFixed(digits)}%`;
-const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const pct = (x, digits = 1) => `${Number(x || 0).toFixed(digits)}%`;
 
 function pagoMensual(M, tasaAnual, nMeses) {
-  const r = tasaAnual / 100 / 12;
+  const r = (tasaAnual || 0) / 100 / 12;
+  if (!nMeses) return 0;
   if (r === 0) return M / nMeses;
   return (M * r) / (1 - Math.pow(1 + r, -nMeses));
 }
 
-// ------------ Constantes UI ------------
-const TABS = [
-  { id: "simple", label: "Crédito simple" },
-  { id: "arrendamiento", label: "Arrendamiento puro" },
-  { id: "asesoria", label: "Asesoría estratégica" },
-  { id: "bursatilizacion", label: "Bursatilización" },
+function futureValue(P, tasaAnual, meses) {
+  const r = (tasaAnual || 0) / 100 / 12;
+  return P * Math.pow(1 + r, meses || 0);
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+// ---------- UI Config ----------
+const CATS = [
+  {
+    id: "credito",
+    title: "Crédito",
+    subtitle: "Simple o Revolvente",
+    glow: "g-credit",
+    options: [
+      { id: "simple", label: "Simple", desc: "Pagos fijos mensuales, claridad total." },
+      { id: "revolvente", label: "Revolvente", desc: "Línea disponible, paga interés sobre uso." },
+    ],
+  },
+  {
+    id: "arr",
+    title: "Arrendamiento",
+    subtitle: "Financiero o Puro",
+    glow: "g-lease",
+    options: [
+      { id: "financiero", label: "Financiero", desc: "Adquisición al final (opción de compra)." },
+      { id: "puro", label: "Puro", desc: "Renta deducible, flexible y operativo." },
+    ],
+  },
+  {
+    id: "inv",
+    title: "Inversión",
+    subtitle: "Cartera, por crédito o pagaré",
+    glow: "g-inv",
+    options: [
+      { id: "cartera", label: "Cartera", desc: "Exposición diversificada a originación." },
+      { id: "por_credito", label: "Por crédito", desc: "Selecciona créditos específicos." },
+      { id: "pagare_36", label: "Pagaré 36m", desc: "Rendimiento fijo, horizonte claro." },
+    ],
+  },
 ];
 
-const PLAZOS = [12, 18, 24, 36, 48];
-
-// ------------ SVG Micro-charts ------------
-function BarChart({ data, w = 260, h = 120, pad = 22, format = (v) => v }) {
-  // data: [{label, value}]
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const barW = (w - pad * 2) / data.length - 10;
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mini-chart">
-      <line
-        x1={pad}
-        y1={h - pad}
-        x2={w - pad}
-        y2={h - pad}
-        stroke="currentColor"
-        opacity="0.25"
-      />
-      {data.map((d, i) => {
-        const x = pad + i * ((w - pad * 2) / data.length) + 5;
-        const hh = ((h - pad * 2) * d.value) / max;
-        const y = h - pad - hh;
-        return (
-          <g key={d.label}>
-            <rect x={x} y={y} width={barW} height={hh} rx="6" className="bar" />
-            <text x={x + barW / 2} y={h - 6} className="t-label">
-              {d.label}
-            </text>
-            <text x={x + barW / 2} y={y - 6} className="t-value">
-              {format(d.value)}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function LineChart({ points, w = 320, h = 140, pad = 24, format = (v) => v }) {
-  // points: [{x, y, label}]
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-
-  const scaleX = (x) =>
-    pad + ((x - minX) / Math.max(maxX - minX, 1)) * (w - pad * 2);
-  const scaleY = (y) =>
-    h - pad - ((y - minY) / Math.max(maxY - minY, 1)) * (h - pad * 2);
-
-  const pathD = points
-    .map((p, i) => `${i ? "L" : "M"} ${scaleX(p.x)} ${scaleY(p.y)}`)
-    .join(" ");
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mini-chart">
-      <polyline
-        fill="none"
-        stroke="currentColor"
-        opacity="0.25"
-        strokeWidth="1"
-        points={`${pad},${h - pad} ${w - pad},${h - pad}`}
-      />
-      <path d={pathD} className="line" />
-      {points.map((p, i) => (
-        <g key={i}>
-          <circle cx={scaleX(p.x)} cy={scaleY(p.y)} r="3" className="dot" />
-          <text x={scaleX(p.x)} y={scaleY(p.y) - 8} className="t-value">
-            {format(p.y)}
-          </text>
-          <text x={scaleX(p.x)} y={h - 6} className="t-label">
-            {p.label ?? p.x}
-          </text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function Donut({ parts, w = 160, h = 160 }) {
-  // parts: [{label, value}]
-  const cx = w / 2;
-  const cy = h / 2;
-  const r = Math.min(w, h) / 2 - 10;
-  const total = Math.max(
-    parts.reduce((s, p) => s + p.value, 0),
-    1
-  );
-  let angle = -Math.PI / 2;
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="mini-chart">
-      {parts.map((p, idx) => {
-        const slice = (p.value / total) * Math.PI * 2;
-        const x1 = cx + r * Math.cos(angle);
-        const y1 = cy + r * Math.sin(angle);
-        const x2 = cx + r * Math.cos(angle + slice);
-        const y2 = cy + r * Math.sin(angle + slice);
-        const large = slice > Math.PI ? 1 : 0;
-        const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-        angle += slice;
-        return <path key={idx} d={d} className={`arc arc-${idx}`} />;
-      })}
-      <circle cx={cx} cy={cy} r={r * 0.55} className="donut-hole" />
-      <text x={cx} y={cy} className="donut-text">
-        Mix
-      </text>
-    </svg>
-  );
-}
-
-// ------------ Página ------------
 export default function Productos() {
-  // UI
-  const [tab, setTab] = useState("simple");
-  const tabIndex = TABS.findIndex((t) => t.id === tab);
+  const nav = useNavigate();
 
-  // Inputs financieros
+  // Category + option
+  const [cat, setCat] = useState("credito"); // credito | arr | inv
+  const activeCat = useMemo(() => CATS.find((c) => c.id === cat) || CATS[0], [cat]);
+
+  const [opt, setOpt] = useState("simple"); // depends on cat
+
+  // Keep opt valid when cat changes
+  React.useEffect(() => {
+    const first = activeCat.options[0]?.id;
+    if (!activeCat.options.some((o) => o.id === opt)) setOpt(first);
+  }, [cat]); // eslint-disable-line
+
+  // Inputs (shared style)
   const [monto, setMonto] = useState(1_200_000);
   const [plazo, setPlazo] = useState(24);
   const [tasa, setTasa] = useState(24);
   const [fee, setFee] = useState(3.5);
 
-  // Cálculos comunes
-  const pago = useMemo(
-    () => pagoMensual(monto, tasa, plazo),
-    [monto, tasa, plazo]
-  );
+  // Revolvente inputs
+  const [linea, setLinea] = useState(2_500_000);
+  const [usoPct, setUsoPct] = useState(45);
+
+  // Inversión inputs
+  const [invMonto, setInvMonto] = useState(500_000);
+  const [invTasa, setInvTasa] = useState(14);
+  const [invMeses, setInvMeses] = useState(36);
+
+  // Cálculos Crédito simple / Arr
+  const pago = useMemo(() => pagoMensual(monto, tasa, plazo), [monto, tasa, plazo]);
   const comApertura = useMemo(() => (monto * fee) / 100, [monto, fee]);
-  const totalCredito = useMemo(
-    () => pago * plazo + comApertura,
-    [pago, plazo, comApertura]
-  );
+  const totalCredito = useMemo(() => pago * plazo + comApertura, [pago, plazo, comApertura]);
 
-  // Arrendamiento (aprox igual fórmula; se puede ajustar con residual si quieres después)
+  // Revolvente (estimación): interés mensual sobre saldo usado
+  const saldoUsado = useMemo(() => (linea * usoPct) / 100, [linea, usoPct]);
+  const interesMensual = useMemo(() => saldoUsado * ((tasa || 0) / 100 / 12), [saldoUsado, tasa]);
+
+  // Arrendamiento (aprox): usamos misma fórmula, pero KPI diferente
   const renta = pago;
-  const totalArr = useMemo(
-    () => renta * plazo + comApertura,
-    [renta, plazo, comApertura]
-  );
+  const totalArr = useMemo(() => renta * plazo + comApertura, [renta, plazo, comApertura]);
 
-  // Datos charts
-  const linePoints = useMemo(() => {
-    // pago vs plazo
-    return [12, 18, 24, 36, 48].map((p) => ({
-      x: p,
-      y: pagoMensual(monto, tasa, p),
-      label: `${p}m`,
-    }));
-  }, [monto, tasa]);
+  // Inversión (FV)
+  const invFV = useMemo(() => futureValue(invMonto, invTasa, invMeses), [invMonto, invTasa, invMeses]);
+  const invGanancia = useMemo(() => Math.max(invFV - invMonto, 0), [invFV, invMonto]);
 
-  const donutParts = useMemo(() => {
-    // Aprox: intereses = total - monto - com
-    const intereses = clamp(totalCredito - monto - comApertura, 0, Infinity);
-    const principal = monto;
-    const com = comApertura;
-    return [
-      { label: "Intereses", value: intereses },
-      { label: "Principal", value: principal },
-      { label: "Comisión", value: com },
-    ];
-  }, [totalCredito, monto, comApertura]);
+  const ctaLabel = useMemo(() => {
+    if (cat === "inv") return "Iniciar onboarding";
+    return "Iniciar solicitud";
+  }, [cat]);
 
-  const compBars = useMemo(() => {
-    return [
-      { label: "Crédito", value: totalCredito },
-      { label: "Arrend.", value: totalArr },
-    ];
-  }, [totalCredito, totalArr]);
-
-  // Card selection visual (texto amarillo)
-  const [activeCard, setActiveCard] = useState("simple");
+  const goCTA = () => {
+    // Ajusta si quieres separar flujo inversión vs crédito
+    nav("/solicitud");
+  };
 
   return (
     <div className="app-container">
       <Navbar />
 
       <main className="products">
+        {/* Background layers */}
+        <div className="p-bg" aria-hidden />
+        <div className="p-grid" aria-hidden />
+        <div className="p-squares" aria-hidden />
+
+        {/* HERO */}
         <section className="p-hero">
           <div className="p-wrap">
-            <h1>
-              Productos <span className="neon">Plinius</span>
-            </h1>
-            <p className="p-sub">
-              Financiamiento claro y operativo para PyMEs: elige el vehículo que
-              mejor se adapta a tu flujo y objetivos.
-            </p>
+            <div className="p-heroTop">
+              <div>
+                <div className="p-badge">Plinius · Productos</div>
+                <h1 className="p-h1">
+                  Tres caminos. <span className="neon">Una plataforma.</span>
+                </h1>
+                <p className="p-sub">
+                  Elige el vehículo y simula rápido. Todo con estética Plinius: oscuro, limpio y agresivo.
+                </p>
+              </div>
 
-            {/* Tabs */}
-            <div className="tabs" role="tablist" aria-label="Tipos de producto">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  role="tab"
-                  aria-selected={tab === t.id}
-                  className={`tab-btn ${tab === t.id ? "active" : ""}`}
-                  onClick={() => setTab(t.id)}
-                >
-                  {t.label}
+              <div className="p-heroCTA">
+                <button className="btn btn-neon" onClick={goCTA}>
+                  {ctaLabel}
                 </button>
-              ))}
-              {/* Indicador con CSS vars (string) */}
-              <span
-                className="tab-indicator"
-                style={{
-                  "--idx": String(tabIndex),
-                  "--count": String(TABS.length),
-                }}
-                aria-hidden
-              />
+                <Link to="/terminos" className="btn btn-outline">
+                  Ver términos
+                </Link>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Cards de producto rápidas */}
-        <section className="p-cards">
-          <div className="p-wrap grid">
-            <article
-              className={`p-card ${activeCard === "simple" ? "active" : ""}`}
-              onClick={() => {
-                setActiveCard("simple");
-                setTab("simple");
-              }}
-            >
-              <header>
-                <h3 className="p-title">Crédito simple</h3>
-                <span className="p-chip">Tasa {pct(tasa, 1)}</span>
-              </header>
-              <p className="p-text">
-                Liquidez inmediata para capital de trabajo, con pagos fijos y
-                condiciones transparentes.
-              </p>
-              <ul className="p-list">
-                <li>Plazos: 12–48 meses</li>
-                <li>Comisión de apertura: {pct(fee, 1)}</li>
-                <li>Desembolso ágil</li>
-              </ul>
-              <div className="p-cta">Seleccionar</div>
-            </article>
-
-            <article
-              className={`p-card ${
-                activeCard === "arrendamiento" ? "active" : ""
-              }`}
-              onClick={() => {
-                setActiveCard("arrendamiento");
-                setTab("arrendamiento");
-              }}
-            >
-              <header>
-                <h3 className="p-title">Arrendamiento puro</h3>
-                <span className="p-chip">Plazo {plazo}m</span>
-              </header>
-              <p className="p-text">
-                Renta deducible de activos productivos, optimizando caja y
-                contabilidad.
-              </p>
-              <ul className="p-list">
-                <li>Pagos mensuales estimados</li>
-                <li>Documentación guiada</li>
-                <li>Flexibilidad en plazos</li>
-              </ul>
-              <div className="p-cta">Seleccionar</div>
-            </article>
-
-            <article
-              className={`p-card ${activeCard === "asesoria" ? "active" : ""}`}
-              onClick={() => {
-                setActiveCard("asesoria");
-                setTab("asesoria");
-              }}
-            >
-              <header>
-                <h3 className="p-title">Asesoría estratégica</h3>
-                <span className="p-chip">Consultoría</span>
-              </header>
-              <p className="p-text">
-                Estructuración financiera, planeación de deuda y soporte en
-                procesos de fondeo e inversión.
-              </p>
-              <ul className="p-list">
-                <li>Diagnóstico y plan de acción</li>
-                <li>Optimización de obligaciones</li>
-                <li>Acompañamiento con inversionistas</li>
-              </ul>
-              <div className="p-cta">Solicitar</div>
-            </article>
-
-            <article
-              className={`p-card ${
-                activeCard === "bursatilizacion" ? "active" : ""
-              }`}
-              onClick={() => {
-                setActiveCard("bursatilizacion");
-                setTab("bursatilizacion");
-              }}
-            >
-              <header>
-                <h3 className="p-title">Bursatilización</h3>
-                <span className="p-chip">Mercado</span>
-              </header>
-              <p className="p-text">
-                Asesoría para estructurar y listar vehículos de financiamiento
-                en el mercado mexicano.
-              </p>
-              <ul className="p-list">
-                <li>Estructura a medida</li>
-                <li>Gobierno y compliance</li>
-                <li>Relación con intermediarios</li>
-              </ul>
-              <div className="p-cta">Conocer más</div>
-            </article>
-          </div>
-        </section>
-
-        {/* Panel según tab */}
-        <section className="p-panel">
-          <div className="p-wrap panel-grid">
-            {/* Columna izquierda: controles (solo para crédito/arrendamiento) */}
-            <div className="panel-left">
-              {(tab === "simple" || tab === "arrendamiento") && (
-                <>
-                  <div className="ctrl">
-                    <div className="ctrl-row">
-                      <label htmlFor="monto">Monto</label>
-                      <span className="mono">{pesos(monto)}</span>
-                    </div>
-                    <input
-                      id="monto"
-                      type="range"
-                      min={100_000}
-                      max={10_000_000}
-                      step={50_000}
-                      value={monto}
-                      onChange={(e) => setMonto(Number(e.target.value))}
-                    />
-                    <div className="ctrl-hints">
-                      <span>{pesos(100_000)}</span>
-                      <span>{pesos(10_000_000)}</span>
-                    </div>
-                  </div>
-
-                  <div className="ctrl">
-                    <div className="ctrl-row">
-                      <label>Plazo</label>
-                      <span className="mono">{plazo} meses</span>
-                    </div>
-                    <div className="seg" role="radiogroup" aria-label="Plazo">
-                      {PLAZOS.map((p) => (
-                        <label
-                          key={p}
-                          className={`seg-btn ${plazo === p ? "active" : ""}`}
-                        >
-                          <input
-                            type="radio"
-                            name="plazo"
-                            value={p}
-                            checked={plazo === p}
-                            onChange={() => setPlazo(p)}
-                          />
-                          {p} m
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="ctrl">
-                    <div className="ctrl-row">
-                      <label htmlFor="tasa">Tasa anual</label>
-                      <span className="mono">{pct(tasa, 1)}</span>
-                    </div>
-                    <input
-                      id="tasa"
-                      type="range"
-                      min={18}
-                      max={36}
-                      step={0.5}
-                      value={tasa}
-                      onChange={(e) => setTasa(Number(e.target.value))}
-                    />
-                    <div className="ctrl-hints">
-                      <span>18%</span>
-                      <span>36%</span>
-                    </div>
-                  </div>
-
-                  <div className="ctrl">
-                    <div className="ctrl-row">
-                      <label htmlFor="fee">Comisión de apertura</label>
-                      <span className="mono">{pct(fee, 1)}</span>
-                    </div>
-                    <input
-                      id="fee"
-                      type="range"
-                      min={3}
-                      max={5}
-                      step={0.1}
-                      value={fee}
-                      onChange={(e) => setFee(Number(e.target.value))}
-                    />
-                    <div className="ctrl-hints">
-                      <span>3%</span>
-                      <span>5%</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {tab === "asesoria" && (
-                <div className="advisory">
-                  <h3>Asesoría estratégica</h3>
-                  <p>
-                    Servicio de consultoría financiera para diseñar tu
-                    estructura de capital, plan de deuda y narrativa de
-                    inversión. Entregables claros y ejecutables.
-                  </p>
-                  <ul className="ticks">
-                    <li>Diagnóstico financiero y KPIs clave</li>
-                    <li>Mapa de fondeo y calendario de ejecución</li>
-                    <li>Soporte en mesas con fondeadores</li>
-                  </ul>
-                  <Link to="/contacto" className="btn btn-neon">
-                    Agendar diagnóstico
-                  </Link>
-                </div>
-              )}
-
-              {tab === "bursatilizacion" && (
-                <div className="advisory">
-                  <h3>Bursatilización</h3>
-                  <p>
-                    Acompañamiento integral para diseñar, validar y listar
-                    vehículos de financiamiento en el mercado mexicano.
-                  </p>
-                  <ul className="ticks">
-                    <li>Estructuración y gobierno</li>
-                    <li>Análisis de riesgos y documentación</li>
-                    <li>Relación con intermediarios y listados</li>
-                  </ul>
-                  <Link to="/contacto" className="btn btn-outline">
-                    Solicitar información
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Columna derecha: resultados / charts */}
-            <div className="panel-right">
-              {(tab === "simple" || tab === "arrendamiento") && (
-                <>
-                  <div className="kpi-grid">
-                    <div className="kpi">
-                      <span className="k-label">
-                        {tab === "arrendamiento"
-                          ? "Renta mensual (est.)"
-                          : "Pago mensual (est.)"}
-                      </span>
-                      <span className="k-value">{pesos(pago)}</span>
-                    </div>
-                    <div className="kpi">
-                      <span className="k-label">Comisión apertura</span>
-                      <span className="k-value">{pesos(comApertura)}</span>
-                    </div>
-                    <div className="kpi">
-                      <span className="k-label">Total (aprox)</span>
-                      <span className="k-value">
-                        {tab === "arrendamiento"
-                          ? pesos(totalArr)
-                          : pesos(totalCredito)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="charts-grid">
-                    <div className="chart-card">
-                      <h4 className="chart-title">Pago vs Plazo</h4>
-                      <LineChart
-                        points={linePoints}
-                        format={(v) => pesos(v, 0)}
-                      />
-                    </div>
-
-                    <div className="chart-card">
-                      <h4 className="chart-title">Distribución de costos</h4>
-                      <div className="donut-wrap">
-                        <Donut parts={donutParts} />
-                        <ul className="legend">
-                          <li>
-                            <span className="swatch swatch-0" />
-                            Intereses
-                          </li>
-                          <li>
-                            <span className="swatch swatch-1" />
-                            Principal
-                          </li>
-                          <li>
-                            <span className="swatch swatch-2" />
-                            Comisión
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="chart-card">
-                      <h4 className="chart-title">Comparativo total</h4>
-                      <BarChart data={compBars} format={(v) => pesos(v, 0)} />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {(tab === "asesoria" || tab === "bursatilizacion") && (
-                <div className="info-card">
-                  <h4>Entregables & Alcance</h4>
-                  <ul className="grid-2">
-                    <li>Brief ejecutivo y objetivos</li>
-                    <li>Métricas operativas & financieras</li>
-                    <li>Mapa de riesgos y mitigantes</li>
-                    <li>Documentación y governance</li>
-                  </ul>
-                  <div className="cta-inline">
-                    <Link to="/terminos" className="btn btn-outline">
-                      Ver términos
-                    </Link>
-                    <Link to="/login" className="btn btn-neon">
-                      Iniciar proceso
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Comparativa rica */}
-        <section className="p-compare">
+        {/* 3 BOXES */}
+        <section className="p-cats">
           <div className="p-wrap">
-            <h2>Comparativa de vehículos</h2>
-            <div className="compare-table">
-              <div className="c-row c-head">
-                <div className="c-col">Atributo</div>
-                <div className="c-col">Crédito simple</div>
-                <div className="c-col">Arrendamiento puro</div>
-                <div className="c-col">Asesoría</div>
-              </div>
-
-              <div className="c-row">
-                <div className="c-col">Destino</div>
-                <div className="c-col">Capital de trabajo, expansión</div>
-                <div className="c-col">Activos productivos, equipo</div>
-                <div className="c-col">Estructura y planeación financiera</div>
-              </div>
-
-              <div className="c-row">
-                <div className="c-col">Plazo</div>
-                <div className="c-col">12–48 meses</div>
-                <div className="c-col">12–48 meses</div>
-                <div className="c-col">Por proyecto</div>
-              </div>
-
-              <div className="c-row">
-                <div className="c-col">Pagos</div>
-                <div className="c-col">Fijos mensuales</div>
-                <div className="c-col">Rentas mensuales</div>
-                <div className="c-col">Hitos y entregables</div>
-              </div>
-
-              <div className="c-row">
-                <div className="c-col">Comisión apertura</div>
-                <div className="c-col">3–5%</div>
-                <div className="c-col">3–5%</div>
-                <div className="c-col">N/A</div>
-              </div>
-
-              <div className="c-row">
-                <div className="c-col">Documentación</div>
-                <div className="c-col">Contrato & garantías (según caso)</div>
-                <div className="c-col">Contrato de arrendamiento</div>
-                <div className="c-col">Alcance, cronograma, NDA</div>
-              </div>
-
-              <div className="c-row">
-                <div className="c-col">Tiempo estimado</div>
-                <div className="c-col">Ágil (según expediente)</div>
-                <div className="c-col">Ágil (según proveedor)</div>
-                <div className="c-col">Kickoff en 3–5 días</div>
-              </div>
+            <div className="p-catGrid">
+              {CATS.map((c) => {
+                const active = c.id === cat;
+                return (
+                  <button
+                    key={c.id}
+                    className={`p-catCard ${c.glow} ${active ? "is-active" : ""}`}
+                    onClick={() => setCat(c.id)}
+                    type="button"
+                  >
+                    <div className="p-catTop">
+                      <div className="p-catTitle">{c.title}</div>
+                      <div className="p-catPill">{c.subtitle}</div>
+                    </div>
+                    <div className="p-catDesc">
+                      {c.id === "credito" && "Liquidez para operar: pagos claros o línea revolvente."}
+                      {c.id === "arr" && "Equipo / activos productivos: deducible y estructurado."}
+                      {c.id === "inv" && "Rendimiento y exposición: elige nivel de control."}
+                    </div>
+                    <div className="p-catHint">Click para configurar →</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        <section className="p-cta-final">
-          <div className="p-wrap ctas">
-            <Link to="/login" className="btn btn-neon">
-              Iniciar solicitud
-            </Link>
-            <Link to="/terminos" className="btn btn-outline">
-              Términos y condiciones
-            </Link>
+        {/* CONFIG PANEL */}
+        <section className="p-panel">
+          <div className="p-wrap">
+            <div className="p-panelShell">
+              <header className="p-panelHead">
+                <div>
+                  <div className="p-panelKicker">Configuración</div>
+                  <div className="p-panelH2">
+                    {activeCat.title} · <span className="neon">{activeCat.options.find((o) => o.id === opt)?.label}</span>
+                  </div>
+                  <div className="p-panelSub">{activeCat.options.find((o) => o.id === opt)?.desc}</div>
+                </div>
+
+                <div className="p-panelActions">
+                  <button className="p-ctaBtn" onClick={goCTA}>
+                    {ctaLabel}
+                  </button>
+                  <Link className="p-ghostBtn" to="/ingresar?registro=0">
+                    Ingresar
+                  </Link>
+                </div>
+              </header>
+
+              {/* option chips */}
+              <div className="p-optRow">
+                {activeCat.options.map((o) => (
+                  <button
+                    key={o.id}
+                    className={`p-optChip ${opt === o.id ? "is-on" : ""}`}
+                    onClick={() => setOpt(o.id)}
+                    type="button"
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-panelGrid">
+                {/* LEFT */}
+                <div className="p-left">
+                  {(cat === "credito" && opt === "simple") && (
+                    <>
+                      <ControlSlider
+                        label="Monto"
+                        value={monto}
+                        display={pesos(monto)}
+                        min={100_000}
+                        max={10_000_000}
+                        step={50_000}
+                        onChange={setMonto}
+                      />
+
+                      <ControlSlider
+                        label="Plazo"
+                        value={plazo}
+                        display={`${plazo} meses`}
+                        min={6}
+                        max={60}
+                        step={1}
+                        onChange={setPlazo}
+                      />
+
+                      <ControlSlider
+                        label="Tasa anual"
+                        value={tasa}
+                        display={pct(tasa, 1)}
+                        min={14}
+                        max={42}
+                        step={0.5}
+                        onChange={setTasa}
+                      />
+
+                      <ControlSlider
+                        label="Comisión de apertura"
+                        value={fee}
+                        display={pct(fee, 1)}
+                        min={2}
+                        max={6}
+                        step={0.1}
+                        onChange={setFee}
+                      />
+
+                      <div className="p-note">
+                        *Simulación estimada. Condiciones reales dependen de perfil, garantías y revisión de expediente.
+                      </div>
+                    </>
+                  )}
+
+                  {(cat === "credito" && opt === "revolvente") && (
+                    <>
+                      <ControlSlider
+                        label="Línea"
+                        value={linea}
+                        display={pesos(linea)}
+                        min={200_000}
+                        max={15_000_000}
+                        step={50_000}
+                        onChange={setLinea}
+                      />
+
+                      <ControlSlider
+                        label="Uso de línea"
+                        value={usoPct}
+                        display={`${usoPct}%`}
+                        min={5}
+                        max={95}
+                        step={1}
+                        onChange={setUsoPct}
+                      />
+
+                      <ControlSlider
+                        label="Tasa anual"
+                        value={tasa}
+                        display={pct(tasa, 1)}
+                        min={14}
+                        max={42}
+                        step={0.5}
+                        onChange={setTasa}
+                      />
+
+                      <div className="p-note">
+                        Revolvente = pagas interés sobre el saldo usado. El capital se repone al pagar.
+                      </div>
+                    </>
+                  )}
+
+                  {(cat === "arr") && (
+                    <>
+                      <ControlSlider
+                        label="Valor del activo"
+                        value={monto}
+                        display={pesos(monto)}
+                        min={150_000}
+                        max={12_000_000}
+                        step={50_000}
+                        onChange={setMonto}
+                      />
+
+                      <ControlSlider
+                        label="Plazo"
+                        value={plazo}
+                        display={`${plazo} meses`}
+                        min={12}
+                        max={60}
+                        step={1}
+                        onChange={setPlazo}
+                      />
+
+                      <ControlSlider
+                        label="Tasa anual (est.)"
+                        value={tasa}
+                        display={pct(tasa, 1)}
+                        min={12}
+                        max={38}
+                        step={0.5}
+                        onChange={setTasa}
+                      />
+
+                      <ControlSlider
+                        label="Comisión de apertura"
+                        value={fee}
+                        display={pct(fee, 1)}
+                        min={2}
+                        max={6}
+                        step={0.1}
+                        onChange={setFee}
+                      />
+
+                      <div className="p-note">
+                        {opt === "financiero"
+                          ? "Arrendamiento financiero: puede incluir opción de compra."
+                          : "Arrendamiento puro: renta deducible y enfoque operativo."}
+                      </div>
+                    </>
+                  )}
+
+                  {(cat === "inv") && (
+                    <>
+                      <ControlSlider
+                        label="Monto a invertir"
+                        value={invMonto}
+                        display={pesos(invMonto)}
+                        min={50_000}
+                        max={20_000_000}
+                        step={10_000}
+                        onChange={setInvMonto}
+                      />
+
+                      <ControlSlider
+                        label="Tasa anual objetivo"
+                        value={invTasa}
+                        display={pct(invTasa, 1)}
+                        min={7}
+                        max={22}
+                        step={0.25}
+                        onChange={setInvTasa}
+                      />
+
+                      <ControlSlider
+                        label="Horizonte (meses)"
+                        value={invMeses}
+                        display={`${invMeses} meses`}
+                        min={3}
+                        max={60}
+                        step={1}
+                        onChange={setInvMeses}
+                      />
+
+                      <div className="p-note">
+                        Inversión = estimación de crecimiento compuesto. En cartera / por crédito el rendimiento real
+                        dependerá del desempeño de la originación.
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* RIGHT */}
+                <div className="p-right">
+                  {(cat === "credito" && opt === "simple") && (
+                    <div className="p-kpis">
+                      <KPI label="Pago mensual (est.)" value={pesos(pago)} />
+                      <KPI label="Comisión apertura" value={pesos(comApertura)} />
+                      <KPI label="Total aprox" value={pesos(totalCredito)} />
+                      <KPI label="Plazo" value={`${plazo} meses`} />
+                    </div>
+                  )}
+
+                  {(cat === "credito" && opt === "revolvente") && (
+                    <div className="p-kpis">
+                      <KPI label="Línea" value={pesos(linea)} />
+                      <KPI label="Saldo usado" value={pesos(saldoUsado)} />
+                      <KPI label="Interés mensual (est.)" value={pesos(interesMensual)} />
+                      <KPI label="Tasa" value={pct(tasa, 1)} />
+                    </div>
+                  )}
+
+                  {(cat === "arr") && (
+                    <div className="p-kpis">
+                      <KPI label="Renta mensual (est.)" value={pesos(renta)} />
+                      <KPI label="Comisión apertura" value={pesos(comApertura)} />
+                      <KPI label="Total aprox" value={pesos(totalArr)} />
+                      <KPI label="Plazo" value={`${plazo} meses`} />
+                    </div>
+                  )}
+
+                  {(cat === "inv") && (
+                    <div className="p-kpis">
+                      <KPI label="Monto" value={pesos(invMonto)} />
+                      <KPI label="Tasa objetivo" value={pct(invTasa, 2)} />
+                      <KPI label="Valor futuro (est.)" value={pesos(invFV)} />
+                      <KPI label="Ganancia (est.)" value={pesos(invGanancia)} />
+                    </div>
+                  )}
+
+                  <div className="p-glassInfo">
+                    <div className="p-glassTitle">Siguiente paso</div>
+                    <div className="p-glassText">
+                      {cat === "inv"
+                        ? "Crea tu cuenta y completa onboarding. Luego podrás elegir: cartera, por crédito o pagaré."
+                        : "Inicia tu solicitud. Se registrará en tu panel y el equipo Plinius la revisa."}
+                    </div>
+
+                    <div className="p-glassActions">
+                      <button className="p-ctaBtn" onClick={goCTA}>
+                        {ctaLabel}
+                      </button>
+                      <Link className="p-ghostBtn" to="/solicitudes">
+                        Ver solicitudes
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="p-miniWarn">
+                    ⚡ Tip: si quieres que el rendimiento/instrumentos se vuelvan “reales”, lo conectamos después a tu
+                    motor (tasas/curvas/reglas).
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer CTA */}
+            <div className="p-bottomCTA">
+              <Link to="/solicitud" className="btn btn-neon">
+                Iniciar solicitud
+              </Link>
+              <Link to="/" className="btn btn-outline">
+                Volver a inicio
+              </Link>
+            </div>
           </div>
         </section>
-      </main>
 
-      <Footer />
+        <Footer />
+      </main>
+    </div>
+  );
+}
+
+/* ---------- Components ---------- */
+
+function KPI({ label, value }) {
+  return (
+    <div className="p-kpi">
+      <div className="p-kLabel">{label}</div>
+      <div className="p-kValue">{value}</div>
+    </div>
+  );
+}
+
+function ControlSlider({ label, value, display, min, max, step, onChange }) {
+  const pctW = ((value - min) / Math.max(max - min, 1)) * 100;
+  const safePct = clamp(pctW, 0, 100);
+
+  return (
+    <div className="p-ctrl">
+      <div className="p-ctrlTop">
+        <span className="p-ctrlLabel">{label}</span>
+        <span className="p-ctrlValue">{display}</span>
+      </div>
+
+      <div className="p-range">
+        <div className="p-rangeFill" style={{ width: `${safePct}%` }} />
+        <input
+          className="p-rangeInput"
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+      </div>
+
+      <div className="p-ctrlHint">
+        <span>{pesos(min)}</span>
+        <span>{pesos(max)}</span>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/images/logo-plinius.png";
-import crowdlinkLogo from "../assets/images/crowdlink-logo.png";
 import "../assets/css/navbar.css";
 import { supabase } from "../lib/supabaseClient";
 
@@ -18,11 +17,11 @@ const Navbar = () => {
   const [session, setSession] = useState(null);
   const isAuthed = !!session?.user;
 
-  // Cierra menú al cambiar de ruta
+  // ✅ Cierra menú al cambiar de ruta O hash
   useEffect(() => {
     setMobileOpen(false);
     setOpenMenu(null);
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
   // Cierra dropdown al hacer click fuera
   useEffect(() => {
@@ -151,15 +150,14 @@ const Navbar = () => {
                 onMouseLeave={closeByHover}
               >
                 <li role="none">
-                  <Link
-                    to="/sobre-plinius"
-                    role="menuitem"
-                    className="dropdown-item"
-                  >
+                  {/* ✅ ahora apunta a sección en Home */}
+                  <Link to="/#sobre-plinius" role="menuitem" className="dropdown-item">
                     Sobre Plinius
                   </Link>
                 </li>
+
                 <li role="none">
+                  {/* Si NO tienes ruta /productos, cámbialo también a /#productos */}
                   <Link to="/productos" role="menuitem" className="dropdown-item">
                     Productos
                     <span className="dropdown-sub">
@@ -167,8 +165,10 @@ const Navbar = () => {
                     </span>
                   </Link>
                 </li>
+
                 <li role="none">
-                  <Link to="/enfoque" role="menuitem" className="dropdown-item">
+                  {/* ✅ ahora apunta a sección en Home */}
+                  <Link to="/#enfoque" role="menuitem" className="dropdown-item">
                     Enfoque y criterios de crédito
                   </Link>
                 </li>
@@ -221,20 +221,19 @@ const Navbar = () => {
             </button>
           </li>
 
-          {/* Opcional: Salir en navbar (si hay sesión) */}
+          {/* Salir (si hay sesión) */}
           {isAuthed && (
             <li className="nav-item">
-              <button type="button" className="nav-link nav-link-btn" onClick={signOut}>
+              <button
+                type="button"
+                className="nav-link nav-link-btn"
+                onClick={signOut}
+              >
                 Salir
               </button>
             </li>
           )}
         </ul>
-
-        {/* Si luego quieres reactivar el logo Crowdlink, lo dejamos aquí */}
-        {/* <div className="navbar-right">
-          <img src={crowdlinkLogo} alt="Crowdlink" />
-        </div> */}
       </div>
     </nav>
   );

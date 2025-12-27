@@ -620,6 +620,9 @@ body::before {
 /* =====================================================
    SECCIÓN: POR QUÉ PLINIUS
    ===================================================== */
+/* =====================================================
+   SECCIÓN: SOBRE PLINIUS (antes: POR QUÉ PLINIUS)
+   ===================================================== */
 .why {
   padding-top: 72px;
 }
@@ -634,7 +637,8 @@ body::before {
 .why-card {
   border-radius: var(--radius-md);
   border: 1px solid rgba(148, 163, 184, 0.4);
-  background: radial-gradient(
+  background:
+    radial-gradient(
       140% 200% at 0% 0%,
       rgba(56, 189, 248, 0.18),
       transparent 40%
@@ -642,22 +646,79 @@ body::before {
     rgba(15, 23, 42, 0.9);
   padding: 14px 14px 13px;
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.75);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+
+.why-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(226, 232, 240, 0.55);
+  box-shadow: 0 22px 52px rgba(15, 23, 42, 0.85);
+}
+
+.why-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
 .why-card h3 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.why-badge {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  background: rgba(15, 23, 42, 0.75);
+  color: #e5e7eb;
 }
 
 .why-card p {
   margin: 0;
   font-size: 13px;
   color: #d1d5db;
+  line-height: 1.45;
+}
+
+.why-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+
+.why-list li {
+  position: relative;
+  padding-left: 16px;
+  color: #e5e7eb;
+  font-size: 12px;
+}
+
+.why-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 8px;
+  height: 2px;
+  border-radius: 99px;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent-soft);
 }
 
 /* =====================================================
-   SECCIÓN: PROCESO
+   SECCIÓN: ENFOQUE Y CRITERIOS (antes: PROCESO)
    ===================================================== */
 .process-grid {
   margin-top: 22px;
@@ -678,6 +739,13 @@ body::before {
     ),
     rgba(15, 23, 42, 0.95);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.85);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+
+.process-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(226, 232, 240, 0.55);
+  box-shadow: 0 22px 52px rgba(15, 23, 42, 0.92);
 }
 
 .process-index {
@@ -689,23 +757,103 @@ body::before {
   align-items: center;
   justify-content: center;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--accent);
   background: rgba(15, 23, 42, 0.9);
   box-shadow: 0 0 18px var(--accent-soft);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .process-card h3 {
   margin: 0 0 4px;
   font-size: 15px;
+  font-weight: 800;
 }
 
 .process-card p {
   margin: 0;
   font-size: 13px;
   color: #e5e7eb;
+  line-height: 1.45;
 }
+
+.process-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+
+.process-list li {
+  position: relative;
+  padding-left: 16px;
+  color: #cbd5f5;
+  font-size: 12px;
+}
+
+.process-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 8px;
+  height: 2px;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, 0.8);
+}
+
+/* mini-row final con 2 cards */
+.criteria-note {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.criteria-card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.92);
+  padding: 12px 14px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.65);
+}
+
+.criteria-card h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e8edf4;
+}
+
+.criteria-card p {
+  margin: 0;
+  font-size: 13px;
+  color: #cbd5f5;
+  line-height: 1.45;
+}
+
+/* responsive de estas 2 secciones */
+@media (max-width: 840px) {
+  .why-grid,
+  .process-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .criteria-note {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .why-grid,
+  .process-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 
 /* =====================================================
    CTA FINAL
