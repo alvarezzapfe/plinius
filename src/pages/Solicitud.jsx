@@ -17,20 +17,13 @@ const pesos = (x, max = 0) =>
     maximumFractionDigits: max,
   }).format(Number.isFinite(x) ? x : 0);
 
-const pct = (x, digits = 1) =>
-  `${(Number.isFinite(x) ? x : 0).toFixed(digits)}%`;
+const pct = (x, digits = 1) => `${(Number.isFinite(x) ? x : 0).toFixed(digits)}%`;
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function pagoMensual(M, tasaAnual, nMeses) {
   const r = tasaAnual / 100 / 12;
-  if (
-    !Number.isFinite(M) ||
-    !Number.isFinite(tasaAnual) ||
-    !Number.isFinite(nMeses) ||
-    nMeses <= 0
-  )
-    return 0;
+  if (!Number.isFinite(M) || !Number.isFinite(tasaAnual) || !Number.isFinite(nMeses) || nMeses <= 0) return 0;
   if (r === 0) return M / nMeses;
   return (M * r) / (1 - Math.pow(1 + r, -nMeses));
 }
@@ -57,21 +50,9 @@ const totalSteps = 4;
 const PLAZOS = [12, 18, 24, 36, 48];
 
 const PRODUCTOS = [
-  {
-    id: "simple",
-    title: "Crédito simple",
-    desc: "Capital de trabajo, proyectos y crecimiento.",
-  },
-  {
-    id: "arrendamiento",
-    title: "Arrendamiento",
-    desc: "Maquinaria, equipo o flotilla (pago mensual).",
-  },
-  {
-    id: "revolvente",
-    title: "Revolvente",
-    desc: "Línea para operar mes a mes con flexibilidad.",
-  },
+  { id: "simple", title: "Crédito simple", desc: "Capital de trabajo, proyectos y crecimiento." },
+  { id: "arrendamiento", title: "Arrendamiento", desc: "Maquinaria, equipo o flotilla (pago mensual)." },
+  { id: "revolvente", title: "Revolvente", desc: "Línea para operar mes a mes con flexibilidad." },
 ];
 
 const STEPS_META = [
@@ -117,33 +98,49 @@ function labelsFrom(ids, opts) {
 
 /* =======================
    API call -> Resend + Insert (tu handler)
+   - Soporta base URL opcional para debug/routing
 ======================= */
+const API_BASE = (import.meta?.env?.VITE_API_BASE_URL || "").replace(/\/$/, ""); 
+// Si no defines VITE_API_BASE_URL, queda "" y usa mismo dominio.
+
 async function postSolicitudToApi(payload, accessToken) {
-  const r = await fetch("/api/plinius/solicitud", {
+  const url = `${API_BASE}/api/plinius/solicitud`;
+
+  const r = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(payload),
+    cache: "no-store",
   });
 
+  // Intentar JSON; si no, texto
   let data = null;
+  let rawText = "";
   try {
     data = await r.json();
-  } catch {}
+  } catch {
+    try {
+      rawText = await r.text();
+    } catch {}
+  }
 
   if (!r.ok || !data?.ok) {
     const msg =
       data?.error ||
-      `Error enviando solicitud (HTTP ${r.status || "?"})`;
+      (rawText ? `API respondió: ${rawText.slice(0, 220)}` : `Error enviando solicitud (HTTP ${r.status || "?"})`);
+
     const err = new Error(msg);
     err.status = r.status;
     err.payload = data;
+    err.rawText = rawText;
+    err.url = url;
     throw err;
   }
 
-  return data; // { ok:true, id }
+  return data; // { ok:true, id, ... (si tu backend regresa más) }
 }
 
 export default function Solicitud() {
@@ -186,6 +183,8 @@ export default function Solicitud() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [sendWarn, setSendWarn] = useState(""); // 👈 warning si insert ok pero mail falla
+  const [lastSolicitudId, setLastSolicitudId] = useState(""); // 👈 para debug / UI
 
   // Panel abierto Step 3
   const [openPanel, setOpenPanel] = useState("uso"); // uso | perfil | timing
@@ -215,9 +214,7 @@ export default function Solicitud() {
       setSession(data?.session || null);
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_ev, s) =>
-      setSession(s)
-    );
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, s) => setSession(s));
 
     return () => {
       mounted = false;
@@ -241,9 +238,7 @@ export default function Solicitud() {
       if (!error && data) {
         setProfileRow(data);
 
-        const fullName = `${data.nombres || ""} ${
-          data.apellido_paterno || ""
-        }`.trim();
+        const fullName = `${data.nombres || ""} ${data.apellido_paterno || ""}`.trim();
 
         if (!empresa) setEmpresa(data.empresa || "");
         if (!rfc) setRfc(data.rfc || "");
@@ -255,9 +250,7 @@ export default function Solicitud() {
 
       // Fallback metadata
       const m = session.user.user_metadata || {};
-      const fullName2 = `${m.nombres || ""} ${
-        m.apellido_paterno || ""
-      }`.trim();
+      const fullName2 = `${m.nombres || ""} ${m.apellido_paterno || ""}`.trim();
       if (!empresa) setEmpresa(m.empresa || "");
       if (!rfc) setRfc(m.rfc || "");
       if (!nombre) setNombre(fullName2 || "");
@@ -270,12 +263,7 @@ export default function Solicitud() {
      Motor simple (UX)
   ======================= */
   const tasaEstimada = useMemo(() => {
-    let t =
-      producto === "revolvente"
-        ? 28
-        : producto === "arrendamiento"
-        ? 25
-        : 23;
+    let t = producto === "revolvente" ? 28 : producto === "arrendamiento" ? 25 : 23;
     t += conGarantia ? -1.2 : +2.0;
 
     const pagoRef = pagoMensual(monto, Math.max(t, 18), plazo);
@@ -292,14 +280,8 @@ export default function Solicitud() {
     return clamp(t, 18, 36);
   }, [producto, conGarantia, monto, plazo, ebitdaMensual]);
 
-  const pago = useMemo(
-    () => pagoMensual(monto, tasaEstimada, plazo),
-    [monto, tasaEstimada, plazo]
-  );
-  const dscr = useMemo(() => ebitdaMensual / Math.max(pago, 1), [
-    ebitdaMensual,
-    pago,
-  ]);
+  const pago = useMemo(() => pagoMensual(monto, tasaEstimada, plazo), [monto, tasaEstimada, plazo]);
+  const dscr = useMemo(() => ebitdaMensual / Math.max(pago, 1), [ebitdaMensual, pago]);
 
   const salud = useMemo(() => {
     const a = dscr >= 1.7 ? 0.55 : dscr >= 1.3 ? 0.35 : 0.15;
@@ -309,8 +291,7 @@ export default function Solicitud() {
     const s = clamp(a + b + c, 0, 1);
     return {
       score: s,
-      label:
-        s >= 0.78 ? "Muy saludable" : s >= 0.6 ? "Aprobable" : "A revisar",
+      label: s >= 0.78 ? "Muy saludable" : s >= 0.6 ? "Aprobable" : "A revisar",
       tone: s >= 0.78 ? "ok" : s >= 0.6 ? "warn" : "bad",
     };
   }, [dscr, monto, ebitdaMensual, conGarantia]);
@@ -322,11 +303,7 @@ export default function Solicitud() {
   const telefonoClean = useMemo(() => cleanPhone(telefono), [telefono]);
 
   const canNext1 = Boolean(producto) && Number.isFinite(plazo);
-  const canNext2 =
-    monto >= 100_000 &&
-    plazo >= 12 &&
-    ebitdaMensual >= 0 &&
-    ventasMensuales >= 0;
+  const canNext2 = monto >= 100_000 && plazo >= 12 && ebitdaMensual >= 0 && ventasMensuales >= 0;
   const canNext3 = usoSel.length >= 1;
 
   const canSend =
@@ -344,26 +321,16 @@ export default function Solicitud() {
     return m;
   }, [empresa, nombre, emailOk, telefonoClean]);
 
-  const stepPct =
-    step <= 0
-      ? 0
-      : ((Math.min(step, totalSteps) - 1) / (totalSteps - 1)) * 100;
+  const stepPct = step <= 0 ? 0 : ((Math.min(step, totalSteps) - 1) / (totalSteps - 1)) * 100;
 
   const goNext = () => setStep((s) => Math.min(totalSteps, s + 1));
   const goPrev = () => setStep((s) => Math.max(0, s - 1));
   const jumpTo = (n) => setStep(clamp(n, 0, totalSteps));
 
-  const productoTitle =
-    PRODUCTOS.find((x) => x.id === producto)?.title || "—";
+  const productoTitle = PRODUCTOS.find((x) => x.id === producto)?.title || "—";
   const usoLabels = useMemo(() => labelsFrom(usoSel, USO_OPCIONES), [usoSel]);
-  const perfilLabels = useMemo(
-    () => labelsFrom(perfilSel, PERFIL_OPCIONES),
-    [perfilSel]
-  );
-  const timingLabel = useMemo(
-    () => TIMING_OPCIONES.find((x) => x.id === timing)?.label || "—",
-    [timing]
-  );
+  const perfilLabels = useMemo(() => labelsFrom(perfilSel, PERFIL_OPCIONES), [perfilSel]);
+  const timingLabel = useMemo(() => TIMING_OPCIONES.find((x) => x.id === timing)?.label || "—", [timing]);
 
   // PendingCount (solo si hay session)
   const [pendingCount, setPendingCount] = useState(null);
@@ -384,6 +351,7 @@ export default function Solicitud() {
       if (!alive) return;
       setPendingCount(typeof count === "number" ? count : null);
     })();
+
     return () => {
       alive = false;
     };
@@ -393,9 +361,10 @@ export default function Solicitud() {
     if (sending) return;
 
     setSendError("");
+    setSendWarn("");
+    setLastSolicitudId("");
     setSending(true);
 
-    // Payload exactamente como tu schema del handler
     const payload = {
       producto,
       conGarantia,
@@ -403,17 +372,10 @@ export default function Solicitud() {
       monto: Math.round(Number(monto)),
       ventasMensuales: Math.round(Number(ventasMensuales)),
       ebitdaMensual: Math.round(Number(ebitdaMensual)),
-
       tasaEstimada,
       pago,
       dscr,
-
-      objetivo: {
-        uso: usoSel,
-        perfil: perfilSel,
-        timing,
-      },
-
+      objetivo: { uso: usoSel, perfil: perfilSel, timing },
       contacto: {
         empresa: cleanText(empresa, 120),
         rfc: cleanRFC(rfc),
@@ -421,7 +383,6 @@ export default function Solicitud() {
         email: cleanText(email, 120),
         telefono: telefonoClean,
       },
-
       website: cleanText(website, 40),
       createdAt: new Date().toISOString(),
     };
@@ -430,9 +391,7 @@ export default function Solicitud() {
       const { data: sess } = await supabase.auth.getSession();
       const s = sess?.session;
 
-      // Tu API exige token sí o sí
       if (!s) {
-        // opcional: guarda un draft mínimo para que no se pierda si loguea
         try {
           sessionStorage.setItem("plinius_solicitud_draft", JSON.stringify(payload));
         } catch {}
@@ -444,13 +403,23 @@ export default function Solicitud() {
       if (payload.website) return;
 
       if (typeof pendingCount === "number" && pendingCount >= 2) {
-        throw new Error(
-          "Ya tienes 2 solicitudes pendientes. Espera respuesta antes de enviar otra."
-        );
+        throw new Error("Ya tienes 2 solicitudes pendientes. Espera respuesta antes de enviar otra.");
       }
 
-      // ✅ AQUÍ está lo importante: llamar tu endpoint (inserta + Resend)
       const resp = await postSolicitudToApi(payload, s.access_token);
+
+      if (resp?.id) setLastSolicitudId(resp.id);
+
+      // Si tu backend regresa mail status (recomendado), aquí lo mostramos.
+      // Ej: { ok:true, id, mail:{ admin:{ok:false,error:"..."}, user:{ok:true} } }
+      const adminOk = resp?.mail?.admin?.ok;
+      const userOk = resp?.mail?.user?.ok;
+      if (adminOk === false || userOk === false) {
+        const parts = [];
+        if (adminOk === false) parts.push(`admin: ${resp.mail.admin.error || "falló"}`);
+        if (userOk === false) parts.push(`usuario: ${resp.mail.user.error || "falló"}`);
+        setSendWarn(`Solicitud guardada, pero el correo falló (${parts.join(" · ")}).`);
+      }
 
       setSent(true);
       setPendingCount((x) => (typeof x === "number" ? x + 1 : x));
@@ -459,15 +428,17 @@ export default function Solicitud() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch {}
 
-      // Limpia draft
       try {
         sessionStorage.removeItem("plinius_solicitud_draft");
       } catch {}
-
-      // si quieres usar el id:
-      // console.log("Solicitud ID:", resp.id);
     } catch (e) {
-      setSendError(e?.message || "Error enviando solicitud");
+      console.error("SOLICITUD ERROR:", e);
+
+      // Mensaje usuario + hint técnico si aplica
+      const hint =
+        e?.url ? ` (endpoint: ${e.url})` : "";
+
+      setSendError((e?.message || "Error enviando solicitud") + hint);
     } finally {
       setSending(false);
     }
@@ -486,9 +457,7 @@ export default function Solicitud() {
             <div className="solHeaderLeft">
               <h1 className="solH1">Solicitud</h1>
               <div className="solSub">
-                {isLoggedIn
-                  ? "3 pasos · Rápido · Indicativo (no vinculante)"
-                  : "4 pasos · Rápido · Indicativo (no vinculante)"}
+                {isLoggedIn ? "3 pasos · Rápido · Indicativo (no vinculante)" : "4 pasos · Rápido · Indicativo (no vinculante)"}
               </div>
             </div>
 
@@ -504,10 +473,7 @@ export default function Solicitud() {
           <section className="solCard">
             <div className="solProg">
               <div className="solProgBar">
-                <div
-                  className="solProgFill"
-                  style={{ width: `${stepPct}%` }}
-                />
+                <div className="solProgFill" style={{ width: `${stepPct}%` }} />
               </div>
             </div>
 
@@ -516,11 +482,7 @@ export default function Solicitud() {
                 <div className="solPane">
                   <div className="solSuccessTop">
                     <div className="solBrand">
-                      <img
-                        className="solBrandLogo"
-                        src={PliniusLogo}
-                        alt="Plinius"
-                      />
+                      <img className="solBrandLogo" src={PliniusLogo} alt="Plinius" />
                       <div className="solBrandTxt">
                         <div className="solBrandK">Plinius</div>
                         <div className="solBrandS">Financiamiento para PyMEs</div>
@@ -529,69 +491,53 @@ export default function Solicitud() {
                     <div className="solPill">Solicitud recibida</div>
                   </div>
 
-                  <h2 className="solH2">
-                    Gracias. Ya estamos trabajando en tu solicitud.
-                  </h2>
+                  <h2 className="solH2">Gracias. Ya estamos trabajando en tu solicitud.</h2>
                   <p className="solP">
-                    Normalmente respondemos en{" "}
-                    <strong>24 a 48 horas</strong>.
+                    Normalmente respondemos en <strong>24 a 48 horas</strong>.
                   </p>
+
+                  {sendWarn && <div className="solWarn" style={{ marginTop: 10 }}>{sendWarn}</div>}
+                  {lastSolicitudId && (
+                    <div className="solTiny" style={{ marginTop: 8 }}>
+                      ID interno: <strong>{String(lastSolicitudId).slice(0, 8)}</strong>
+                    </div>
+                  )}
 
                   <div className="solTiles">
                     <div className="solTile">
                       <div className="solTileT">Siguiente paso</div>
                       <div className="solTileV">Revisión preliminar</div>
-                      <div className="solTileS">
-                        Te pediremos 2–3 documentos si aplica.
-                      </div>
+                      <div className="solTileS">Te pediremos 2–3 documentos si aplica.</div>
                     </div>
                     <div className="solTile">
                       <div className="solTileT">Tiempo estimado</div>
                       <div className="solTileV">1–2 días</div>
-                      <div className="solTileS">
-                        Si tu info está lista, puede ser el mismo día.
-                      </div>
+                      <div className="solTileS">Si tu info está lista, puede ser el mismo día.</div>
                     </div>
                   </div>
 
                   <div className="solActions">
-                    <button
-                      type="button"
-                      className="btnx primary"
-                      onClick={() => nav("/dashboard")}
-                    >
+                    <button type="button" className="btnx primary" onClick={() => nav("/dashboard")}>
                       Ir a Dashboard
                     </button>
-                    <button
-                      type="button"
-                      className="btnx ghost"
-                      onClick={() => nav("/")}
-                    >
+                    <button type="button" className="btnx ghost" onClick={() => nav("/")}>
                       Ir al inicio
                     </button>
                   </div>
 
-                  <div className="solFootNote">
-                    Tip: responde con estados financieros, ventas y deuda actual.
-                  </div>
+                  <div className="solFootNote">Tip: responde con estados financieros, ventas y deuda actual.</div>
                 </div>
               ) : (
                 <>
                   {step === 0 && (
                     <div className="solPane">
                       <div className="solHeroTop">
-                        <img
-                          className="solHeroLogo"
-                          src={PliniusLogo}
-                          alt="Plinius"
-                        />
+                        <img className="solHeroLogo" src={PliniusLogo} alt="Plinius" />
                         <div className="solPill">Precalificación</div>
                       </div>
 
                       <h2 className="solH2">Inicia tu solicitud</h2>
-                      <p className="solP">
-                        Te toma menos de 2 minutos. Proceso claro y sin fricción.
-                      </p>
+                      <p className="solP">Te toma menos de 2 minutos. Proceso claro y sin fricción.</p>
 
                       <div className="solBullets">
                         <div className="solBullet">✓ Respuesta en 24–48h</div>
@@ -600,11 +546,7 @@ export default function Solicitud() {
                       </div>
 
                       <div className="solActions">
-                        <button
-                          type="button"
-                          className="btnx primary"
-                          onClick={() => setStep(1)}
-                        >
+                        <button type="button" className="btnx primary" onClick={() => setStep(1)}>
                           Iniciar solicitud
                         </button>
                         <Link className="btnx ghost" to="/simulador">
@@ -612,9 +554,7 @@ export default function Solicitud() {
                         </Link>
                       </div>
 
-                      <div className="solFootNote">
-                        *Este resultado es informativo y no constituye oferta vinculante.
-                      </div>
+                      <div className="solFootNote">*Este resultado es informativo y no constituye oferta vinculante.</div>
                     </div>
                   )}
 
@@ -625,9 +565,7 @@ export default function Solicitud() {
                         <div>
                           <div className="solKicker">Paso 1</div>
                           <div className="solTitle">Producto y condiciones</div>
-                          <div className="solHint">
-                            Elige lo esencial. Lo demás lo ajustamos.
-                          </div>
+                          <div className="solHint">Elige lo esencial. Lo demás lo ajustamos.</div>
                         </div>
                         <Link className="btnx ghost" to="/simulador">
                           Volver
@@ -639,9 +577,7 @@ export default function Solicitud() {
                           <button
                             key={p.id}
                             type="button"
-                            className={`solProd ${
-                              producto === p.id ? "active" : ""
-                            }`}
+                            className={`solProd ${producto === p.id ? "active" : ""}`}
                             onClick={() => setProducto(p.id)}
                             aria-pressed={producto === p.id}
                           >
@@ -656,18 +592,14 @@ export default function Solicitud() {
                         <div className="solSeg">
                           <button
                             type="button"
-                            className={`solSegBtn ${
-                              conGarantia ? "active" : ""
-                            }`}
+                            className={`solSegBtn ${conGarantia ? "active" : ""}`}
                             onClick={() => setConGarantia(true)}
                           >
                             Con garantía
                           </button>
                           <button
                             type="button"
-                            className={`solSegBtn ${
-                              !conGarantia ? "active" : ""
-                            }`}
+                            className={`solSegBtn ${!conGarantia ? "active" : ""}`}
                             onClick={() => setConGarantia(false)}
                           >
                             Sin garantía
@@ -682,9 +614,7 @@ export default function Solicitud() {
                             <button
                               key={p}
                               type="button"
-                              className={`solChip ${
-                                plazo === p ? "active" : ""
-                              }`}
+                              className={`solChip ${plazo === p ? "active" : ""}`}
                               onClick={() => setPlazo(p)}
                             >
                               {p}m
@@ -694,19 +624,10 @@ export default function Solicitud() {
                       </div>
 
                       <div className="solActions">
-                        <button
-                          type="button"
-                          className="btnx ghost"
-                          onClick={goPrev}
-                        >
+                        <button type="button" className="btnx ghost" onClick={goPrev}>
                           Atrás
                         </button>
-                        <button
-                          type="button"
-                          className="btnx primary"
-                          onClick={goNext}
-                          disabled={!canNext1}
-                        >
+                        <button type="button" className="btnx primary" onClick={goNext} disabled={!canNext1}>
                           Siguiente
                         </button>
                       </div>
@@ -720,9 +641,7 @@ export default function Solicitud() {
                         <div>
                           <div className="solKicker">Paso 2</div>
                           <div className="solTitle">Monto y capacidad</div>
-                          <div className="solHint">
-                            Estimamos pago y comodidad del crédito.
-                          </div>
+                          <div className="solHint">Estimamos pago y comodidad del crédito.</div>
                         </div>
                       </div>
 
@@ -757,9 +676,7 @@ export default function Solicitud() {
                             max={1_500_000}
                             step={10_000}
                             value={ebitdaMensual}
-                            onChange={(e) =>
-                              setEbitdaMensual(Number(e.target.value))
-                            }
+                            onChange={(e) => setEbitdaMensual(Number(e.target.value))}
                           />
                           <div className="solBoxHint">
                             <span>{pesos(30_000)}</span>
@@ -778,9 +695,7 @@ export default function Solicitud() {
                             max={20_000_000}
                             step={50_000}
                             value={ventasMensuales}
-                            onChange={(e) =>
-                              setVentasMensuales(Number(e.target.value))
-                            }
+                            onChange={(e) => setVentasMensuales(Number(e.target.value))}
                           />
                           <div className="solBoxHint">
                             <span>{pesos(100_000)}</span>
@@ -801,26 +716,15 @@ export default function Solicitud() {
                             <span>Flujo / pago</span>
                             <strong>{dscr.toFixed(2)}x</strong>
                           </div>
-                          <div className="solTiny">
-                            Indicativo. Se ajusta con documentos.
-                          </div>
+                          <div className="solTiny">Indicativo. Se ajusta con documentos.</div>
                         </div>
                       </div>
 
                       <div className="solActions">
-                        <button
-                          type="button"
-                          className="btnx ghost"
-                          onClick={goPrev}
-                        >
+                        <button type="button" className="btnx ghost" onClick={goPrev}>
                           Atrás
                         </button>
-                        <button
-                          type="button"
-                          className="btnx primary"
-                          onClick={goNext}
-                          disabled={!canNext2}
-                        >
+                        <button type="button" className="btnx primary" onClick={goNext} disabled={!canNext2}>
                           Siguiente
                         </button>
                       </div>
@@ -835,92 +739,50 @@ export default function Solicitud() {
                           <div className="solKicker">Paso 3</div>
                           <div className="solTitle">Selecciona tu caso</div>
                           <div className="solHint">
-                            {isLoggedIn
-                              ? "Si ya tienes cuenta, enviamos al finalizar."
-                              : "Para enviar, primero inicia sesión."}
+                            {isLoggedIn ? "Si ya tienes cuenta, enviamos al finalizar." : "Para enviar, primero inicia sesión."}
                           </div>
                         </div>
                       </div>
 
                       <div className="solAcc">
-                        <details
-                          className="solDet"
-                          open={openPanel === "uso"}
-                          onToggle={(e) =>
-                            e.target.open && setOpenPanel("uso")
-                          }
-                        >
+                        <details className="solDet" open={openPanel === "uso"} onToggle={(e) => e.target.open && setOpenPanel("uso")}>
                           <summary className="solSum">
                             <div className="solSumL">
                               <div className="solSumT">Uso del crédito</div>
                               <div className="solTag req">Requerido</div>
                             </div>
-                            <div className="solSumR">
-                              {usoSel.length} seleccionado(s)
-                            </div>
+                            <div className="solSumR">{usoSel.length} seleccionado(s)</div>
                           </summary>
 
                           <div className="solOpts">
                             {USO_OPCIONES.map((o) => {
                               const checked = usoSel.includes(o.id);
                               return (
-                                <label
-                                  key={o.id}
-                                  className={`solOpt ${checked ? "on" : ""}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() =>
-                                      setUsoSel((s) => toggleMulti(s, o.id))
-                                    }
-                                  />
+                                <label key={o.id} className={`solOpt ${checked ? "on" : ""}`}>
+                                  <input type="checkbox" checked={checked} onChange={() => setUsoSel((s) => toggleMulti(s, o.id))} />
                                   <span>{o.label}</span>
                                 </label>
                               );
                             })}
-                            {usoSel.length === 0 && (
-                              <div className="solWarn">
-                                Selecciona al menos 1 opción.
-                              </div>
-                            )}
+                            {usoSel.length === 0 && <div className="solWarn">Selecciona al menos 1 opción.</div>}
                           </div>
                         </details>
 
-                        <details
-                          className="solDet"
-                          open={openPanel === "perfil"}
-                          onToggle={(e) =>
-                            e.target.open && setOpenPanel("perfil")
-                          }
-                        >
+                        <details className="solDet" open={openPanel === "perfil"} onToggle={(e) => e.target.open && setOpenPanel("perfil")}>
                           <summary className="solSum">
                             <div className="solSumL">
-                              <div className="solSumT">
-                                Perfil / documentación
-                              </div>
+                              <div className="solSumT">Perfil / documentación</div>
                               <div className="solTag opt">Opcional</div>
                             </div>
-                            <div className="solSumR">
-                              {perfilSel.length} seleccionado(s)
-                            </div>
+                            <div className="solSumR">{perfilSel.length} seleccionado(s)</div>
                           </summary>
 
                           <div className="solOpts">
                             {PERFIL_OPCIONES.map((o) => {
                               const checked = perfilSel.includes(o.id);
                               return (
-                                <label
-                                  key={o.id}
-                                  className={`solOpt ${checked ? "on" : ""}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() =>
-                                      setPerfilSel((s) => toggleMulti(s, o.id))
-                                    }
-                                  />
+                                <label key={o.id} className={`solOpt ${checked ? "on" : ""}`}>
+                                  <input type="checkbox" checked={checked} onChange={() => setPerfilSel((s) => toggleMulti(s, o.id))} />
                                   <span>{o.label}</span>
                                 </label>
                               );
@@ -928,13 +790,7 @@ export default function Solicitud() {
                           </div>
                         </details>
 
-                        <details
-                          className="solDet"
-                          open={openPanel === "timing"}
-                          onToggle={(e) =>
-                            e.target.open && setOpenPanel("timing")
-                          }
-                        >
+                        <details className="solDet" open={openPanel === "timing"} onToggle={(e) => e.target.open && setOpenPanel("timing")}>
                           <summary className="solSum">
                             <div className="solSumL">
                               <div className="solSumT">Urgencia</div>
@@ -947,16 +803,8 @@ export default function Solicitud() {
                             {TIMING_OPCIONES.map((o) => {
                               const checked = timing === o.id;
                               return (
-                                <label
-                                  key={o.id}
-                                  className={`solOpt ${checked ? "on" : ""}`}
-                                >
-                                  <input
-                                    type="radio"
-                                    name="timing"
-                                    checked={checked}
-                                    onChange={() => setTiming(o.id)}
-                                  />
+                                <label key={o.id} className={`solOpt ${checked ? "on" : ""}`}>
+                                  <input type="radio" name="timing" checked={checked} onChange={() => setTiming(o.id)} />
                                   <span>{o.label}</span>
                                 </label>
                               );
@@ -988,17 +836,14 @@ export default function Solicitud() {
                                 <strong>{session?.user?.email || "—"}</strong>
                               </div>
                               {profileRow?.empresa ? (
-                                <div className="solTiny">
-                                  Prefill desde tu perfil. Puedes editar aquí si hace falta.
-                                </div>
+                                <div className="solTiny">Prefill desde tu perfil. Puedes editar aquí si hace falta.</div>
                               ) : (
-                                <div className="solTiny">
-                                  Confirma tus datos de contacto para responderte.
-                                </div>
+                                <div className="solTiny">Confirma tus datos de contacto para responderte.</div>
                               )}
                             </div>
 
                             {sendError && <div className="solError">{sendError}</div>}
+                            {sendWarn && <div className="solWarn">{sendWarn}</div>}
 
                             <div className="solField">
                               <label>Empresa</label>
@@ -1013,11 +858,7 @@ export default function Solicitud() {
 
                             <div className="solField">
                               <label>RFC (opcional)</label>
-                              <input
-                                value={rfc}
-                                onChange={(e) => setRfc(cleanRFC(e.target.value))}
-                                placeholder="Ej. ALA010203XX0"
-                              />
+                              <input value={rfc} onChange={(e) => setRfc(cleanRFC(e.target.value))} placeholder="Ej. ALA010203XX0" />
                             </div>
 
                             <div className="solField">
@@ -1048,7 +889,7 @@ export default function Solicitud() {
                               <input
                                 value={telefono}
                                 onChange={(e) => setTelefono(e.target.value)}
-                                onBlur={() => setTelefono(telefonoClean)}
+                                onBlur={() => setTelefono(cleanPhone(telefono))}
                                 placeholder="55 1234 5678"
                                 inputMode="tel"
                                 autoComplete="tel"
@@ -1062,9 +903,7 @@ export default function Solicitud() {
                             )}
 
                             {typeof pendingCount === "number" && pendingCount >= 2 && (
-                              <div className="solError">
-                                Ya tienes 2 solicitudes pendientes. Espera respuesta antes de enviar otra.
-                              </div>
+                              <div className="solError">Ya tienes 2 solicitudes pendientes. Espera respuesta antes de enviar otra.</div>
                             )}
                           </div>
                         )}
@@ -1081,12 +920,7 @@ export default function Solicitud() {
                       />
 
                       <div className="solActions">
-                        <button
-                          type="button"
-                          className="btnx ghost"
-                          onClick={goPrev}
-                          disabled={sending}
-                        >
+                        <button type="button" className="btnx ghost" onClick={goPrev} disabled={sending}>
                           Atrás
                         </button>
 
@@ -1096,23 +930,14 @@ export default function Solicitud() {
                             className="btnx primary"
                             onClick={submit}
                             disabled={
-                              !canNext3 ||
-                              !canSend ||
-                              sending ||
-                              (typeof pendingCount === "number" && pendingCount >= 2)
+                              !canNext3 || !canSend || sending || (typeof pendingCount === "number" && pendingCount >= 2)
                             }
-                            title={
-                              !canSend ? `Faltan: ${missingSend.join(", ")}` : "Enviar solicitud"
-                            }
+                            title={!canSend ? `Faltan: ${missingSend.join(", ")}` : "Enviar solicitud"}
                           >
                             {sending ? "Enviando..." : "Enviar solicitud"}
                           </button>
                         ) : (
-                          <button
-                            type="button"
-                            className="btnx primary"
-                            onClick={() => nav("/ingresar?registro=0")}
-                          >
+                          <button type="button" className="btnx primary" onClick={() => nav("/ingresar?registro=0")}>
                             Iniciar sesión para enviar
                           </button>
                         )}
@@ -1127,26 +952,15 @@ export default function Solicitud() {
                         <div>
                           <div className="solKicker">Paso 4</div>
                           <div className="solTitle">Datos para responder</div>
-                          <div className="solHint">
-                            Para enviar, primero inicia sesión.
-                          </div>
+                          <div className="solHint">Para enviar, primero inicia sesión.</div>
                         </div>
                       </div>
 
                       <div className="solActions">
-                        <button
-                          type="button"
-                          className="btnx ghost"
-                          onClick={goPrev}
-                          disabled={sending}
-                        >
+                        <button type="button" className="btnx ghost" onClick={goPrev} disabled={sending}>
                           Atrás
                         </button>
-                        <button
-                          type="button"
-                          className="btnx primary"
-                          onClick={() => nav("/ingresar?registro=0")}
-                        >
+                        <button type="button" className="btnx primary" onClick={() => nav("/ingresar?registro=0")}>
                           Iniciar sesión
                         </button>
                       </div>
@@ -1162,28 +976,17 @@ export default function Solicitud() {
               {STEPS_META.map((s) => {
                 const active = step === s.n;
                 const done = step > s.n;
-
-                // Step 4 no “clickeable” si está logueado (porque ya no se usa)
                 const clickable = step !== 0 && !(isLoggedIn && s.n === 4);
 
                 return (
-                  <li
-                    key={s.n}
-                    className={`solStep ${active ? "active" : ""} ${
-                      done ? "done" : ""
-                    }`}
-                  >
+                  <li key={s.n} className={`solStep ${active ? "active" : ""} ${done ? "done" : ""}`}>
                     <button
                       type="button"
                       className="solStepBtn"
                       onClick={() => clickable && jumpTo(s.n)}
                       disabled={!clickable}
                       aria-current={active ? "step" : undefined}
-                      title={
-                        isLoggedIn && s.n === 4
-                          ? "No aplica si ya iniciaste sesión"
-                          : undefined
-                      }
+                      title={isLoggedIn && s.n === 4 ? "No aplica si ya iniciaste sesión" : undefined}
                     >
                       <span className="solDot" />
                       <span className="solStepNum">{s.n}</span>
@@ -1196,9 +999,7 @@ export default function Solicitud() {
             </ol>
           </nav>
 
-          <div className="solBottom">
-            Este resultado es informativo y no constituye oferta vinculante.
-          </div>
+          <div className="solBottom">Este resultado es informativo y no constituye oferta vinculante.</div>
         </div>
       </main>
 
