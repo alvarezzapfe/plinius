@@ -1,5 +1,5 @@
 /* =====================================================
-   DASHBOARD – Sidebar compacto + geometría limpia
+   DASHBOARD – Sidebar fijo + tabla pro + geometría limpia
    ===================================================== */
 
 :root{
@@ -19,6 +19,11 @@
 
   --text: rgba(226,232,240,0.95);
   --muted: rgba(148,163,184,0.95);
+
+  --row-h: 52px;
+
+  /* Sticky right panel */
+  --stickyTop: 14px;
 }
 
 *{ box-sizing:border-box; }
@@ -79,6 +84,9 @@
   display:flex;
   flex-direction:column;
   gap:10px;
+
+  /* evita “brincos” */
+  contain: layout paint;
 }
 
 .dash-brandRow{
@@ -200,6 +208,9 @@
   padding-top:2px;
   flex:1 1 auto;
   overflow:auto;
+
+  /* suaviza scroll */
+  scrollbar-gutter: stable;
 }
 
 .dash-navSection{
@@ -322,9 +333,7 @@
   padding: 6px 4px 12px;
 }
 
-.dash-headLeft{
-  min-width: 0;
-}
+.dash-headLeft{ min-width: 0; }
 
 .dash-headRight{
   display:flex;
@@ -484,42 +493,113 @@
   margin: 12px 0;
 }
 
-/* Lists */
+/* =====================================================
+   SOLICITUDES: LISTA -> TABLA CHINGONA
+   - sin tocar JSX: convierte cada row en “grid table”
+   ===================================================== */
+
 .dash-list{
   display:grid;
-  gap:10px;
+  gap:8px;
 }
 
+/* header fake (opcional si lo agregas algún día)
+.dash-tableHead { ... }
+*/
+
 .dash-listRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+  min-height: var(--row-h);
   border-radius: var(--r-16);
   border: var(--b1);
   background: rgba(255,255,255,0.06);
-  padding:12px;
+  padding: 0;               /* 👈 importante: ahora maneja padding por columnas */
+  overflow: hidden;
+  position: relative;
+
+  /* tabla */
+  display: grid;
+  grid-template-columns: minmax(260px, 1.35fr) minmax(220px, 1fr) 160px;
+  align-items: stretch;
+  gap: 0;
 }
 
+/* líneas “tabla” */
+.dash-listRow::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(to right,
+      transparent 0%,
+      transparent calc(100% - 1px),
+      rgba(148,163,184,0.00) 100%);
+  opacity: 0;
+}
+
+.dash-listRow:hover{
+  border-color: rgba(148,163,184,0.45);
+  background: rgba(255,255,255,0.075);
+}
+
+/* Columna 1 (main) */
+.dash-listRow > div:first-child{
+  padding: 10px 12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+}
+
+/* Columna 2 (sub/meta) -> lo tomamos desde .dash-listSub */
+.dash-listSub{
+  margin-top:6px;
+  font-size:12px;
+  color: rgba(148,163,184,0.90);
+  display:flex;
+  gap:10px;
+  flex-wrap: wrap;
+  min-width:0;
+}
+
+/* Row main line */
 .dash-listMain{
   font-size:13px;
-  font-weight:900;
+  font-weight:950;
   color: rgba(226,232,240,0.96);
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  min-width:0;
 }
 
-.dash-listSub{
-  margin-top:4px;
-  font-size:12px;
-  color: rgba(148,163,184,0.9);
+/* Columna derecha (CTA) */
+.dash-listRight{
+  padding: 10px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap: 10px;
+  border-left: 1px solid rgba(148,163,184,0.16);
+  background: rgba(2,6,23,0.10);
 }
 
+/* columna “middle” visual: hacemos que .dash-listSub se perciba como columna 2
+   sin cambiar JSX: le damos look de “celdas”
+*/
+.dash-listRow > div:first-child{
+  border-right: 1px solid rgba(148,163,184,0.16);
+}
+
+/* Pills status (si las usas) */
 .dash-status{
   display:inline-flex;
   align-items:center;
   height:18px;
   padding:0 8px;
   border-radius:999px;
-  margin-left:10px;
+  margin-left:0;
   font-size:11px;
   font-weight:950;
   border:1px solid rgba(148,163,184,0.28);
@@ -529,11 +609,55 @@
 .dash-status.aplicado{ border-color: rgba(34,197,94,0.45); }
 .dash-status.rechazado{ border-color: rgba(239,68,68,0.45); }
 
-.dash-balance{
+/* =====================================================
+   Detalle / Grid info
+   ===================================================== */
+
+.dash-profileGrid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:10px;
+}
+
+.dash-info{
+  border-radius: var(--r-16);
+  border: var(--b1);
+  background: rgba(255,255,255,0.06);
+  padding: 12px;
+}
+
+.dash-infoLabel{
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(148,163,184,0.92);
+}
+
+.dash-infoValue{
   margin-top: 6px;
-  font-size: 28px;
+  font-size: 13px;
   font-weight: 950;
-  letter-spacing: -0.02em;
+  color: rgba(226,232,240,0.95);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+/* =====================================================
+   Sticky RIGHT PANEL (no se mueva)
+   - usa en el contenedor del panel que quieres fijo:
+     className="dash-stickyRight"
+   ===================================================== */
+
+.dash-stickyRight{
+  position: sticky;
+  top: var(--stickyTop);
+  align-self: start;
+}
+
+/* si el panel dentro tiene mucho contenido, le damos su propio scroll */
+.dash-stickyRight > .dash-panel{
+  max-height: calc(100vh - (var(--stickyTop) * 2));
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 /* Forms */
@@ -601,11 +725,20 @@
 }
 .dash-fileInput{ display:none; }
 
-/* Responsive */
+/* =====================================================
+   Responsive
+   ===================================================== */
+
 @media (max-width: 980px){
   :root{ --dash-side-w: 276px; }
   .dash-kpis{ grid-template-columns: 1fr 1fr; }
   .dash-formGrid{ grid-template-columns: 1fr 1fr; }
+
+  .dash-profileGrid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+  .dash-listRow{
+    grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 1fr) 150px;
+  }
 }
 
 @media (max-width: 780px){
@@ -628,11 +761,31 @@
     justify-content: space-between;
     align-items:center;
   }
+
+  .dash-listRow{
+    grid-template-columns: 1fr;
+  }
+  .dash-listRight{
+    justify-content: flex-start;
+    border-left: none;
+    border-top: 1px solid rgba(148,163,184,0.16);
+    background: rgba(2,6,23,0.08);
+  }
+  .dash-listRow > div:first-child{
+    border-right:none;
+  }
+
+  .dash-stickyRight{
+    position: static;
+  }
+  .dash-stickyRight > .dash-panel{
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 @media (max-width: 560px){
   .dash-kpis{ grid-template-columns: 1fr; }
   .dash-formGrid{ grid-template-columns: 1fr; }
-  .dash-listRow{ align-items:flex-start; flex-direction:column; }
   .dash-topSignout span{ display:none; } /* en mobile deja solo el icono */
 }
