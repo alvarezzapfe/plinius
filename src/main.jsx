@@ -19,6 +19,7 @@ import Inversionistas from "./pages/Inversionistas.jsx";
 import Solicitud from "./pages/Solicitud.jsx"; // 👈 ESTE es el nuevo wizard
 import Solicitudes from "./pages/Solicitudes";
 import CreditoDetalle from "./pages/CreditoDetalle";
+import SolicitudDetalle from "./pages/SolicitudDetalle";
 
 // Stub rápido de alianza
 function AlianzaCrowdlink() {
@@ -70,6 +71,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
         <Route path="/solicitudes" element={<Solicitudes />} />
         <Route path="/creditos/:id" element={<CreditoDetalle />} />
+        <Route path="/solicitudes/:id" element={<SolicitudDetalle />} />
+
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />

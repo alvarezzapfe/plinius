@@ -1,88 +1,92 @@
 // src/pages/Solicitudes.jsx
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import "../assets/css/dashboard.css";
+import "../assets/css/dashboard.css"; // reutilizamos tu estilo base del dashboard
 
 /* =======================
    Helpers
 ======================= */
-const pesos = (x) =>
-  new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(x) ? x : 0);
-
 const fmtDT = (d) => (d ? new Date(d).toLocaleString("es-MX") : "—");
 
-function statusPillClass(status) {
-  if (status === "aprobada") return "dash-btn dash-btnPrimary";
-  if (status === "rechazada") return "dash-btn dash-btnGhost";
-  return "dash-btn dash-btnSoft";
-}
-
-const TAB_BTN = (active) => ({
-  height: 36,
-  padding: "0 14px",
-  borderRadius: 999,
-  fontWeight: 900,
-  border: active
-    ? "1px solid rgba(34,197,94,0.55)"
-    : "1px solid rgba(148,163,184,0.55)",
-  background: active ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.06)",
-  color: "rgba(226,232,240,0.95)",
-  cursor: "pointer",
-});
-
-const INPUT_STYLE = {
-  height: 36,
-  padding: "0 12px",
-  borderRadius: 999,
-  border: "1px solid rgba(148,163,184,0.55)",
-  background: "rgba(255,255,255,0.06)",
-  color: "rgba(226,232,240,0.95)",
-  outline: "none",
+const pill = (status = "") => {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("pend")) return { cls: "dash-status pendiente", label: "pendiente" };
+  if (s.includes("aprob")) return { cls: "dash-status aplicado", label: "aprobada" };
+  if (s.includes("rech")) return { cls: "dash-status rechazado", label: "rechazada" };
+  if (s.includes("rev")) return { cls: "dash-status pendiente", label: "en revisión" };
+  return { cls: "dash-status", label: status || "—" };
 };
 
-/* =======================
-   Data hydration (profiles)
-======================= */
-async function hydrateProfilesForSolicitudes(rows) {
-  if (!rows || rows.length === 0) return rows;
+const cleanText = (s, max = 120) =>
+  String(s ?? "")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
 
-  const ids = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
-  if (ids.length === 0) return rows;
-
-  const { data: profs, error: perr } = await supabase
-    .from("profiles")
-    .select("id,email,nombres,apellido_paterno,is_admin,created_at")
-    .in("id", ids)
-    .limit(1000);
-
-  if (perr) return rows.map((r) => ({ ...r, profile: null }));
-
-  const map = new Map((profs || []).map((p) => [p.id, p]));
-  return rows.map((r) => ({ ...r, profile: map.get(r.user_id) || null }));
+function safeJson(obj) {
+  if (!obj) return {};
+  if (typeof obj === "object") return obj;
+  try {
+    return JSON.parse(obj);
+  } catch {
+    return {};
+  }
 }
 
-/* =======================
-   Credit linkage helper
-   - crédito se crea por trigger cuando solicitud pasa a "aprobada"
-======================= */
-async function fetchCreditoBySolicitudId(solicitudId) {
-  if (!solicitudId) return null;
+/**
+ * Trata de sacar campos comunes de tu payload del wizard.
+ * Ajusta keys si tu wizard usa otros nombres.
+ */
+function deriveFromPayload(payloadRaw) {
+  const p = safeJson(payloadRaw);
 
-  const { data, error } = await supabase
-    .from("creditos")
-    .select(
-      "id,estado,producto,monto_objetivo,monto_recaudado,tasa_anual,plazo_meses,tag,created_at,solicitud_id"
-    )
-    .eq("solicitud_id", solicitudId)
-    .maybeSingle();
+  // nombres “probables” (wizard)
+  const empresa =
+    p.empresa ||
+    p.nombre_empresa ||
+    p.razon_social ||
+    p.empresa_nombre ||
+    p.company ||
+    p?.general?.empresa ||
+    p?.general?.razon_social ||
+    "";
 
-  if (error) return null;
-  return data || null;
+  const producto = p.producto || p.tipo_credito || p?.credito?.producto || p?.costo?.producto || "";
+
+  const monto =
+    p.monto ||
+    p.monto_solicitado ||
+    p.montoSolicitado ||
+    p?.credito?.monto ||
+    p?.costo?.monto ||
+    p?.financiera?.monto ||
+    null;
+
+  const plazo =
+    p.plazo ||
+    p.plazo_meses ||
+    p.plazoMeses ||
+    p?.credito?.plazo_meses ||
+    p?.costo?.plazo_meses ||
+    null;
+
+  const tasa =
+    p.tasa ||
+    p.tasa_anual ||
+    p.tasaAnual ||
+    p?.credito?.tasa_anual ||
+    p?.costo?.tasa_anual ||
+    null;
+
+  return {
+    empresa: cleanText(empresa, 64) || "—",
+    producto: cleanText(producto, 48) || "—",
+    monto: monto === null ? "—" : String(monto),
+    plazo: plazo === null ? "—" : String(plazo),
+    tasa: tasa === null ? "—" : String(tasa),
+  };
 }
 
 export default function Solicitudes() {
@@ -90,29 +94,19 @@ export default function Solicitudes() {
 
   const [booting, setBooting] = useState(true);
   const [session, setSession] = useState(null);
-
-  const [profileRow, setProfileRow] = useState(null);
-  const isAdmin = !!profileRow?.is_admin;
-
-  const [tab, setTab] = useState("mine"); // mine | all | users
-  const [mine, setMine] = useState([]);
-  const [all, setAll] = useState([]);
-  const [users, setUsers] = useState([]);
-
-  // selected incluye: solicitud + profile (admin) + credito (si aprobada)
-  const [selected, setSelected] = useState(null);
-
-  const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-
-  const [busy, setBusy] = useState(false);
-  const [errMsg, setErrMsg] = useState("");
-
   const user = session?.user;
 
-  /* =======================
-     Auth boot
-  ======================= */
+  const [profile, setProfile] = useState(null);
+  const isAdmin = !!profile?.is_admin;
+
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  const [q, setQ] = useState("");
+  const [fStatus, setFStatus] = useState("all"); // all | pendiente | aprobada | rechazada
+
+  // Boot session
   useEffect(() => {
     let mounted = true;
 
@@ -123,9 +117,7 @@ export default function Solicitudes() {
       setBooting(false);
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_ev, s) => {
-      setSession(s || null);
-    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, s) => setSession(s));
 
     return () => {
       mounted = false;
@@ -137,241 +129,99 @@ export default function Solicitudes() {
     if (!booting && !session) nav("/ingresar?registro=0");
   }, [booting, session, nav]);
 
-  /* =======================
-     Load my profile (is_admin)
-  ======================= */
+  // Load profile (para saber si es admin)
   useEffect(() => {
     if (!user?.id) return;
 
     (async () => {
-      setErrMsg("");
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("profiles")
-        .select("id,email,is_admin,nombres,apellido_paterno,created_at")
+        .select("id,email,is_admin,nombres,apellido_paterno,empresa,created_at")
         .eq("id", user.id)
-        .maybeSingle();
+        .single();
 
-      if (error) {
-        setProfileRow(null);
-        setErrMsg(`No pude leer tu perfil (profiles). ${error.message}`);
-        return;
-      }
-
-      setProfileRow(data || null);
+      setProfile(data || null);
     })();
   }, [user?.id]);
 
-  // Si no es admin, evita tabs admin
-  useEffect(() => {
-    if (!isAdmin && (tab === "all" || tab === "users")) setTab("mine");
-  }, [isAdmin, tab]);
-
-  /* =======================
-     Stats / limits
-  ======================= */
-  const pendingCount = useMemo(
-    () => (mine || []).filter((x) => x.status === "pendiente").length,
-    [mine]
-  );
-  const canCreate = pendingCount < 2;
-
-  const mineStats = useMemo(() => {
-    const p = mine.filter((x) => x.status === "pendiente").length;
-    const a = mine.filter((x) => x.status === "aprobada").length;
-    const r = mine.filter((x) => x.status === "rechazada").length;
-    return { p, a, r };
-  }, [mine]);
-
-  const adminStats = useMemo(() => {
-    const p = all.filter((x) => x.status === "pendiente").length;
-    const a = all.filter((x) => x.status === "aprobada").length;
-    const r = all.filter((x) => x.status === "rechazada").length;
-    return { p, a, r };
-  }, [all]);
-
-  /* =======================
-     Loaders
-  ======================= */
-  const loadMine = useCallback(async () => {
+  const load = async () => {
     if (!user?.id) return;
-    setErrMsg("");
 
-    const { data, error } = await supabase
-      .from("solicitudes")
-      .select("id,status,created_at,decided_at,admin_note,payload")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(300);
+    setLoading(true);
+    setErr("");
 
-    if (error) {
-      setErrMsg(`Error cargando mis solicitudes: ${error.message}`);
-      return;
-    }
-    setMine(data || []);
-  }, [user?.id]);
-
-  const loadAll = useCallback(async () => {
-    setErrMsg("");
-
-    const { data, error } = await supabase
-      .from("solicitudes")
-      .select("id,user_id,status,created_at,decided_at,admin_note,payload")
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    if (error) {
-      setErrMsg(`Error cargando todas (admin): ${error.message}`);
-      return;
-    }
-
-    const hydrated = await hydrateProfilesForSolicitudes(data || []);
-    setAll(hydrated);
-  }, []);
-
-  const loadUsers = useCallback(async () => {
-    setErrMsg("");
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id,email,nombres,apellido_paterno,is_admin,created_at")
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    if (error) {
-      setErrMsg(`Error cargando usuarios (admin): ${error.message}`);
-      return;
-    }
-    setUsers(data || []);
-  }, []);
-
-  // First load mine
-  useEffect(() => {
-    if (!user?.id) return;
-    loadMine();
-  }, [user?.id, loadMine]);
-
-  // Admin loads
-  useEffect(() => {
-    if (!isAdmin) return;
-    loadAll();
-    loadUsers();
-  }, [isAdmin, loadAll, loadUsers]);
-
-  /* =======================
-     Filters
-  ======================= */
-  const filteredAll = useMemo(() => {
-    let rows = all || [];
-    if (statusFilter !== "all") rows = rows.filter((r) => r.status === statusFilter);
-
-    const qq = q.trim().toLowerCase();
-    if (qq) {
-      rows = rows.filter((r) => {
-        const em = (r.profile?.email || "").toLowerCase();
-        const st = (r.status || "").toLowerCase();
-        const emp = (r.payload?.contacto?.empresa || "").toLowerCase();
-        return em.includes(qq) || st.includes(qq) || emp.includes(qq);
-      });
-    }
-    return rows;
-  }, [all, q, statusFilter]);
-
-  /* =======================
-     Open detail (now attaches credito when aprobada)
-  ======================= */
-  const openRow = async (row) => {
-    setErrMsg("");
-    setSelected(null);
-
-    const { data, error } = await supabase
-      .from("solicitudes")
-      .select("id,user_id,status,created_at,decided_at,admin_note,payload")
-      .eq("id", row.id)
-      .maybeSingle();
-
-    if (error || !data) {
-      setSelected(row);
-      if (error) setErrMsg(`No pude cargar detalle completo: ${error.message}`);
-      return;
-    }
-
-    // Hidrata profile si eres admin
-    let profile = row.profile || null;
-    if (!profile && data.user_id) {
-      const { data: p2 } = await supabase
-        .from("profiles")
-        .select("id,email,nombres,apellido_paterno")
-        .eq("id", data.user_id)
-        .maybeSingle();
-      profile = p2 || null;
-    }
-
-    // ✅ Si está aprobada, trae crédito ligado (creado por trigger)
-    let credito = null;
-    if (data.status === "aprobada") {
-      credito = await fetchCreditoBySolicitudId(data.id);
-    }
-
-    setSelected({ ...data, profile, credito });
-  };
-
-  /* =======================
-     Admin decision
-     - update solicitudes.status
-     - trigger crea/actualiza creditos automáticamente
-  ======================= */
-  const decide = async (id, nextStatus) => {
-    if (!isAdmin) return;
-
-    setBusy(true);
-    setErrMsg("");
-
-    const note =
-      nextStatus === "aprobada"
-        ? "Aprobada en revisión preliminar"
-        : "Rechazada en revisión preliminar";
-
-    const decidedAt = new Date().toISOString();
-
-    const { error } = await supabase
-      .from("solicitudes")
-      .update({ status: nextStatus, admin_note: note, decided_at: decidedAt })
-      .eq("id", id);
-
-    if (error) {
-      setBusy(false);
-      setErrMsg(error.message);
-      return;
-    }
-
-    await loadMine();
-    await loadAll();
-
-    // ✅ Si aprobaste, intenta traer el crédito recién creado
-    let credito = null;
-    if (nextStatus === "aprobada") {
-      credito = await fetchCreditoBySolicitudId(id);
-    }
-
-    setSelected((s) =>
-      s?.id === id
-        ? { ...s, status: nextStatus, admin_note: note, decided_at: decidedAt, credito: credito || s.credito || null }
-        : s
-    );
-
-    setBusy(false);
-  };
-
-  /* =======================
-     Sign out
-  ======================= */
-  const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      /**
+       * Si NO eres admin: solo tus solicitudes
+       * Si eres admin: todas (ojo: RLS debe permitirlo)
+       */
+      let query = supabase
+        .from("solicitudes")
+        .select("id,user_id,status,created_at,payload")
+        .order("created_at", { ascending: false })
+        .limit(250);
+
+      if (!isAdmin) query = query.eq("user_id", user.id);
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const mapped = (data || []).map((r) => {
+        const d = deriveFromPayload(r.payload);
+        return {
+          ...r,
+          _empresa: d.empresa,
+          _producto: d.producto,
+          _monto: d.monto,
+          _plazo: d.plazo,
+          _tasa: d.tasa,
+        };
+      });
+
+      setRows(mapped);
+    } catch (e) {
+      setErr(e?.message || "No pude cargar solicitudes.");
+      setRows([]);
     } finally {
-      nav("/ingresar?registro=0");
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    // esperamos a profile para saber si admin
+    // pero si tarda, igual jalamos y luego recargamos
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isAdmin]);
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+
+    return (rows || [])
+      .filter((r) => {
+        if (fStatus === "all") return true;
+        const s = String(r.status || "").toLowerCase();
+        if (fStatus === "pendiente") return s.includes("pend");
+        if (fStatus === "aprobada") return s.includes("aprob") || s.includes("aplic");
+        if (fStatus === "rechazada") return s.includes("rech");
+        return true;
+      })
+      .filter((r) => {
+        if (!needle) return true;
+        const blob = `${r.id} ${r.status} ${r._empresa} ${r._producto}`.toLowerCase();
+        return blob.includes(needle);
+      });
+  }, [rows, q, fStatus]);
+
+  const counts = useMemo(() => {
+    const all = rows.length;
+    const pend = rows.filter((r) => String(r.status || "").toLowerCase().includes("pend")).length;
+    const aprob = rows.filter((r) => String(r.status || "").toLowerCase().includes("aprob")).length;
+    const rech = rows.filter((r) => String(r.status || "").toLowerCase().includes("rech")).length;
+    return { all, pend, aprob, rech };
+  }, [rows]);
 
   if (booting) {
     return (
@@ -391,321 +241,205 @@ export default function Solicitudes() {
       <div className="dash-grid" aria-hidden />
 
       <div className="dash-shell">
-        {/* Sidebar */}
+        {/* Sidebar mini (reuso estilo) */}
         <aside className="dash-side">
           <div className="dash-brandRow">
-            <div className="dash-badge">Plinius · Solicitudes</div>
-            <button className="dash-iconBtn" onClick={signOut} title="Cerrar sesión">
-              ⎋
+            <div className="dash-badge">Plinius · Crédito</div>
+            <button className="dash-iconBtn" onClick={() => nav("/dashboard")} title="Regresar al dashboard">
+              ←
             </button>
           </div>
 
-          <div className="dash-panel" style={{ marginTop: 0 }}>
-            <div className="dash-panelTitle">Acciones</div>
-            <div className="dash-row" style={{ display: "grid", gap: 10 }}>
-              <button className="dash-btn dash-btnSoft w100" onClick={() => nav("/dashboard")}>
-                Volver al Dashboard
-              </button>
-
-              <button className="dash-btn dash-btnSoft w100" onClick={() => nav("/")}>
-                Inicio
-              </button>
-
-              <button
-                className="dash-btn dash-btnPrimary w100"
-                onClick={() => nav("/solicitud")}
-                disabled={!canCreate}
-                title={!canCreate ? "Tienes 2 solicitudes pendientes" : "Crear solicitud"}
-              >
-                Nueva solicitud
-              </button>
-
-              {!canCreate && (
-                <div className="dash-sideHint">
-                  Límite: <strong>2 pendientes</strong>. Espera respuesta.
-                </div>
-              )}
+          <div className="dash-profileCard">
+            <div className="dash-avatar">
+              {(profile?.nombres?.[0] || "P").toUpperCase()}
+              {(profile?.apellido_paterno?.[0] || "").toUpperCase()}
+            </div>
+            <div>
+              <div className="dash-profileName">
+                {(profile?.nombres || "Usuario") + " " + (profile?.apellido_paterno || "")}
+              </div>
+              <div className="dash-profileEmail">{profile?.email || user?.email || "—"}</div>
+              {isAdmin && <div className="dash-adminPill">ADMIN</div>}
             </div>
           </div>
 
-          {isAdmin && (
-            <div className="dash-panel">
-              <div className="dash-panelTitle">Admin</div>
-              <div className="dash-sideHint">
-                Ves <strong>todos los usuarios</strong> y <strong>todas las solicitudes</strong>.
-              </div>
-              <div className="dash-sideHint" style={{ marginTop: 6 }}>
-                Totales: Pend <strong>{adminStats.p}</strong> · Apr <strong>{adminStats.a}</strong> · Rech{" "}
-                <strong>{adminStats.r}</strong>
-              </div>
+          <div className="dash-nav">
+            <div className="dash-navSection">
+              <div className="dash-navSectionTitle">Crédito</div>
+
+              <button className="dash-navItem is-active">
+                <span className="dash-navIcon">↻</span>
+                <span className="dash-navLabel">Solicitudes</span>
+                <span className="dash-navMeta">{rows.length}</span>
+              </button>
+
+              <button className="dash-navItem" onClick={() => nav("/solicitud")} title="Nueva solicitud">
+                <span className="dash-navIcon">＋</span>
+                <span className="dash-navLabel">Nueva</span>
+                <span />
+              </button>
+
+              <button className="dash-navItem" onClick={() => nav("/")} title="Inicio">
+                <span className="dash-navIcon">⌂</span>
+                <span className="dash-navLabel">Inicio</span>
+                <span />
+              </button>
             </div>
-          )}
+          </div>
+
+          <div className="dash-sideFoot">
+            <div className="dash-sideHint">
+              Tip: abre una solicitud y adjunta Edo. cuenta para acelerar análisis.
+            </div>
+
+            <div className="dash-sideActions">
+              <button className="dash-btn dash-btnPrimary w100" onClick={() => nav("/solicitud")}>
+                Nueva solicitud
+              </button>
+              <button className="dash-btn dash-btnSoft w100" onClick={load} disabled={loading}>
+                {loading ? "Cargando…" : "Refresh"}
+              </button>
+            </div>
+          </div>
         </aside>
 
         {/* Main */}
         <section className="dash-main">
-          <header className="dash-head">
-            <div>
-              <h1 className="dash-h1">Solicitudes</h1>
-              <p className="dash-sub">
-                {isAdmin ? "Modo admin: revisión y decisión." : "Aquí ves tus solicitudes y su estatus."}
-              </p>
-            </div>
+          <div className="dash-mainInner">
+            <header className="dash-head">
+              <div className="dash-headLeft">
+                <h1 className="dash-h1">Solicitudes</h1>
+                <p className="dash-sub">
+                  Lista ordenada (tabla). El botón <strong>Ver</strong> abre la nueva pantalla pro del detalle.
+                </p>
+              </div>
 
-            <div className="dash-headActions">
-              <button
-                className="dash-btn dash-btnSoft"
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    await loadMine();
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-                disabled={busy}
-              >
-                {busy ? "Actualizando…" : "Refresh"}
-              </button>
-
-              {isAdmin && (
-                <button
-                  className="dash-btn dash-btnSoft"
-                  onClick={async () => {
-                    setBusy(true);
-                    try {
-                      await loadAll();
-                      await loadUsers();
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                  disabled={busy}
-                >
-                  {busy ? "Actualizando…" : "Refresh admin"}
-                </button>
-              )}
-            </div>
-          </header>
-
-          {errMsg && <div className="dash-miniNote">{errMsg}</div>}
-
-          {/* Tabs */}
-          <div className="dash-panel">
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button style={TAB_BTN(tab === "mine")} onClick={() => setTab("mine")}>
-                Mis solicitudes ({mine.length})
-              </button>
-
-              {isAdmin && (
-                <>
-                  <button style={TAB_BTN(tab === "all")} onClick={() => setTab("all")}>
-                    Todas ({all.length})
+              <div className="dash-headRight">
+                <div className="dash-headActions">
+                  <button className="dash-btn dash-btnSoft" onClick={() => nav("/solicitud")}>
+                    + Nueva
                   </button>
-                  <button style={TAB_BTN(tab === "users")} onClick={() => setTab("users")}>
-                    Usuarios ({users.length})
+                  <button className="dash-btn dash-btnSoft" onClick={load} disabled={loading}>
+                    {loading ? "…" : "Refresh"}
                   </button>
-                </>
-              )}
-            </div>
-
-            {tab === "mine" && (
-              <div style={{ marginTop: 12 }}>
-                <div className="dash-miniNote">
-                  Pendientes: <strong>{mineStats.p}</strong> · Aprobadas: <strong>{mineStats.a}</strong> · Rechazadas:{" "}
-                  <strong>{mineStats.r}</strong>
                 </div>
-
-                <List rows={mine} onOpen={openRow} isAdmin={false} />
               </div>
-            )}
+            </header>
 
-            {tab === "all" && isAdmin && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Buscar: email, empresa o status…"
-                    style={INPUT_STYLE}
-                  />
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={INPUT_STYLE}>
-                    <option value="all">Todas</option>
-                    <option value="pendiente">Pendientes</option>
-                    <option value="aprobada">Aprobadas</option>
-                    <option value="rechazada">Rechazadas</option>
-                  </select>
-                </div>
-
-                <div className="dash-miniNote" style={{ marginTop: 8 }}>
-                  Resultados: <strong>{filteredAll.length}</strong>
-                </div>
-
-                <List rows={filteredAll} onOpen={openRow} isAdmin />
-              </div>
-            )}
-
-            {tab === "users" && isAdmin && (
-              <div style={{ marginTop: 12 }}>
-                {users.length === 0 ? (
-                  <div className="dash-empty">No hay usuarios (o tu RLS no deja ver).</div>
-                ) : (
-                  <div className="dash-list">
-                    {users.map((u) => (
-                      <div key={u.id} className="dash-listRow">
-                        <div>
-                          <div className="dash-listMain">
-                            <strong>{u.email}</strong>
-                            {u.is_admin ? <span style={{ marginLeft: 8, fontWeight: 950 }}>★ ADMIN</span> : null}
-                          </div>
-                          <div className="dash-listSub">
-                            {u.nombres || "—"} {u.apellido_paterno || ""} · Alta: {fmtDT(u.created_at)}
-                          </div>
-                        </div>
-                        <div className="dash-listRight" style={{ display: "flex", gap: 10 }}>
-                          <button
-                            className="dash-btn dash-btnSoft"
-                            onClick={() => {
-                              setTab("all");
-                              setQ(u.email || "");
-                            }}
-                          >
-                            Ver solicitudes
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Detalle */}
-          {selected && (
+            {/* filtros */}
             <div className="dash-panel">
-              <div className="dash-panelTitle">Detalle</div>
-
-              <div className="dash-miniNote">
-                Status: <strong>{selected.status}</strong> · Creada: <strong>{fmtDT(selected.created_at)}</strong>
-                {selected.decided_at ? ` · Decidida: ${fmtDT(selected.decided_at)}` : ""}
-                {selected.admin_note ? ` · Nota: ${selected.admin_note}` : ""}
+              <div className="dash-panelTitleRow">
+                <div className="dash-panelTitle">Filtros</div>
+                <div className="dash-chip">
+                  {counts.all} total · {counts.pend} pendientes
+                </div>
               </div>
 
-              {(selected.profile?.email || selected.profiles?.email) && (
-                <div className="dash-miniNote">
-                  Usuario: <strong>{selected.profile?.email || selected.profiles?.email}</strong>
+              <div className="dash-formGrid" style={{ gridTemplateColumns: "2fr 1fr 1fr" }}>
+                <label className="dash-field">
+                  <span className="dash-fieldLabel">Buscar</span>
+                  <div className="dash-fieldInput">
+                    <input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="Empresa, producto, status, id…"
+                    />
+                  </div>
+                </label>
+
+                <label className="dash-field">
+                  <span className="dash-fieldLabel">Estatus</span>
+                  <div className="dash-fieldInput">
+                    <select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+                      <option value="all">Todas</option>
+                      <option value="pendiente">Pendientes</option>
+                      <option value="aprobada">Aprobadas</option>
+                      <option value="rechazada">Rechazadas</option>
+                    </select>
+                  </div>
+                </label>
+
+                <div className="dash-field">
+                  <span className="dash-fieldLabel">Acción</span>
+                  <div className="dash-fieldInput" style={{ display: "grid", placeItems: "center" }}>
+                    <button className="dash-btn dash-btnPrimary" onClick={() => nav("/solicitud")}>
+                      Crear solicitud
+                    </button>
+                  </div>
                 </div>
-              )}
-
-              {/* Payload mini grid */}
-              <div className="dash-profileGrid" style={{ marginTop: 10 }}>
-                <Mini label="Empresa" value={selected.payload?.contacto?.empresa || "—"} />
-                <Mini label="Producto" value={selected.payload?.producto || "—"} />
-                <Mini label="Monto" value={pesos(Number(selected.payload?.monto || 0))} />
-                <Mini label="Plazo" value={`${selected.payload?.plazo || "—"} meses`} />
-                <Mini label="Tasa" value={`${selected.payload?.tasaEstimada ?? "—"}%`} />
-                <Mini label="Pago" value={pesos(Number(selected.payload?.pago || 0))} />
-                <Mini label="DSCR" value={`${Number(selected.payload?.dscr || 0).toFixed(2)}x`} />
-                <Mini label="Uso" value={(selected.payload?.objetivo?.uso || []).join(", ") || "—"} />
-              </div>
-
-              {/* ✅ Crédito ligado (si aprobada) */}
-              {selected.status === "aprobada" && (
-                <div className="dash-miniNote" style={{ marginTop: 10 }}>
-                  Crédito:{" "}
-                  <strong>
-                    {selected.credito?.id ? `Creado (${selected.credito.estado})` : "Creándose… (si tarda, refresca)"}
-                  </strong>
-                </div>
-              )}
-
-              {/* Admin buttons */}
-              {isAdmin && (
-                <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button
-                    className="dash-btn dash-btnPrimary"
-                    onClick={() => decide(selected.id, "aprobada")}
-                    disabled={busy}
-                  >
-                    {busy ? "Procesando…" : "Aprobar"}
-                  </button>
-                  <button
-                    className="dash-btn dash-btnGhost"
-                    onClick={() => decide(selected.id, "rechazada")}
-                    disabled={busy}
-                  >
-                    {busy ? "Procesando…" : "Rechazar"}
-                  </button>
-                </div>
-              )}
-
-              {/* ✅ Ir a crédito */}
-              {selected.status === "aprobada" && selected.credito?.id && (
-                <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button className="dash-btn dash-btnPrimary" onClick={() => nav(`/creditos/${selected.credito.id}`)}>
-                    Ir a crédito
-                  </button>
-                </div>
-              )}
-
-              <div className="dash-row" style={{ marginTop: 12 }}>
-                <button className="dash-btn dash-btnSoft" onClick={() => setSelected(null)} disabled={busy}>
-                  Cerrar detalle
-                </button>
               </div>
             </div>
-          )}
+
+            {/* tabla */}
+            <div className="dash-panel">
+              <div className="dash-panelTitleRow">
+                <div className="dash-panelTitle">Listado</div>
+                <div className="dash-chip">{filtered.length}</div>
+              </div>
+
+              {err ? (
+                <div className="dash-empty">Error: {err}</div>
+              ) : loading ? (
+                <div className="dash-empty">Cargando solicitudes…</div>
+              ) : filtered.length === 0 ? (
+                <div className="dash-empty">
+                  No hay solicitudes con esos filtros. <Link to="/solicitud">Crea una</Link>.
+                </div>
+              ) : (
+                <div className="sol-tableWrap">
+                  <div className="sol-table">
+                    <div className="sol-tr sol-th">
+                      <div>ID</div>
+                      <div>Empresa</div>
+                      <div>Producto</div>
+                      <div>Monto</div>
+                      <div>Plazo</div>
+                      <div>Tasa</div>
+                      <div>Estatus</div>
+                      <div>Creada</div>
+                      <div />
+                    </div>
+
+                    {filtered.map((r) => {
+                      const p = pill(r.status);
+                      return (
+                        <div className="sol-tr" key={r.id}>
+                          <div className="sol-id">{String(r.id).slice(0, 8)}…</div>
+                          <div className="sol-main">{r._empresa}</div>
+                          <div className="sol-sub">{r._producto}</div>
+                          <div className="sol-num">{r._monto}</div>
+                          <div className="sol-num">{r._plazo}</div>
+                          <div className="sol-num">{r._tasa}</div>
+                          <div>
+                            <span className={p.cls}>{p.label}</span>
+                          </div>
+                          <div className="sol-date">{fmtDT(r.created_at)}</div>
+                          <div className="sol-actions">
+                            {/* ✅ RUTA NUEVA PRO */}
+                            <button
+                              className="dash-btn dash-btnSoft"
+                              onClick={() => nav(`/solicitudes/${encodeURIComponent(String(r.id))}`)}
+                              title="Ver detalle pro"
+                            >
+                              Ver
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* nota */}
+            <div className="dash-sideHint" style={{ marginTop: 10 }}>
+              Próximo paso: ruta <code>/solicitudes/:id</code> con pantalla pro (sidebar fijo + detalle + stats).
+            </div>
+          </div>
         </section>
       </div>
-    </div>
-  );
-}
-
-function List({ rows, onOpen, isAdmin }) {
-  if (!rows || rows.length === 0) return <div className="dash-empty">Sin registros.</div>;
-
-  return (
-    <div className="dash-list" style={{ marginTop: 10 }}>
-      {rows.map((s) => (
-        <div key={s.id} className="dash-listRow">
-          <div>
-            <div className="dash-listMain">
-              {isAdmin ? (
-                <>
-                  <strong>{s.profile?.email || s.profiles?.email || "—"}</strong>{" "}
-                  <span style={{ opacity: 0.9 }}>· {s.payload?.contacto?.empresa || "—"}</span>
-                  <span style={{ opacity: 0.85 }}> · {s.status}</span>
-                </>
-              ) : (
-                <>
-                  <strong>{s.status}</strong>{" "}
-                  <span style={{ opacity: 0.85 }}>· {s.payload?.contacto?.empresa || "—"}</span>
-                </>
-              )}
-            </div>
-            <div className="dash-listSub">
-              {fmtDT(s.created_at)}
-              {s.admin_note ? ` · ${s.admin_note}` : ""}
-            </div>
-          </div>
-
-          <div className="dash-listRight" style={{ display: "flex", gap: 10 }}>
-            <button className={statusPillClass(s.status)} onClick={() => onOpen(s)}>
-              Ver
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Mini({ label, value }) {
-  return (
-    <div className="dash-info">
-      <div className="dash-infoLabel">{label}</div>
-      <div className="dash-infoValue">{String(value ?? "—")}</div>
     </div>
   );
 }
