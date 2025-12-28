@@ -493,6 +493,14 @@
   margin: 12px 0;
 }
 
+/* ✅ NUEVO: balance grande (lo usas en Tesorería) */
+.dash-balance{
+  font-size: 26px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+}
+
 /* =====================================================
    SOLICITUDES: LISTA -> TABLA CHINGONA
    - sin tocar JSX: convierte cada row en “grid table”
@@ -939,4 +947,22 @@
     height: auto;
     overflow: visible;
   }
+}
+
+/* =====================================================
+   Sidebar compact (para que quepa TODO con inversiones)
+===================================================== */
+.dash-nav{
+  gap:8px;              /* antes 10 */
+}
+.dash-navItem{
+  padding:7px 10px;     /* antes 8px 10px */
+  border-radius:13px;
+}
+.dash-navSectionTitle{
+  padding:0 4px;        /* antes 0 6px */
+}
+.dash-sideFoot{
+  gap:8px;              /* antes 10 */
+  padding-top:8px;      /* antes 10 */
 }

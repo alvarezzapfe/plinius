@@ -50,7 +50,8 @@ export default function Dashboard() {
   const [profile, setProfile] = useState(null);
   const isAdmin = !!profile?.is_admin;
 
-  const [tab, setTab] = useState("resumen"); // resumen | perfil | docs | tesoreria
+  // ✅ agrega inversiones como tab interno
+  const [tab, setTab] = useState("resumen"); // resumen | perfil | docs | tesoreria | inversiones
 
   // KPIs (solicitudes del usuario)
   const [mineSolicitudes, setMineSolicitudes] = useState([]);
@@ -62,6 +63,15 @@ export default function Dashboard() {
   // Tesorería
   const [balance, setBalance] = useState(0);
   const [ledger, setLedger] = useState([]);
+
+  // ✅ Inversiones (MVP placeholder -> luego lo conectamos a Supabase)
+  const [invSummary, setInvSummary] = useState({
+    invested: 0,
+    pnl: 0,
+    yieldPct: 0,
+    positions: 0,
+  });
+  const [invMovs, setInvMovs] = useState([]);
 
   // Perfil editable
   const [edit, setEdit] = useState({
@@ -192,6 +202,26 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user?.id) return;
     loadTreasury();
+  }, [user?.id]);
+
+  // ✅ Load investments (MVP placeholder)
+  // Luego lo conectamos a Supabase (inversiones / posiciones / movimientos)
+  const loadInvestments = async () => {
+    if (!user?.id) return;
+
+    // Placeholder: por ahora en 0 para no romper UI.
+    setInvSummary({
+      invested: 0,
+      pnl: 0,
+      yieldPct: 0,
+      positions: 0,
+    });
+    setInvMovs([]);
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    loadInvestments();
   }, [user?.id]);
 
   const saveProfile = async () => {
@@ -457,6 +487,17 @@ export default function Dashboard() {
                 <span className="dash-navLabel">Tesorería</span>
                 <span />
               </button>
+
+              {/* ✅ NUEVO: Inversiones (tab interno) */}
+              <button
+                className={`dash-navItem ${tab === "inversiones" ? "is-active" : ""}`}
+                onClick={() => setTab("inversiones")}
+                title="Portafolio"
+              >
+                <span className="dash-navIcon">⬈</span>
+                <span className="dash-navLabel">Inversiones</span>
+                <span className="dash-navMeta">MVP</span>
+              </button>
             </div>
 
             <div className="dash-navDivider" />
@@ -476,9 +517,33 @@ export default function Dashboard() {
                 <span className="dash-navMeta">{pendingCount}/2</span>
               </button>
 
+              {/* ⚠️ Nota: si no existe /creditos como ruta lista, esto 404.
+                  Lo dejo tal cual porque me pediste no quitar nada. */}
               <button className="dash-navItem" onClick={() => nav("/creditos")}>
                 <span className="dash-navIcon">▦</span>
                 <span className="dash-navLabel">Créditos</span>
+                <span />
+              </button>
+            </div>
+
+            {/* ✅ NUEVO: header separado "Inversiones" (como Crédito) */}
+            <div className="dash-navDivider" />
+
+            <div className="dash-navSection">
+              <div className="dash-navSectionTitle">Inversiones</div>
+
+              <button
+                className={`dash-navItem ${tab === "inversiones" ? "is-active" : ""}`}
+                onClick={() => setTab("inversiones")}
+              >
+                <span className="dash-navIcon">⬈</span>
+                <span className="dash-navLabel">Portafolio</span>
+                <span className="dash-navMeta">MVP</span>
+              </button>
+
+              <button className="dash-navItem" onClick={() => nav("/inversionistas")} title="Landing Inversionistas">
+                <span className="dash-navIcon">✦</span>
+                <span className="dash-navLabel">Inversionistas</span>
                 <span />
               </button>
             </div>
@@ -509,7 +574,7 @@ export default function Dashboard() {
         {/* Main */}
         <section className="dash-main">
           <div className="dash-mainInner">
-            {/* ✅ Header geométrico: title/desc izquierda, acciones centro/derecha, signout extremo derecha */}
+            {/* ✅ Header geométrico */}
             <header className="dash-head">
               <div className="dash-headLeft">
                 <h1 className="dash-h1">
@@ -519,7 +584,9 @@ export default function Dashboard() {
                     ? "Perfil"
                     : tab === "docs"
                     ? "Documentos"
-                    : "Tesorería"}
+                    : tab === "tesoreria"
+                    ? "Tesorería"
+                    : "Inversiones"}
                 </h1>
                 <p className="dash-sub">
                   {tab === "resumen"
@@ -528,7 +595,9 @@ export default function Dashboard() {
                     ? "Edita tu información (sin cambiar nombre/correo)."
                     : tab === "docs"
                     ? "Sube y administra tus documentos."
-                    : "Registra depósitos y consulta tu saldo (conciliación por Plinius)."}
+                    : tab === "tesoreria"
+                    ? "Registra depósitos y consulta tu saldo (conciliación por Plinius)."
+                    : "Portafolio, rendimientos y movimientos (MVP)."}
                 </p>
               </div>
 
@@ -539,6 +608,9 @@ export default function Dashboard() {
                   </button>
                   <button className="dash-btn dash-btnSoft" onClick={loadTreasury}>
                     Refresh tesorería
+                  </button>
+                  <button className="dash-btn dash-btnSoft" onClick={loadInvestments}>
+                    Refresh inversiones
                   </button>
                 </div>
 
@@ -588,6 +660,7 @@ export default function Dashboard() {
                     <li>Completa perfil (empresa/RFC/teléfono).</li>
                     <li>Sube documentos (edo cuenta / estados financieros).</li>
                     <li>Si usarás tesorería, registra un depósito con referencia.</li>
+                    <li>Explora Inversiones (próximamente: posiciones y rendimientos).</li>
                   </ul>
 
                   <div className="dash-row" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -599,6 +672,9 @@ export default function Dashboard() {
                     </button>
                     <button className="dash-btn dash-btnSoft" onClick={() => nav("/solicitudes")}>
                       Ver solicitudes
+                    </button>
+                    <button className="dash-btn dash-btnSoft" onClick={() => setTab("inversiones")}>
+                      Ir a inversiones
                     </button>
                   </div>
                 </div>
@@ -824,7 +900,8 @@ export default function Dashboard() {
                       CLABE: <strong>[PEGA_TU_CLABE_AQUI]</strong>
                     </li>
                     <li>
-                      Concepto sugerido: <strong>PLINIUS TESORERIA · {profile?.email || user?.email || "tu_email"}</strong>
+                      Concepto sugerido:{" "}
+                      <strong>PLINIUS TESORERIA · {profile?.email || user?.email || "tu_email"}</strong>
                     </li>
                     <li>Luego registra el depósito aquí (monto + referencia).</li>
                   </ol>
@@ -854,6 +931,96 @@ export default function Dashboard() {
                               {fmtDT(r.created_at)}
                               {r.reference ? ` · Ref: ${r.reference}` : ""}
                               {r.applied_at ? ` · Aplicado: ${fmtDT(r.applied_at)}` : ""}
+                            </div>
+                          </div>
+
+                          <div className="dash-listRight">
+                            <button className="dash-btn dash-btnSoft" onClick={() => {}}>
+                              Ver
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ✅ INVERSIONES */}
+            {tab === "inversiones" && (
+              <>
+                <div className="dash-kpis">
+                  <div className="dash-kpiCard">
+                    <div className="dash-kpiLabel">Invertido</div>
+                    <div className="dash-kpiValue">{pesos(invSummary.invested)}</div>
+                    <div className="dash-kpiSub">Capital en posiciones</div>
+                  </div>
+
+                  <div className="dash-kpiCard">
+                    <div className="dash-kpiLabel">Rendimiento</div>
+                    <div className="dash-kpiValue">{pesos(invSummary.pnl)}</div>
+                    <div className="dash-kpiSub">Acumulado</div>
+                  </div>
+
+                  <div className="dash-kpiCard">
+                    <div className="dash-kpiLabel">Yield</div>
+                    <div className="dash-kpiValue">{Number(invSummary.yieldPct || 0).toFixed(2)}%</div>
+                    <div className="dash-kpiSub">Estimado</div>
+                  </div>
+
+                  <div className="dash-kpiCard">
+                    <div className="dash-kpiLabel">Posiciones</div>
+                    <div className="dash-kpiValue">{invSummary.positions}</div>
+                    <div className="dash-kpiSub">Activas</div>
+                  </div>
+                </div>
+
+                <div className="dash-panel">
+                  <div className="dash-panelTitleRow">
+                    <div className="dash-panelTitle">Portafolio (MVP)</div>
+                    <div className="dash-chip">Próximamente</div>
+                  </div>
+
+                  <ul className="dash-modList">
+                    <li>Posiciones por crédito / pool.</li>
+                    <li>Intereses devengados y pagados.</li>
+                    <li>Movimientos: aportes, retiros, intereses.</li>
+                  </ul>
+
+                  <div className="dash-row" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button className="dash-btn dash-btnPrimary" onClick={() => nav("/inversionistas")}>
+                      Ver landing Inversionistas
+                    </button>
+                    <button className="dash-btn dash-btnSoft" onClick={loadInvestments}>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+
+                <div className="dash-panel">
+                  <div className="dash-panelTitleRow">
+                    <div className="dash-panelTitle">Movimientos de inversión</div>
+                    <div className="dash-chip">{invMovs.length}</div>
+                  </div>
+
+                  {invMovs.length === 0 ? (
+                    <div className="dash-empty" style={{ marginTop: 10 }}>
+                      Aún no hay movimientos de inversión.
+                    </div>
+                  ) : (
+                    <div className="dash-list" style={{ marginTop: 10 }}>
+                      {invMovs.map((m) => (
+                        <div key={m.id} className="dash-listRow">
+                          <div>
+                            <div className="dash-listMain">
+                              <strong>{m.type || "Movimiento"}</strong>{" "}
+                              <span style={{ opacity: 0.9 }}>· {pesos(Number(m.amount || 0))}</span>
+                              {m.status ? <span className={`dash-status ${m.status}`}>{m.status}</span> : null}
+                            </div>
+                            <div className="dash-listSub">
+                              {fmtDT(m.created_at)}
+                              {m.reference ? ` · Ref: ${m.reference}` : ""}
                             </div>
                           </div>
 
