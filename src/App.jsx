@@ -1,239 +1,225 @@
 // src/App.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import "./assets/css/theme.css";
-import Plogo from "./assets/images/logo2-plinius.png";
+import { supabase } from "./lib/supabaseClient";
 
+/* =====================================================
+   HELPERS
+   ===================================================== */
 const pesos = (x, max = 0) =>
   new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
     maximumFractionDigits: max,
-  }).format(x);
+  }).format(Number.isFinite(x) ? x : 0);
 
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function inferKind(producto = "") {
+  const p = String(producto).toLowerCase();
+  if (p.includes("arrend")) return "lease";
+  if (p.includes("private") || p.includes("privado")) return "private";
+  if (p.includes("reestr") || p.includes("consol")) return "refi";
+  return "credit";
+}
+
+function titleFromCredito(c) {
+  const prod = c?.producto ? String(c.producto) : "Crédito";
+  return `${prod}`;
+}
+
+/**
+ * ✅ NO UUID assumptions
+ * Blocks ONLY placeholders like "ph-1"
+ */
+const isRealId = (id) => {
+  if (id === null || id === undefined) return false;
+  const s = String(id).trim();
+  if (!s || s === "undefined" || s === "null") return false;
+  return !s.startsWith("ph-") && s !== "empty";
+};
+
+/* =====================================================
+   Home
+   ===================================================== */
 export default function App() {
   const location = useLocation();
 
-  // Animación reveal on scroll
+  /* =======================
+     Reveal on scroll
+  ======================= */
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) =>
-          e.target.classList.toggle("in", e.isIntersecting)
-        ),
+      (entries) => entries.forEach((e) => e.target.classList.toggle("in", e.isIntersecting)),
       { threshold: 0.12 }
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
 
-  // ✅ Scroll a secciones por hash (#sobre-plinius, #enfoque)
+  /* =======================
+     Scroll to hash sections
+  ======================= */
   useEffect(() => {
     if (!location.hash) return;
     const id = location.hash.replace("#", "");
     const el = document.getElementById(id);
     if (!el) return;
 
-    // un pequeño delay para que el layout termine (navbar / fonts)
     setTimeout(() => {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
   }, [location.hash]);
 
+  /* =====================================================
+     Opportunities from Supabase (creditos)
+     - Estado: "fondeando" = invertible
+  ===================================================== */
+  const [opps, setOpps] = useState([]);
+  const [oppErr, setOppErr] = useState("");
+  const [oppLoading, setOppLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      setOppErr("");
+      setOppLoading(true);
+
+      const { data, error } = await supabase
+        .from("creditos")
+        .select("id,estado,producto,monto_objetivo,monto_recaudado,tasa_anual,plazo_meses,tag,created_at")
+        .in("estado", ["fondeando"])
+        .order("created_at", { ascending: false })
+        .limit(40);
+
+      if (!mounted) return;
+
+      if (error) {
+        setOppErr(error.message);
+        setOpps([]);
+        setOppLoading(false);
+        return;
+      }
+
+      const mapped = (data || []).map((c) => {
+        const idStr = String(c?.id ?? "").trim();
+        const real = isRealId(idStr);
+
+        // ✅ IMPORTANT: cards never send to /inversionistas
+        const href = real ? `/creditos/${encodeURIComponent(idStr)}` : "/#oportunidades";
+
+        return {
+          id: idStr,
+          kind: inferKind(c.producto),
+          title: titleFromCredito(c),
+          tag: c.tag || "Oportunidad",
+          rate: `${Number(c.tasa_anual || 0).toFixed(1)}% anual`,
+          term: `${c.plazo_meses || "—"} meses`,
+          target: Number(c.monto_objetivo || 0),
+          raised: Number(c.monto_recaudado || 0),
+          ctaTo: href,
+          detailTo: href,
+          canOpenDetail: real,
+        };
+      });
+
+      setOpps(mapped);
+      setOppLoading(false);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const opportunities = useMemo(() => opps || [], [opps]);
+
+  const hasOpps = opportunities.length > 0;
+  const showEmpty = !oppLoading && !oppErr && !hasOpps;
+
   return (
     <div className="app-container">
       <Navbar />
 
-      {/* ---------- HERO: SLOGAN + DASHBOARD ---------- */}
+      {/* ---------- HERO ---------- */}
       <main className="hero">
         <div className="hero-bg" aria-hidden />
         <div className="hero-grid" aria-hidden />
 
         <div className="hero-inner">
-          {/* Título y subtítulo */}
           <header className="hero-header">
-            <img src={Plogo} alt="Plinius" className="hero-logo" />
             <h1>
-              Crédito y arrendamiento puro para tu negocio.
-              <span className="hero-highlight">
-                {" "}
-                Respuesta en máximo 48 horas.
-              </span>
+              Crédito, gestión de crédito e inversión en{" "}
+              <span className="hero-highlight">crédito privado</span>.{" "}
+              <span className="hero-highlight">Respuesta en máximo 48 horas.</span>
             </h1>
+
             <p className="hero-sub">
-              Plinius simplifica el acceso a financiamiento para empresas en
-              México. Procesos claros, panel de control para tus créditos y un
-              equipo que habla el mismo idioma que tu negocio.
+              Plinius es una plataforma para empresas e inversionistas: pide crédito, administra tus vencimientos y accede a
+              oportunidades de inversión en crédito privado (con datos y trazabilidad).
             </p>
 
-            <div className="hero-cta-row">
+            {/* 3 CTAs */}
+            <div className="hero-cta-row hero-cta-row-3">
               <Link to="/ingresar" className="btn btn-neon">
                 Iniciar solicitud
               </Link>
               <Link to="/simulador" className="btn btn-outline">
                 Simular crédito
               </Link>
+              {/* ✅ Scroll a oportunidades (NO /inversionistas) */}
+              <Link to="/#oportunidades" className="btn btn-outline btn-accentOutline">
+                Invertir
+              </Link>
+            </div>
+
+            {/* badges */}
+            <div className="hero-badges">
+              <span className="hero-badge">Crédito empresarial</span>
+              <span className="hero-badge">Panel de control</span>
+              <span className="hero-badge">Crédito privado</span>
+              <span className="hero-badge">Data + humano</span>
+            </div>
+
+            {/* Header del carrusel */}
+            <div className="hero-carouselHead" id="oportunidades">
+              <div>
+                <h2>Oportunidades activas</h2>
+                <p>
+                  Conectado a Supabase (tabla <strong>creditos</strong>). Hover pausa el movimiento.
+                </p>
+              </div>
+
+              <div className="hero-carouselHint" title="Se actualiza al recargar (después lo hacemos realtime)">
+                <span className="hint-dot" />
+                {oppLoading ? "Cargando…" : oppErr ? "Error" : hasOpps ? "Live" : "Sin oportunidades"}
+              </div>
             </div>
           </header>
 
-          {/* Dashboard tipo Microsoft / Office */}
-          <section className="hero-dashboard reveal">
-            <div className="dash-screen">
-              {/* Top bar */}
-              <div className="dash-topbar">
-                <div className="dash-topbar-left">
-                  <span className="dash-app-name">Plinius</span>
-                  <span className="dash-app-tag">Panel de cliente</span>
+          {/* FULL BLEED BAND */}
+          <section className="offer-bleed" aria-label="Oportunidades fondeando">
+            <div className="offer-bleedGlow" aria-hidden />
+            <div className="offer-marquee reveal">
+              <div className="offer-edges" aria-hidden />
+
+              {/* Error */}
+              {oppErr ? (
+                <div style={{ padding: "0 18px", opacity: 0.9 }}>
+                  No pude cargar oportunidades: <strong>{oppErr}</strong>
                 </div>
-                <div className="dash-topbar-right">
-                  <span className="dash-company">
-                    Atlas Logística Integrada, S.A. de C.V.
-                  </span>
-                  <span className="dash-user-avatar">AL</span>
-                </div>
-              </div>
-
-              {/* Cuerpo: sidebar + contenido */}
-              <div className="dash-body">
-                {/* Sidebar */}
-                <aside className="dash-sidebar">
-                  <div className="dash-sidebar-section">
-                    <p className="dash-sidebar-title">Menú</p>
-                    <button className="dash-nav-item active">
-                      Resumen general
-                    </button>
-                    <button className="dash-nav-item">Créditos activos</button>
-                    <button className="dash-nav-item">Arrendamientos</button>
-                    <button className="dash-nav-item">Vencimientos</button>
-                    <button className="dash-nav-item">Ofertas disponibles</button>
-                    <button className="dash-nav-item">Documentos</button>
-                    <button className="dash-nav-item">Ajustes</button>
-                  </div>
-                </aside>
-
-                {/* Contenido principal */}
-                <section className="dash-main">
-                  {/* KPIs */}
-                  <div className="dash-kpi-row">
-                    <div className="dash-kpi">
-                      <span className="dash-kpi-label">
-                        Línea aprobada total
-                      </span>
-                      <span className="dash-kpi-value">
-                        {pesos(8_000_000, 0)}
-                      </span>
-                      <span className="dash-kpi-foot">
-                        Disponible: {pesos(3_200_000, 0)}
-                      </span>
-                    </div>
-                    <div className="dash-kpi">
-                      <span className="dash-kpi-label">
-                        Pago estimado este mes
-                      </span>
-                      <span className="dash-kpi-value">
-                        {pesos(286_400, 0)}
-                      </span>
-                      <span className="dash-kpi-foot">Vencen 3 créditos</span>
-                    </div>
-                    <div className="dash-kpi">
-                      <span className="dash-kpi-label">Estado general</span>
-                      <span className="dash-kpi-status ok">Preaprobado</span>
-                      <span className="dash-kpi-foot">
-                        Perfil de riesgo dentro de políticas.
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Gráfica + tabla */}
-                  <div className="dash-middle-row">
-                    {/* Gráfica de flujo de pagos */}
-                    <div className="dash-card">
-                      <div className="dash-card-head">
-                        <div>
-                          <h3>Próximos pagos por mes</h3>
-                          <p>Calendario estimado de flujos de los siguientes 6 meses.</p>
-                        </div>
-                        <select
-                          className="dash-select"
-                          defaultValue="6m"
-                          aria-label="Rango de tiempo"
-                        >
-                          <option value="3m">3M</option>
-                          <option value="6m">6M</option>
-                          <option value="12m">12M</option>
-                        </select>
-                      </div>
-                      <div className="dash-chart">
-                        {[
-                          { mes: "Sep", monto: 220_000 },
-                          { mes: "Oct", monto: 310_000 },
-                          { mes: "Nov", monto: 280_000 },
-                          { mes: "Dic", monto: 340_000 },
-                          { mes: "Ene", monto: 260_000 },
-                          { mes: "Feb", monto: 295_000 },
-                        ].map((row) => (
-                          <div className="dash-chart-row" key={row.mes}>
-                            <span className="dash-chart-label">{row.mes}</span>
-                            <div
-                              className="dash-chart-bar"
-                              style={{
-                                ["--w"]: `${Math.min(
-                                  100,
-                                  (row.monto / 340_000) * 100
-                                ).toFixed(0)}%`,
-                              }}
-                            >
-                              <div className="dash-chart-fill" />
-                            </div>
-                            <span className="dash-chart-value">
-                              {pesos(row.monto / 1000, 0).replace("MXN", "")} mil
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tabla de créditos */}
-                    <div className="dash-card">
-                      <div className="dash-card-head">
-                        <div>
-                          <h3>Créditos y arrendamientos</h3>
-                          <p>Resumen de operaciones activas con Plinius.</p>
-                        </div>
-                      </div>
-                      <div className="dash-table">
-                        <div className="dash-table-head">
-                          <span>Producto</span>
-                          <span>Saldo</span>
-                          <span>Pago mensual</span>
-                          <span>Próx. vencimiento</span>
-                        </div>
-                        <div className="dash-table-row">
-                          <span>Crédito simple capital de trabajo</span>
-                          <span>{pesos(2_800_000, 0)}</span>
-                          <span>{pesos(145_000, 0)}</span>
-                          <span>15 / Oct / 2025</span>
-                        </div>
-                        <div className="dash-table-row">
-                          <span>Arrendamiento flotilla logística</span>
-                          <span>{pesos(3_100_000, 0)}</span>
-                          <span>{pesos(98_500, 0)}</span>
-                          <span>07 / Nov / 2025</span>
-                        </div>
-                        <div className="dash-table-row">
-                          <span>Crédito puente maquinaria</span>
-                          <span>{pesos(1_450_000, 0)}</span>
-                          <span>{pesos(42_900, 0)}</span>
-                          <span>28 / Dic / 2025</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </div>
+              ) : /* Empty coqueto */ showEmpty ? (
+                <EmptyOpportunities />
+              ) : /* Loading */ oppLoading ? (
+                <div style={{ padding: "0 18px", opacity: 0.9 }}>Cargando oportunidades…</div>
+              ) : (
+                <OfferCarousel items={opportunities} duration={46} />
+              )}
             </div>
           </section>
         </div>
@@ -245,8 +231,7 @@ export default function App() {
           <header className="section-head">
             <h2>Sobre Plinius</h2>
             <p className="section-sub">
-              Financiamiento empresarial con enfoque práctico: claridad, velocidad y
-              criterio de crédito basado en flujo real.
+              Financiamiento empresarial con enfoque práctico: claridad, velocidad y criterio de crédito basado en flujo real.
             </p>
           </header>
 
@@ -256,14 +241,11 @@ export default function App() {
                 <h3>Financiamiento sin fricción</h3>
                 <span className="why-badge">Digital + humano</span>
               </div>
-              <p>
-                Una experiencia simple para founders y equipos de finanzas:
-                solicitud clara, seguimiento en panel y comunicación directa.
-              </p>
+              <p>Solicitud clara, seguimiento en panel y comunicación directa.</p>
               <ul className="why-list">
                 <li>Proceso guiado y transparente</li>
                 <li>Panel de control de créditos y vencimientos</li>
-                <li>Documentos y avances siempre visibles</li>
+                <li>Documentos y avances visibles</li>
               </ul>
             </article>
 
@@ -272,10 +254,7 @@ export default function App() {
                 <h3>Criterio de crédito serio</h3>
                 <span className="why-badge">Cash-flow first</span>
               </div>
-              <p>
-                Analizamos capacidad de pago y estructura óptima (monto, plazo,
-                producto) para que el crédito ayude a crecer, no a ahorcar.
-              </p>
+              <p>Estructura óptima (monto, plazo, producto) para crecer sin ahorcarte.</p>
               <ul className="why-list">
                 <li>Flujos, márgenes y estacionalidad</li>
                 <li>Riesgo concentrado y dependencias</li>
@@ -288,14 +267,11 @@ export default function App() {
                 <h3>Productos para operar</h3>
                 <span className="why-badge">Crédito + Arrendamiento</span>
               </div>
-              <p>
-                Capital de trabajo, maquinaria, flotillas y crecimiento. Diseñamos
-                la estructura para tu operación y tu ciclo de cobranza.
-              </p>
+              <p>Capital de trabajo, maquinaria, flotillas y crecimiento. Calendarios alineados al negocio.</p>
               <ul className="why-list">
                 <li>Crédito simple para capital de trabajo</li>
-                <li>Arrendamiento puro (activos productivos)</li>
-                <li>Calendarios alineados a tu negocio</li>
+                <li>Arrendamiento puro</li>
+                <li>Pagos alineados al ciclo</li>
               </ul>
             </article>
           </div>
@@ -307,52 +283,40 @@ export default function App() {
         <div className="section-inner">
           <header className="section-head">
             <h2>Enfoque y criterios</h2>
-            <p className="section-sub">
-              Esto es lo que buscamos para darte una respuesta rápida y una oferta
-              que tenga sentido.
-            </p>
+            <p className="section-sub">Lo que buscamos para darte respuesta rápida y una oferta con sentido.</p>
           </header>
 
           <div className="process-grid">
             <article className="process-card">
               <div className="process-index">1</div>
               <h3>Enfoque de análisis</h3>
-              <p>
-                Priorizamos la capacidad de pago real y la calidad de los flujos.
-                Menos “papel”, más lectura de negocio.
-              </p>
+              <p>Capacidad de pago real y calidad de flujos.</p>
               <ul className="process-list">
-                <li>Flujo libre y cobertura de deuda</li>
-                <li>Calidad de ingresos y recurrencia</li>
-                <li>Uso del crédito y retorno esperado</li>
+                <li>Flujo libre y cobertura</li>
+                <li>Recurrencia y concentración</li>
+                <li>Uso del crédito</li>
               </ul>
             </article>
 
             <article className="process-card">
               <div className="process-index">2</div>
               <h3>Criterios base</h3>
-              <p>
-                No buscamos empresas “perfectas”, buscamos empresas con fundamentos
-                y trazabilidad.
-              </p>
+              <p>Fundamentos + trazabilidad.</p>
               <ul className="process-list">
-                <li>Antigüedad operando y evidencia de ventas</li>
-                <li>Información fiscal (SAT) y bancarización</li>
-                <li>Historial de pago y concentración de clientes</li>
+                <li>Ventas comprobables</li>
+                <li>Fiscal y bancarización</li>
+                <li>Historial de pago</li>
               </ul>
             </article>
 
             <article className="process-card">
               <div className="process-index">3</div>
               <h3>Oferta en 48 horas</h3>
-              <p>
-                Con datos completos, podemos cotizar rápido: monto, plazo, tasa,
-                comisiones y garantías (si aplican).
-              </p>
+              <p>Con datos completos, cotizamos rápido.</p>
               <ul className="process-list">
-                <li>Pre-análisis → oferta preliminar</li>
-                <li>Validación → términos finales</li>
-                <li>Firma → desembolso / entrega de activo</li>
+                <li>Pre-análisis → oferta</li>
+                <li>Validación → términos</li>
+                <li>Firma → desembolso</li>
               </ul>
             </article>
           </div>
@@ -360,17 +324,11 @@ export default function App() {
           <div className="criteria-note">
             <div className="criteria-card">
               <h4>Tip para acelerar</h4>
-              <p>
-                Si conectas SAT y adjuntas estados de cuenta, el análisis corre más
-                rápido y la oferta sale mejor estructurada.
-              </p>
+              <p>Conecta SAT y adjunta estados de cuenta para análisis más rápido.</p>
             </div>
             <div className="criteria-card">
               <h4>Qué puedes esperar</h4>
-              <p>
-                Te diremos “sí”, “no” o “sí, pero así” (con estructura alternativa).
-                Siempre con razón clara.
-              </p>
+              <p>“Sí”, “no” o “sí, pero así”. Con razón clara.</p>
             </div>
           </div>
         </div>
@@ -380,19 +338,153 @@ export default function App() {
       <section className="section final-cta reveal">
         <div className="section-inner final-cta-inner">
           <div>
-            <h2>Listo para solicitar crédito o arrendamiento?</h2>
-            <p className="section-sub">
-              Empieza tu solicitud en línea, déjanos leer tus números y
-              construyamos juntos la estructura que tu empresa necesita.
-            </p>
+            <h2>¿Listo para solicitar crédito o invertir?</h2>
+            <p className="section-sub">Empieza en línea: solicita, administra y estructuramos bien.</p>
           </div>
-          <Link to="/ingresar" className="btn btn-neon">
-            Iniciar solicitud
-          </Link>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Link to="/ingresar" className="btn btn-neon">
+              Iniciar solicitud
+            </Link>
+            <Link to="/#oportunidades" className="btn btn-outline btn-accentOutline">
+              Ver oportunidades
+            </Link>
+          </div>
         </div>
       </section>
 
       <Footer />
     </div>
+  );
+}
+
+/* =====================================================
+   Empty state coqueto (si NO hay oportunidades)
+   ===================================================== */
+function EmptyOpportunities() {
+  return (
+    <div className="offer-emptyWrap">
+      <div className="offer-empty">
+        <div className="offer-emptyGlow" aria-hidden />
+        <div className="offer-emptyInner">
+          <div className="offer-emptyKicker">
+            <span className="offer-emptyDot" aria-hidden />
+            Próxima ventana de fondeo
+          </div>
+
+          <h3 className="offer-emptyTitle">Estamos preparando ofertas para ti</h3>
+
+          <p className="offer-emptySub">
+            En Plinius abrimos ventanas de fondeo por lotes: cuando el siguiente crédito esté listo,
+            lo verás aquí primero. Si quieres prioridad, deja tu señal y te avisamos.
+          </p>
+
+          <div className="offer-emptyActions">
+            <Link to="/inversionistas" className="btn btn-neon btn-compact">
+              Quiero acceso prioritario
+            </Link>
+            <Link to="/ingresar" className="btn btn-ghost btn-compact">
+              Solicitar crédito
+            </Link>
+          </div>
+
+          <div className="offer-emptyFoot">
+            <span className="offer-emptyChip">Data + trazabilidad</span>
+            <span className="offer-emptyChip">Tickets claros</span>
+            <span className="offer-emptyChip">Flujos y reporting</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================
+   Offer Carousel
+   - duplicates items for seamless loop (track moves -50%)
+   - only duplicates if > 1 item
+   ===================================================== */
+function OfferCarousel({ items, duration = 46 }) {
+  const safe = Array.isArray(items) ? items : [];
+  const shouldLoop = safe.length > 1;
+  const doubled = shouldLoop ? [...safe, ...safe] : safe;
+  const dur = `${Math.max(18, Number(duration) || 46)}s`;
+
+  return (
+    <div className="offer-track" style={{ ["--duration"]: dur }}>
+      {doubled.map((it, idx) => (
+        <OfferCard key={`${it.id}-${idx}`} item={it} />
+      ))}
+    </div>
+  );
+}
+
+function OfferCard({ item }) {
+  const target = Number(item?.target || 0);
+  const raised = Number(item?.raised || 0);
+  const pct = target > 0 ? clamp((raised / target) * 100, 0, 100) : 0;
+
+  const iconClass =
+    item.kind === "lease" ? "lease" : item.kind === "private" ? "private" : item.kind === "refi" ? "refi" : "";
+
+  const iconText = item.kind === "lease" ? "L" : item.kind === "private" ? "P" : item.kind === "refi" ? "R" : "C";
+
+  // ✅ Strong routing: real -> /creditos/:id, else -> #oportunidades
+  const idStr = String(item?.id ?? "").trim();
+  const real = isRealId(idStr);
+  const creditHref = real ? `/creditos/${encodeURIComponent(idStr)}` : "/#oportunidades";
+
+  return (
+    <article className="offer-card">
+      <div className="offer-top">
+        <div className={`offer-iconWrap ${iconClass}`} aria-hidden>
+          <strong>{iconText}</strong>
+        </div>
+
+        <div className="offer-topText">
+          <h3 className="offer-title">{item.title}</h3>
+
+          <div className="offer-meta">
+            <span className="offer-pill">{item.rate}</span>
+            <span className="offer-pill">{item.term}</span>
+            <span className="offer-pill">{item.tag}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="offer-grid">
+        <div className="offer-stat">
+          <span className="offer-label">Monto objetivo</span>
+          <span className="offer-value">{pesos(target, 0)}</span>
+        </div>
+
+        <div className="offer-stat">
+          <span className="offer-label">Capital recaudado</span>
+          <span className="offer-value offer-raised">{pesos(raised, 0)}</span>
+        </div>
+      </div>
+
+      <div className="offer-progress">
+        <div className="offer-progressBar" aria-hidden>
+          <div className="offer-progressFill" style={{ ["--p"]: `${pct.toFixed(0)}%` }} />
+        </div>
+
+        <div className="offer-progressFoot">
+          <span>
+            Avance: <strong>{pct.toFixed(0)}%</strong>
+          </span>
+          <span className="offer-chip">Fondeando</span>
+        </div>
+      </div>
+
+      <div className="offer-cta">
+        <Link to={creditHref} className="btn btn-neon btn-compact">
+          Invertir
+        </Link>
+        <Link to={creditHref} className="btn btn-ghost btn-compact">
+          Ver detalle
+        </Link>
+      </div>
+    </article>
   );
 }

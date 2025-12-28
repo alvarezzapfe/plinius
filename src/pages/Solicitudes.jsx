@@ -49,13 +49,9 @@ const INPUT_STYLE = {
    Data hydration (profiles)
 ======================= */
 async function hydrateProfilesForSolicitudes(rows) {
-  // rows: [{ user_id, ... }]
   if (!rows || rows.length === 0) return rows;
 
-  const ids = Array.from(
-    new Set(rows.map((r) => r.user_id).filter(Boolean))
-  );
-
+  const ids = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
   if (ids.length === 0) return rows;
 
   const { data: profs, error: perr } = await supabase
@@ -64,13 +60,29 @@ async function hydrateProfilesForSolicitudes(rows) {
     .in("id", ids)
     .limit(1000);
 
-  if (perr) {
-    // Si RLS no deja leer perfiles por admin o hay issues, regresamos filas sin perfiles
-    return rows.map((r) => ({ ...r, profile: null }));
-  }
+  if (perr) return rows.map((r) => ({ ...r, profile: null }));
 
   const map = new Map((profs || []).map((p) => [p.id, p]));
   return rows.map((r) => ({ ...r, profile: map.get(r.user_id) || null }));
+}
+
+/* =======================
+   Credit linkage helper
+   - crédito se crea por trigger cuando solicitud pasa a "aprobada"
+======================= */
+async function fetchCreditoBySolicitudId(solicitudId) {
+  if (!solicitudId) return null;
+
+  const { data, error } = await supabase
+    .from("creditos")
+    .select(
+      "id,estado,producto,monto_objetivo,monto_recaudado,tasa_anual,plazo_meses,tag,created_at,solicitud_id"
+    )
+    .eq("solicitud_id", solicitudId)
+    .maybeSingle();
+
+  if (error) return null;
+  return data || null;
 }
 
 export default function Solicitudes() {
@@ -87,6 +99,7 @@ export default function Solicitudes() {
   const [all, setAll] = useState([]);
   const [users, setUsers] = useState([]);
 
+  // selected incluye: solicitud + profile (admin) + credito (si aprobada)
   const [selected, setSelected] = useState(null);
 
   const [q, setQ] = useState("");
@@ -136,7 +149,7 @@ export default function Solicitudes() {
         .from("profiles")
         .select("id,email,is_admin,nombres,apellido_paterno,created_at")
         .eq("id", user.id)
-        .maybeSingle(); // <- no revienta si no existe
+        .maybeSingle();
 
       if (error) {
         setProfileRow(null);
@@ -144,12 +157,11 @@ export default function Solicitudes() {
         return;
       }
 
-      // Si por alguna razón no existe profile, lo dejamos null sin romper UX
       setProfileRow(data || null);
     })();
   }, [user?.id]);
 
-  // Si no es admin, asegúrate de no quedarte en tabs admin
+  // Si no es admin, evita tabs admin
   useEffect(() => {
     if (!isAdmin && (tab === "all" || tab === "users")) setTab("mine");
   }, [isAdmin, tab]);
@@ -265,7 +277,7 @@ export default function Solicitudes() {
   }, [all, q, statusFilter]);
 
   /* =======================
-     Open detail
+     Open detail (now attaches credito when aprobada)
   ======================= */
   const openRow = async (row) => {
     setErrMsg("");
@@ -278,13 +290,12 @@ export default function Solicitudes() {
       .maybeSingle();
 
     if (error || !data) {
-      // fallback: lo que tengas
       setSelected(row);
       if (error) setErrMsg(`No pude cargar detalle completo: ${error.message}`);
       return;
     }
 
-    // hidrata profile para el detalle si eres admin
+    // Hidrata profile si eres admin
     let profile = row.profile || null;
     if (!profile && data.user_id) {
       const { data: p2 } = await supabase
@@ -295,11 +306,19 @@ export default function Solicitudes() {
       profile = p2 || null;
     }
 
-    setSelected({ ...data, profile });
+    // ✅ Si está aprobada, trae crédito ligado (creado por trigger)
+    let credito = null;
+    if (data.status === "aprobada") {
+      credito = await fetchCreditoBySolicitudId(data.id);
+    }
+
+    setSelected({ ...data, profile, credito });
   };
 
   /* =======================
      Admin decision
+     - update solicitudes.status
+     - trigger crea/actualiza creditos automáticamente
   ======================= */
   const decide = async (id, nextStatus) => {
     if (!isAdmin) return;
@@ -328,9 +347,15 @@ export default function Solicitudes() {
     await loadMine();
     await loadAll();
 
+    // ✅ Si aprobaste, intenta traer el crédito recién creado
+    let credito = null;
+    if (nextStatus === "aprobada") {
+      credito = await fetchCreditoBySolicitudId(id);
+    }
+
     setSelected((s) =>
       s?.id === id
-        ? { ...s, status: nextStatus, admin_note: note, decided_at: decidedAt }
+        ? { ...s, status: nextStatus, admin_note: note, decided_at: decidedAt, credito: credito || s.credito || null }
         : s
     );
 
@@ -573,6 +598,7 @@ export default function Solicitudes() {
                 </div>
               )}
 
+              {/* Payload mini grid */}
               <div className="dash-profileGrid" style={{ marginTop: 10 }}>
                 <Mini label="Empresa" value={selected.payload?.contacto?.empresa || "—"} />
                 <Mini label="Producto" value={selected.payload?.producto || "—"} />
@@ -584,6 +610,17 @@ export default function Solicitudes() {
                 <Mini label="Uso" value={(selected.payload?.objetivo?.uso || []).join(", ") || "—"} />
               </div>
 
+              {/* ✅ Crédito ligado (si aprobada) */}
+              {selected.status === "aprobada" && (
+                <div className="dash-miniNote" style={{ marginTop: 10 }}>
+                  Crédito:{" "}
+                  <strong>
+                    {selected.credito?.id ? `Creado (${selected.credito.estado})` : "Creándose… (si tarda, refresca)"}
+                  </strong>
+                </div>
+              )}
+
+              {/* Admin buttons */}
               {isAdmin && (
                 <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <button
@@ -599,6 +636,15 @@ export default function Solicitudes() {
                     disabled={busy}
                   >
                     {busy ? "Procesando…" : "Rechazar"}
+                  </button>
+                </div>
+              )}
+
+              {/* ✅ Ir a crédito */}
+              {selected.status === "aprobada" && selected.credito?.id && (
+                <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button className="dash-btn dash-btnPrimary" onClick={() => nav(`/creditos/${selected.credito.id}`)}>
+                    Ir a crédito
                   </button>
                 </div>
               )}
