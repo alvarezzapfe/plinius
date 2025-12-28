@@ -885,3 +885,58 @@
   justify-content:flex-end;
   gap:8px;
 }
+
+/* =====================================================
+   FIX: layouts con scroll correcto
+   - el body NO scrollea en vistas dash
+   - el main sí
+===================================================== */
+
+.dash{
+  height: 100vh;        /* 👈 clave */
+  overflow: hidden;     /* ya lo tenías, pero ahora sí cuenta */
+}
+
+/* el contenedor grid ocupa pantalla completa y NO scrollea */
+.dash-shell{
+  height: 100vh;        /* 👈 clave */
+  overflow: hidden;     /* 👈 clave */
+}
+
+/* el main es el que scrollea */
+.dash-main{
+  height: 100vh;        /* 👈 clave */
+  overflow: auto;       /* 👈 clave */
+  overscroll-behavior: contain;
+}
+
+/* =====================================================
+   Layout: sidebar DERECHA (para Solicitudes)
+===================================================== */
+.dash-shellRight{
+  grid-template-columns: 1fr var(--dash-side-w);
+}
+
+.dash-sideRight{
+  border-right: none;
+  border-left: 1px solid rgba(148,163,184,0.70);
+  box-shadow: -16px 0 50px rgba(15,23,42,0.18);
+}
+
+/* =====================================================
+   Responsive: en mobile volvemos a flujo normal
+===================================================== */
+@media (max-width: 780px){
+  .dash{
+    height: auto;
+    overflow: visible;
+  }
+  .dash-shell{
+    height: auto;
+    overflow: visible;
+  }
+  .dash-main{
+    height: auto;
+    overflow: visible;
+  }
+}

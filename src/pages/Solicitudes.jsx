@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import "../assets/css/dashboard.css"; // reutilizamos tu estilo base del dashboard
+import "../assets/css/dashboard.css";
 
 /* =======================
    Helpers
@@ -12,7 +12,7 @@ const fmtDT = (d) => (d ? new Date(d).toLocaleString("es-MX") : "—");
 const pill = (status = "") => {
   const s = String(status || "").toLowerCase();
   if (s.includes("pend")) return { cls: "dash-status pendiente", label: "pendiente" };
-  if (s.includes("aprob")) return { cls: "dash-status aplicado", label: "aprobada" };
+  if (s.includes("aprob") || s.includes("aplic")) return { cls: "dash-status aplicado", label: "aprobada" };
   if (s.includes("rech")) return { cls: "dash-status rechazado", label: "rechazada" };
   if (s.includes("rev")) return { cls: "dash-status pendiente", label: "en revisión" };
   return { cls: "dash-status", label: status || "—" };
@@ -35,14 +35,9 @@ function safeJson(obj) {
   }
 }
 
-/**
- * Trata de sacar campos comunes de tu payload del wizard.
- * Ajusta keys si tu wizard usa otros nombres.
- */
 function deriveFromPayload(payloadRaw) {
   const p = safeJson(payloadRaw);
 
-  // nombres “probables” (wizard)
   const empresa =
     p.empresa ||
     p.nombre_empresa ||
@@ -129,7 +124,7 @@ export default function Solicitudes() {
     if (!booting && !session) nav("/ingresar?registro=0");
   }, [booting, session, nav]);
 
-  // Load profile (para saber si es admin)
+  // Load profile
   useEffect(() => {
     if (!user?.id) return;
 
@@ -151,10 +146,6 @@ export default function Solicitudes() {
     setErr("");
 
     try {
-      /**
-       * Si NO eres admin: solo tus solicitudes
-       * Si eres admin: todas (ojo: RLS debe permitirlo)
-       */
       let query = supabase
         .from("solicitudes")
         .select("id,user_id,status,created_at,payload")
@@ -164,7 +155,6 @@ export default function Solicitudes() {
       if (!isAdmin) query = query.eq("user_id", user.id);
 
       const { data, error } = await query;
-
       if (error) throw error;
 
       const mapped = (data || []).map((r) => {
@@ -190,8 +180,6 @@ export default function Solicitudes() {
 
   useEffect(() => {
     if (!user?.id) return;
-    // esperamos a profile para saber si admin
-    // pero si tarda, igual jalamos y luego recargamos
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, isAdmin]);
@@ -203,7 +191,7 @@ export default function Solicitudes() {
       .filter((r) => {
         if (fStatus === "all") return true;
         const s = String(r.status || "").toLowerCase();
-        if (fStatus === "pendiente") return s.includes("pend");
+        if (fStatus === "pendiente") return s.includes("pend") || s.includes("rev");
         if (fStatus === "aprobada") return s.includes("aprob") || s.includes("aplic");
         if (fStatus === "rechazada") return s.includes("rech");
         return true;
@@ -217,8 +205,14 @@ export default function Solicitudes() {
 
   const counts = useMemo(() => {
     const all = rows.length;
-    const pend = rows.filter((r) => String(r.status || "").toLowerCase().includes("pend")).length;
-    const aprob = rows.filter((r) => String(r.status || "").toLowerCase().includes("aprob")).length;
+    const pend = rows.filter((r) => {
+      const s = String(r.status || "").toLowerCase();
+      return s.includes("pend") || s.includes("rev");
+    }).length;
+    const aprob = rows.filter((r) => {
+      const s = String(r.status || "").toLowerCase();
+      return s.includes("aprob") || s.includes("aplic");
+    }).length;
     const rech = rows.filter((r) => String(r.status || "").toLowerCase().includes("rech")).length;
     return { all, pend, aprob, rech };
   }, [rows]);
@@ -240,78 +234,16 @@ export default function Solicitudes() {
       <div className="dash-bg" aria-hidden />
       <div className="dash-grid" aria-hidden />
 
-      <div className="dash-shell">
-        {/* Sidebar mini (reuso estilo) */}
-        <aside className="dash-side">
-          <div className="dash-brandRow">
-            <div className="dash-badge">Plinius · Crédito</div>
-            <button className="dash-iconBtn" onClick={() => nav("/dashboard")} title="Regresar al dashboard">
-              ←
-            </button>
-          </div>
-
-          <div className="dash-profileCard">
-            <div className="dash-avatar">
-              {(profile?.nombres?.[0] || "P").toUpperCase()}
-              {(profile?.apellido_paterno?.[0] || "").toUpperCase()}
-            </div>
-            <div>
-              <div className="dash-profileName">
-                {(profile?.nombres || "Usuario") + " " + (profile?.apellido_paterno || "")}
-              </div>
-              <div className="dash-profileEmail">{profile?.email || user?.email || "—"}</div>
-              {isAdmin && <div className="dash-adminPill">ADMIN</div>}
-            </div>
-          </div>
-
-          <div className="dash-nav">
-            <div className="dash-navSection">
-              <div className="dash-navSectionTitle">Crédito</div>
-
-              <button className="dash-navItem is-active">
-                <span className="dash-navIcon">↻</span>
-                <span className="dash-navLabel">Solicitudes</span>
-                <span className="dash-navMeta">{rows.length}</span>
-              </button>
-
-              <button className="dash-navItem" onClick={() => nav("/solicitud")} title="Nueva solicitud">
-                <span className="dash-navIcon">＋</span>
-                <span className="dash-navLabel">Nueva</span>
-                <span />
-              </button>
-
-              <button className="dash-navItem" onClick={() => nav("/")} title="Inicio">
-                <span className="dash-navIcon">⌂</span>
-                <span className="dash-navLabel">Inicio</span>
-                <span />
-              </button>
-            </div>
-          </div>
-
-          <div className="dash-sideFoot">
-            <div className="dash-sideHint">
-              Tip: abre una solicitud y adjunta Edo. cuenta para acelerar análisis.
-            </div>
-
-            <div className="dash-sideActions">
-              <button className="dash-btn dash-btnPrimary w100" onClick={() => nav("/solicitud")}>
-                Nueva solicitud
-              </button>
-              <button className="dash-btn dash-btnSoft w100" onClick={load} disabled={loading}>
-                {loading ? "Cargando…" : "Refresh"}
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main */}
+      {/* ✅ Sidebar derecha */}
+      <div className="dash-shell dash-shellRight">
+        {/* Main (scrollea) */}
         <section className="dash-main">
           <div className="dash-mainInner">
             <header className="dash-head">
               <div className="dash-headLeft">
                 <h1 className="dash-h1">Solicitudes</h1>
                 <p className="dash-sub">
-                  Lista ordenada (tabla). El botón <strong>Ver</strong> abre la nueva pantalla pro del detalle.
+                  Tabla pro. El botón <strong>Ver</strong> abre <code>/solicitudes/:id</code>.
                 </p>
               </div>
 
@@ -332,7 +264,7 @@ export default function Solicitudes() {
               <div className="dash-panelTitleRow">
                 <div className="dash-panelTitle">Filtros</div>
                 <div className="dash-chip">
-                  {counts.all} total · {counts.pend} pendientes
+                  {counts.all} total · {counts.pend} pendientes · {counts.aprob} aprob · {counts.rech} rech
                 </div>
               </div>
 
@@ -353,7 +285,7 @@ export default function Solicitudes() {
                   <div className="dash-fieldInput">
                     <select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
                       <option value="all">Todas</option>
-                      <option value="pendiente">Pendientes</option>
+                      <option value="pendiente">Pendientes / revisión</option>
                       <option value="aprobada">Aprobadas</option>
                       <option value="rechazada">Rechazadas</option>
                     </select>
@@ -416,7 +348,6 @@ export default function Solicitudes() {
                           </div>
                           <div className="sol-date">{fmtDT(r.created_at)}</div>
                           <div className="sol-actions">
-                            {/* ✅ RUTA NUEVA PRO */}
                             <button
                               className="dash-btn dash-btnSoft"
                               onClick={() => nav(`/solicitudes/${encodeURIComponent(String(r.id))}`)}
@@ -433,12 +364,74 @@ export default function Solicitudes() {
               )}
             </div>
 
-            {/* nota */}
             <div className="dash-sideHint" style={{ marginTop: 10 }}>
-              Próximo paso: ruta <code>/solicitudes/:id</code> con pantalla pro (sidebar fijo + detalle + stats).
+              Next: pantalla pro en <code>/solicitudes/:id</code> (sidebar fijo + detalle + stats).
             </div>
           </div>
         </section>
+
+        {/* Sidebar derecha (NO se mueve) */}
+        <aside className="dash-side dash-sideRight">
+          <div className="dash-brandRow">
+            <div className="dash-badge">Plinius · Crédito</div>
+            <button className="dash-iconBtn" onClick={() => nav("/dashboard")} title="Regresar al dashboard">
+              ←
+            </button>
+          </div>
+
+          <div className="dash-profileCard">
+            <div className="dash-avatar">
+              {(profile?.nombres?.[0] || "P").toUpperCase()}
+              {(profile?.apellido_paterno?.[0] || "").toUpperCase()}
+            </div>
+            <div>
+              <div className="dash-profileName">
+                {(profile?.nombres || "Usuario") + " " + (profile?.apellido_paterno || "")}
+              </div>
+              <div className="dash-profileEmail">{profile?.email || user?.email || "—"}</div>
+              {isAdmin && <div className="dash-adminPill">ADMIN</div>}
+            </div>
+          </div>
+
+          <div className="dash-nav">
+            <div className="dash-navSection">
+              <div className="dash-navSectionTitle">Crédito</div>
+
+              <button className="dash-navItem is-active">
+                <span className="dash-navIcon">↻</span>
+                <span className="dash-navLabel">Solicitudes</span>
+                <span className="dash-navMeta">{rows.length}</span>
+              </button>
+
+              <button className="dash-navItem" onClick={() => nav("/solicitud")} title="Nueva solicitud">
+                <span className="dash-navIcon">＋</span>
+                <span className="dash-navLabel">Nueva</span>
+                <span />
+              </button>
+
+              <button className="dash-navItem" onClick={() => nav("/")} title="Inicio">
+                <span className="dash-navIcon">⌂</span>
+                <span className="dash-navLabel">Inicio</span>
+                <span />
+              </button>
+            </div>
+          </div>
+
+          <div className="dash-sideFoot">
+            <div className="dash-sideHint">
+              Tip: adjunta Edo. cuenta para acelerar análisis.
+            </div>
+
+            <div className="dash-sideActions">
+              <button className="dash-btn dash-btnPrimary w100" onClick={() => nav("/solicitud")}>
+                Nueva solicitud
+              </button>
+              <button className="dash-btn dash-btnSoft w100" onClick={load} disabled={loading}>
+                {loading ? "Cargando…" : "Refresh"}
+              </button>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
