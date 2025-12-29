@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../assets/css/Inversionistas.css";
-import crowdlinkLogo from "../assets/images/crowdlink-logo.png";
 import { supabase } from "../lib/supabaseClient";
 
 /* =======================
@@ -30,7 +29,7 @@ const cleanText = (s, max = 120) =>
 
 /* =======================
    MVP Market Data (local)
-   ✅ Cambia esto luego por Supabase: deals/tickets
+   ✅ Cambia luego por Supabase
 ======================= */
 const MARKET_DEALS = [
   {
@@ -113,17 +112,16 @@ export default function Inversionistas() {
   const [session, setSession] = useState(null);
   const user = session?.user;
 
-  // UI state (logged-in market)
+  // Market UI
   const [q, setQ] = useState("");
-  const [fStage, setFStage] = useState("all"); // all | abierto | colocacion | proximo
+  const [fStage, setFStage] = useState("all");
   const [fSector, setFSector] = useState("all");
-  const [fEstructura, setFEstructura] = useState("all"); // all | amortizable | bullet
-  const [sort, setSort] = useState("score"); // score | tasa | plazo | monto
+  const [fEstructura, setFEstructura] = useState("all");
+  const [sort, setSort] = useState("score");
 
-  // modal simple (MVP)
   const [openDeal, setOpenDeal] = useState(null);
 
-  // Boot session (Supabase)
+  // Boot session
   useEffect(() => {
     let mounted = true;
 
@@ -142,7 +140,6 @@ export default function Inversionistas() {
     };
   }, []);
 
-  // derived filters options
   const sectors = useMemo(() => {
     const set = new Set(MARKET_DEALS.map((d) => d.sector).filter(Boolean));
     return ["all", ...Array.from(set).sort()];
@@ -150,35 +147,20 @@ export default function Inversionistas() {
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-
     let out = MARKET_DEALS.slice();
 
-    // stage filter
-    if (fStage !== "all") {
-      const s = fStage;
-      out = out.filter((d) => String(d.stage || "").toLowerCase().includes(s));
-    }
-
-    // sector filter
+    if (fStage !== "all") out = out.filter((d) => String(d.stage || "").toLowerCase().includes(fStage));
     if (fSector !== "all") out = out.filter((d) => d.sector === fSector);
+    if (fEstructura !== "all") out = out.filter((d) => String(d.estructura || "").toLowerCase().includes(fEstructura));
 
-    // estructura filter
-    if (fEstructura !== "all") {
-      out = out.filter((d) => String(d.estructura || "").toLowerCase().includes(fEstructura));
-    }
-
-    // search
     if (needle) {
       out = out.filter((d) => {
-        const blob = `${d.id} ${d.empresa} ${d.sector} ${d.ciudad} ${d.estructura} ${d.garantia} ${d.rating}`.toLowerCase();
+        const blob = `${d.id} ${d.empresa} ${d.sector} ${d.ciudad} ${d.estructura} ${d.garantia} ${d.rating} ${d.stage}`.toLowerCase();
         return blob.includes(needle);
       });
     }
 
-    // sorting
     const score = (d) => {
-      // Score heurístico (MVP): más tasa + mejor dscr + menor ltv + mejor rating proxy
-      // rating proxy: BBB > BB- > B+ > B
       const r = String(d.rating || "").toUpperCase();
       const ratingScore =
         r.startsWith("BBB") ? 4 : r.startsWith("BB") ? 3 : r.startsWith("B+") ? 2 : r.startsWith("B") ? 1 : 0;
@@ -203,23 +185,19 @@ export default function Inversionistas() {
     const total = MARKET_DEALS.length;
     const abiertos = MARKET_DEALS.filter((d) => String(d.stage || "").toLowerCase().includes("abierto")).length;
     const colocacion = MARKET_DEALS.filter((d) => String(d.stage || "").toLowerCase().includes("coloc")).length;
-    const avgTasa =
-      total > 0 ? MARKET_DEALS.reduce((acc, d) => acc + Number(d.tasa || 0), 0) / total : 0;
-
+    const avgTasa = total ? MARKET_DEALS.reduce((acc, d) => acc + Number(d.tasa || 0), 0) / total : 0;
     return { total, abiertos, colocacion, avgTasa };
   }, []);
 
-  // Actions (MVP)
-  const goLogin = () => nav("/ingresar?registro=1");
+  const goLogin = () => nav("/ingresar?registro=0");
   const goRegister = () => nav("/ingresar?registro=1");
+
   const onInvest = (deal) => {
-    // MVP: manda a inversiones tab del dashboard o a solicitud de inversión
-    // Ajusta cuando tengas flujo real (ticket checkout)
-    nav("/dashboard");
-    // opcional: toast o guardar estado en localStorage
+    // MVP: manda al dashboard / flujo real cuando exista
     try {
       localStorage.setItem("plinius_last_deal", JSON.stringify({ id: deal.id, ts: Date.now() }));
     } catch {}
+    nav("/dashboard");
   };
 
   if (booting) {
@@ -234,9 +212,7 @@ export default function Inversionistas() {
     );
   }
 
-  // =========================
-  // Gate: NOT logged in
-  // =========================
+  // Gate
   if (!user) {
     return (
       <div className="page-inv">
@@ -245,17 +221,13 @@ export default function Inversionistas() {
         <main className="inv-main">
           <section className="inv-gate">
             <div className="inv-gateCard">
-              <div className="inv-badge-row">
-                <div className="inv-partner-pill">
-                  <img src={crowdlinkLogo} alt="Crowdlink" className="inv-partner-logo" />
-                  <span>Plinius × Crowdlink</span>
-                </div>
+              <div className="inv-tagRow">
                 <span className="inv-tag">Mercado privado · Inversionistas</span>
               </div>
 
               <h1>Acceso restringido</h1>
               <p className="inv-sub">
-                Para ver oportunidades de inversión y tickets, necesitas iniciar sesión o crear tu cuenta.
+                Para ver oportunidades y tickets necesitas iniciar sesión o crear tu cuenta.
               </p>
 
               <div className="inv-gateActions">
@@ -268,17 +240,17 @@ export default function Inversionistas() {
               </div>
 
               <div className="inv-gateHint">
-                Tip: si ya estás registrado, usa <strong>Ingresar</strong>.
+                Si ya estabas registrado, entra con tu correo.
               </div>
             </div>
 
             <aside className="inv-gateSide">
               <div className="inv-gateMini">
-                <div className="inv-gateMiniTitle">¿Qué vas a ver al entrar?</div>
+                <div className="inv-gateMiniTitle">Al ingresar verás</div>
                 <ul className="inv-gateList">
-                  <li>· Tabla de tickets con tasa, plazo, garantías y rating.</li>
-                  <li>· Filtros por sector, estructura, etapa y búsqueda.</li>
-                  <li>· Botones para ver el ticket y solicitar inversión.</li>
+                  <li>· Tabla completa, sin scroll horizontal.</li>
+                  <li>· Filtros, búsqueda y ranking recomendado.</li>
+                  <li>· Botones: Ver, Simular, Invertir.</li>
                 </ul>
               </div>
             </aside>
@@ -290,28 +262,20 @@ export default function Inversionistas() {
     );
   }
 
-  // =========================
-  // Logged-in market
-  // =========================
   return (
     <div className="page-inv">
       <Navbar />
 
       <main className="inv-main">
-        {/* Header */}
+        {/* Head */}
         <section className="inv-marketHead">
           <div className="inv-marketTitle">
-            <div className="inv-badge-row">
-              <div className="inv-partner-pill">
-                <img src={crowdlinkLogo} alt="Crowdlink" className="inv-partner-logo" />
-                <span>Mercado · Inversionistas</span>
-              </div>
+            <div className="inv-tagRow">
               <span className="inv-tag">Crédito privado · PYMEs MX</span>
             </div>
-
             <h1>Mercado de oportunidades</h1>
             <p className="inv-sub">
-              Filtra y revisa tickets. Usa <strong>Ver</strong> para detalle, o <strong>Invertir</strong> para iniciar el flujo.
+              Filtra tickets. Usa <strong>Ver</strong> para detalle y <strong>Invertir</strong> para iniciar el flujo.
             </p>
           </div>
 
@@ -338,7 +302,7 @@ export default function Inversionistas() {
         {/* Filters */}
         <section className="inv-filtersCard">
           <div className="inv-filtersGrid">
-            <label className="inv-field">
+            <label className="inv-field inv-fieldWide">
               <span className="inv-fieldLabel">Buscar</span>
               <input
                 value={q}
@@ -378,7 +342,7 @@ export default function Inversionistas() {
             </label>
 
             <label className="inv-field">
-              <span className="inv-fieldLabel">Ordenar</span>
+              <span className="inv-fieldLabel">Orden</span>
               <select value={sort} onChange={(e) => setSort(e.target.value)}>
                 <option value="score">Recomendado</option>
                 <option value="tasa">Tasa (desc)</option>
@@ -396,31 +360,34 @@ export default function Inversionistas() {
           </div>
         </section>
 
-        {/* Table */}
+        {/* FULL table (no horizontal scroll) */}
         <section className="inv-tableCard">
           <div className="inv-tableTop">
             <div className="inv-tableTitle">
               Tickets ({filtered.length})
-              <span className="inv-tableHint">· Click en “Ver” para detalles</span>
+              <span className="inv-tableHint">· Solo scroll vertical</span>
             </div>
           </div>
 
-          <div className="inv-tableWrap">
-            <div className="inv-table">
-              <div className="inv-tr inv-th">
-                <div>ID</div>
-                <div>Empresa</div>
-                <div>Sector</div>
-                <div>Monto</div>
-                <div>Tasa</div>
-                <div>Plazo</div>
-                <div>DSCR</div>
-                <div>LTV</div>
-                <div>Rating</div>
-                <div>Etapa</div>
-                <div />
+          <div className="inv-tableBox">
+            <div className="inv-table inv-tableFull">
+              {/* Header */}
+              <div className="inv-row inv-head">
+                <div className="c-id">ID</div>
+                <div className="c-emp">Empresa</div>
+                <div className="c-sec">Sector</div>
+                <div className="c-city">Ciudad</div>
+                <div className="c-amt">Monto</div>
+                <div className="c-rate">Tasa</div>
+                <div className="c-term">Plazo</div>
+                <div className="c-dscr">DSCR</div>
+                <div className="c-ltv">LTV</div>
+                <div className="c-rating">Rating</div>
+                <div className="c-stage">Etapa</div>
+                <div className="c-act"></div>
               </div>
 
+              {/* Rows */}
               {filtered.map((d) => {
                 const stage = String(d.stage || "").toLowerCase();
                 const stageCls =
@@ -430,27 +397,36 @@ export default function Inversionistas() {
                 const dscr = Number(d.dscr || 0);
 
                 return (
-                  <div className="inv-tr" key={d.id}>
-                    <div className="inv-id">{d.id}</div>
-                    <div className="inv-main">
+                  <div className="inv-row" key={d.id}>
+                    <div className="c-id inv-mono">{d.id}</div>
+
+                    <div className="c-emp">
                       <div className="inv-emp">{d.empresa}</div>
-                      <div className="inv-mini">{cleanText(d.garantia, 48)}</div>
+                      <div className="inv-mini">{cleanText(d.garantia, 52)}</div>
                     </div>
-                    <div>{d.sector}</div>
-                    <div className="inv-num">{fmtMXN(d.monto)}</div>
-                    <div className="inv-num strong">{fmtPct(d.tasa, 1)}</div>
-                    <div className="inv-num">{d.plazo_meses}m</div>
-                    <div className={`inv-num ${dscr >= 1.3 ? "ok" : dscr >= 1.15 ? "mid" : "bad"}`}>
+
+                    <div className="c-sec">{d.sector}</div>
+                    <div className="c-city">{d.ciudad}</div>
+
+                    <div className="c-amt inv-num">{fmtMXN(d.monto)}</div>
+                    <div className="c-rate inv-num strong">{fmtPct(d.tasa, 1)}</div>
+                    <div className="c-term inv-num">{d.plazo_meses}m</div>
+
+                    <div className={`c-dscr inv-num ${dscr >= 1.3 ? "ok" : dscr >= 1.15 ? "mid" : "bad"}`}>
                       {dscr.toFixed(2)}
                     </div>
-                    <div className={`inv-num ${ltv <= 55 ? "ok" : ltv <= 65 ? "mid" : "bad"}`}>{ltv}%</div>
-                    <div>
+
+                    <div className={`c-ltv inv-num ${ltv <= 55 ? "ok" : ltv <= 65 ? "mid" : "bad"}`}>{ltv}%</div>
+
+                    <div className="c-rating">
                       <span className="inv-pill rating">{d.rating}</span>
                     </div>
-                    <div>
+
+                    <div className="c-stage">
                       <span className={stageCls}>{d.stage}</span>
                     </div>
-                    <div className="inv-actions">
+
+                    <div className="c-act inv-actions">
                       <button className="inv-btn-mini" onClick={() => setOpenDeal(d)}>
                         Ver
                       </button>
@@ -464,18 +440,26 @@ export default function Inversionistas() {
                   </div>
                 );
               })}
+
+              {filtered.length === 0 && (
+                <div className="inv-empty">
+                  No hay tickets con esos filtros.
+                </div>
+              )}
             </div>
           </div>
         </section>
 
-        {/* Modal: Deal detail (MVP) */}
+        {/* Modal */}
         {openDeal && (
           <div className="inv-modalBackdrop" role="dialog" aria-modal="true" onClick={() => setOpenDeal(null)}>
             <div className="inv-modal" onClick={(e) => e.stopPropagation()}>
               <div className="inv-modalHead">
                 <div>
                   <div className="inv-modalTitle">{openDeal.empresa}</div>
-                  <div className="inv-modalSub">{openDeal.id} · {openDeal.sector} · {openDeal.ciudad}</div>
+                  <div className="inv-modalSub">
+                    {openDeal.id} · {openDeal.sector} · {openDeal.ciudad} · {openDeal.stage}
+                  </div>
                 </div>
                 <button className="inv-x" onClick={() => setOpenDeal(null)} title="Cerrar">
                   ✕
@@ -483,38 +467,15 @@ export default function Inversionistas() {
               </div>
 
               <div className="inv-modalGrid">
-                <div className="inv-kv">
-                  <span>Monto</span>
-                  <strong>{fmtMXN(openDeal.monto)}</strong>
-                </div>
-                <div className="inv-kv">
-                  <span>Tasa objetivo</span>
-                  <strong>{fmtPct(openDeal.tasa, 1)}</strong>
-                </div>
-                <div className="inv-kv">
-                  <span>Plazo</span>
-                  <strong>{openDeal.plazo_meses} meses</strong>
-                </div>
-                <div className="inv-kv">
-                  <span>Estructura</span>
-                  <strong>{openDeal.estructura}</strong>
-                </div>
-                <div className="inv-kv">
-                  <span>DSCR</span>
-                  <strong>{Number(openDeal.dscr || 0).toFixed(2)}</strong>
-                </div>
-                <div className="inv-kv">
-                  <span>LTV</span>
-                  <strong>{Number(openDeal.ltv || 0)}%</strong>
-                </div>
-                <div className="inv-kv">
-                  <span>Rating</span>
-                  <strong>{openDeal.rating}</strong>
-                </div>
-                <div className="inv-kv">
-                  <span>Ticket mínimo</span>
-                  <strong>{fmtMXN(openDeal.min_ticket)}</strong>
-                </div>
+                <div className="inv-kv"><span>Monto</span><strong>{fmtMXN(openDeal.monto)}</strong></div>
+                <div className="inv-kv"><span>Tasa objetivo</span><strong>{fmtPct(openDeal.tasa, 1)}</strong></div>
+                <div className="inv-kv"><span>Plazo</span><strong>{openDeal.plazo_meses} meses</strong></div>
+                <div className="inv-kv"><span>Estructura</span><strong>{openDeal.estructura}</strong></div>
+                <div className="inv-kv"><span>Pago</span><strong>{openDeal.pago}</strong></div>
+                <div className="inv-kv"><span>Ticket mínimo</span><strong>{fmtMXN(openDeal.min_ticket)}</strong></div>
+                <div className="inv-kv"><span>DSCR</span><strong>{Number(openDeal.dscr || 0).toFixed(2)}</strong></div>
+                <div className="inv-kv"><span>LTV</span><strong>{Number(openDeal.ltv || 0)}%</strong></div>
+                <div className="inv-kv"><span>Rating</span><strong>{openDeal.rating}</strong></div>
               </div>
 
               <div className="inv-modalNote">
