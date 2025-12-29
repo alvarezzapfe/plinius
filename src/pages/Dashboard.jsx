@@ -477,7 +477,7 @@ export default function Dashboard() {
     // requests (mías para user normal, todas para admin)
     let reqQ = supabase
       .from("investment_requests")
-      .select("id,amount,currency,status,reference,note,created_at,decided_at,decided_by,user_id")
+      .select("id,amount,status,reference,note,created_at,decided_at,decided_by,user_id")
       .order("created_at", { ascending: false })
       .limit(200);
 
@@ -492,7 +492,7 @@ export default function Dashboard() {
       const { data: pendRows, error: pendErr } = await supabase
         .from("investment_requests")
         .select(
-          "id,user_id,amount,currency,status,reference,note,created_at,profiles:profiles(email,empresa,nombres,apellido_paterno)"
+          "id,user_id,amount,status,reference,note,created_at,profiles:profiles(email,empresa,nombres,apellido_paterno)"
         )
         .eq("status", "pendiente")
         .order("created_at", { ascending: true })
