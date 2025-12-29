@@ -825,3 +825,127 @@
   border-color: rgba(251,191,36,0.30);
   box-shadow: 0 0 0 6px rgba(251,191,36,0.06);
 }
+
+/* =====================================================
+   SOLICITUDES: tabla compacta (sol-table)
+   ===================================================== */
+
+.sol-tableWrap{
+  margin-top: 10px;
+  border-radius: var(--r-16);
+  border: var(--b1);
+  background: rgba(255,255,255,0.04);
+  overflow: auto;               /* ✅ scroll horizontal si es necesario */
+  scrollbar-gutter: stable;
+}
+
+.sol-table{
+  min-width: 1120px;            /* ✅ evita colapsos */
+}
+
+/* Grid de columnas: (ajustado para que quepa bonito) */
+.sol-tr{
+  display:grid;
+  grid-template-columns:
+    96px           /* id */
+    minmax(220px, 1.6fr)  /* empresa */
+    minmax(180px, 1.2fr)  /* producto */
+    120px          /* monto */
+    84px           /* plazo */
+    84px           /* tasa */
+    120px          /* estatus */
+    170px          /* creada */
+    92px;          /* acciones */
+  align-items:center;
+}
+
+/* Celdas */
+.sol-tr > div{
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148,163,184,0.12);
+  min-width:0;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;              /* ✅ más chico */
+  color: rgba(226,232,240,0.95);
+}
+
+/* Header */
+.sol-th{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(2,6,23,0.72);
+  backdrop-filter: blur(10px);
+}
+.sol-th > div{
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  color: rgba(148,163,184,0.95);
+  border-bottom: 1px solid rgba(148,163,184,0.20);
+}
+
+/* Hover row */
+.sol-tr:not(.sol-th):hover{
+  background: rgba(255,255,255,0.05);
+}
+
+/* IDs / principales */
+.sol-id{ font-weight: 950; color: rgba(226,232,240,0.92); }
+.sol-main{ font-weight: 950; }
+.sol-sub{ color: rgba(148,163,184,0.95); font-weight: 850; }
+
+/* Números */
+.sol-num{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: rgba(226,232,240,0.92);
+}
+
+/* Fecha */
+.sol-date{
+  color: rgba(148,163,184,0.95);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Actions */
+.sol-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap: 8px;
+}
+.sol-actions .dash-btn{
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* Helpers para header alignment */
+.sol-th .is-num{ text-align:right; }
+.sol-th .is-actions{ text-align:right; }
+
+/* Responsive: comprimimos columnas y texto */
+@media (max-width: 980px){
+  .sol-table{ min-width: 1040px; }
+  .sol-tr{
+    grid-template-columns:
+      92px
+      minmax(200px, 1.4fr)
+      minmax(160px, 1.1fr)
+      110px
+      78px
+      78px
+      116px
+      160px
+      88px;
+  }
+  .sol-tr > div{ font-size: 11.5px; padding: 9px 10px; }
+}
+
+@media (max-width: 780px){
+  .sol-table{ min-width: 980px; }
+  .sol-tr > div{ font-size: 11px; }
+}

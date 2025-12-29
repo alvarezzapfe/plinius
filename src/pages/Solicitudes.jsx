@@ -1,5 +1,5 @@
 // src/pages/Solicitudes.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "../assets/css/dashboard.css";
@@ -8,15 +8,6 @@ import "../assets/css/dashboard.css";
    Helpers
 ======================= */
 const fmtDT = (d) => (d ? new Date(d).toLocaleString("es-MX") : "—");
-
-const pill = (status = "") => {
-  const s = String(status || "").toLowerCase();
-  if (s.includes("pend")) return { cls: "dash-status pendiente", label: "pendiente" };
-  if (s.includes("aprob") || s.includes("aplic")) return { cls: "dash-status aplicado", label: "aprobada" };
-  if (s.includes("rech")) return { cls: "dash-status rechazado", label: "rechazada" };
-  if (s.includes("rev")) return { cls: "dash-status pendiente", label: "en revisión" };
-  return { cls: "dash-status", label: status || "—" };
-};
 
 const cleanText = (s, max = 120) =>
   String(s ?? "")
@@ -84,6 +75,27 @@ function deriveFromPayload(payloadRaw) {
   };
 }
 
+const pill = (status = "") => {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("pend")) return { cls: "dash-status pendiente", label: "pendiente" };
+  if (s.includes("aprob") || s.includes("aplic")) return { cls: "dash-status aplicado", label: "aprobada" };
+  if (s.includes("rech")) return { cls: "dash-status rechazado", label: "rechazada" };
+  if (s.includes("rev")) return { cls: "dash-status pendiente", label: "en revisión" };
+  return { cls: "dash-status", label: status || "—" };
+};
+
+function initialsFromProfile(p) {
+  const a = (p?.nombres || "").trim();
+  const b = (p?.apellido_paterno || "").trim();
+  const c = `${a} ${b}`.trim();
+  if (!c) return "P";
+  return c
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+}
+
 export default function Solicitudes() {
   const nav = useNavigate();
 
@@ -124,6 +136,11 @@ export default function Solicitudes() {
     if (!booting && !session) nav("/ingresar?registro=0");
   }, [booting, session, nav]);
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    nav("/ingresar?registro=0");
+  };
+
   // Load profile
   useEffect(() => {
     if (!user?.id) return;
@@ -131,7 +148,7 @@ export default function Solicitudes() {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("id,email,is_admin,nombres,apellido_paterno,empresa,created_at")
+        .select("id,email,is_admin,nombres,apellido_paterno,apellido_materno,empresa,created_at")
         .eq("id", user.id)
         .single();
 
@@ -139,7 +156,7 @@ export default function Solicitudes() {
     })();
   }, [user?.id]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user?.id) return;
 
     setLoading(true);
@@ -176,13 +193,12 @@ export default function Solicitudes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, isAdmin]);
 
   useEffect(() => {
     if (!user?.id) return;
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isAdmin]);
+  }, [user?.id, isAdmin, load]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -234,17 +250,96 @@ export default function Solicitudes() {
       <div className="dash-bg" aria-hidden />
       <div className="dash-grid" aria-hidden />
 
-      {/* ✅ Sidebar derecha */}
-      <div className="dash-shell dash-shellRight">
-        {/* Main (scrollea) */}
+      <div className="dash-shell">
+        {/* ✅ Sidebar IZQUIERDA normal (igual que Dashboard) */}
+        <aside className="dash-side">
+          <div className="dash-brandRow">
+            <div className="dash-badge">Plinius · Panel</div>
+            <button className="dash-iconBtn" onClick={signOut} title="Cerrar sesión">
+              ⎋
+            </button>
+          </div>
+
+          <div className="dash-quickRow">
+            <button className="dash-quickIcon" onClick={() => nav("/")} title="Inicio">
+              ⌂
+            </button>
+            <div className="dash-quickHint">Inicio</div>
+          </div>
+
+          <div className="dash-profileCard">
+            <div className="dash-avatar">{initialsFromProfile(profile)}</div>
+            <div>
+              <div className="dash-profileName">
+                {(profile?.nombres || "Usuario") + " " + (profile?.apellido_paterno || "")}
+              </div>
+              <div className="dash-profileEmail">{profile?.email || user?.email || "—"}</div>
+              {isAdmin && <div className="dash-adminPill">ADMIN</div>}
+            </div>
+          </div>
+
+          <div className="dash-nav">
+            <div className="dash-navSection">
+              <div className="dash-navSectionTitle">Panel</div>
+
+              <button className="dash-navItem" onClick={() => nav("/dashboard")}>
+                <span className="dash-navIcon">◎</span>
+                <span className="dash-navLabel">Dashboard</span>
+                <span />
+              </button>
+            </div>
+
+            <div className="dash-navDivider" />
+
+            <div className="dash-navSection">
+              <div className="dash-navSectionTitle">Crédito</div>
+
+              <button className="dash-navItem is-active">
+                <span className="dash-navIcon">↻</span>
+                <span className="dash-navLabel">Solicitudes</span>
+                <span className="dash-navMeta">{rows.length}</span>
+              </button>
+
+              <button className="dash-navItem" onClick={() => nav("/solicitud")} title="Nueva solicitud">
+                <span className="dash-navIcon">＋</span>
+                <span className="dash-navLabel">Nueva</span>
+                <span />
+              </button>
+
+              <button className="dash-navItem" onClick={() => nav("/creditos")}>
+                <span className="dash-navIcon">▦</span>
+                <span className="dash-navLabel">Créditos</span>
+                <span />
+              </button>
+            </div>
+          </div>
+
+          <div className="dash-sideFoot">
+            <div className="dash-sideHint">
+              {counts.pend} pendientes · {counts.aprob} aprobadas · {counts.rech} rechazadas
+            </div>
+
+            <div className="dash-sideActions">
+              <button className="dash-btn dash-btnPrimary w100" onClick={() => nav("/solicitud")}>
+                Nueva solicitud
+              </button>
+              <button className="dash-btn dash-btnSoft w100" onClick={load} disabled={loading}>
+                {loading ? "Cargando…" : "Refresh"}
+              </button>
+              <button className="dash-btn dash-btnGhost w100" onClick={signOut}>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main */}
         <section className="dash-main">
           <div className="dash-mainInner">
             <header className="dash-head">
               <div className="dash-headLeft">
                 <h1 className="dash-h1">Solicitudes</h1>
-                <p className="dash-sub">
-                  Tabla pro. El botón <strong>Ver</strong> abre <code>/solicitudes/:id</code>.
-                </p>
+                <p className="dash-sub">Vista tipo tabla (compacta). Click en “Ver” abre el detalle.</p>
               </div>
 
               <div className="dash-headRight">
@@ -256,6 +351,10 @@ export default function Solicitudes() {
                     {loading ? "…" : "Refresh"}
                   </button>
                 </div>
+
+                <button className="dash-topSignout" onClick={signOut} title="Cerrar sesión">
+                  ⎋ <span>Cerrar sesión</span>
+                </button>
               </div>
             </header>
 
@@ -264,7 +363,7 @@ export default function Solicitudes() {
               <div className="dash-panelTitleRow">
                 <div className="dash-panelTitle">Filtros</div>
                 <div className="dash-chip">
-                  {counts.all} total · {counts.pend} pendientes · {counts.aprob} aprob · {counts.rech} rech
+                  {counts.all} total · {counts.pend} pend · {counts.aprob} aprob · {counts.rech} rech
                 </div>
               </div>
 
@@ -325,21 +424,23 @@ export default function Solicitudes() {
                       <div>ID</div>
                       <div>Empresa</div>
                       <div>Producto</div>
-                      <div>Monto</div>
-                      <div>Plazo</div>
-                      <div>Tasa</div>
+                      <div className="is-num">Monto</div>
+                      <div className="is-num">Plazo</div>
+                      <div className="is-num">Tasa</div>
                       <div>Estatus</div>
                       <div>Creada</div>
-                      <div />
+                      <div className="is-actions" />
                     </div>
 
                     {filtered.map((r) => {
                       const p = pill(r.status);
                       return (
                         <div className="sol-tr" key={r.id}>
-                          <div className="sol-id">{String(r.id).slice(0, 8)}…</div>
-                          <div className="sol-main">{r._empresa}</div>
-                          <div className="sol-sub">{r._producto}</div>
+                          <div className="sol-id" title={String(r.id)}>
+                            {String(r.id).slice(0, 8)}…
+                          </div>
+                          <div className="sol-main" title={r._empresa}>{r._empresa}</div>
+                          <div className="sol-sub" title={r._producto}>{r._producto}</div>
                           <div className="sol-num">{r._monto}</div>
                           <div className="sol-num">{r._plazo}</div>
                           <div className="sol-num">{r._tasa}</div>
@@ -351,7 +452,7 @@ export default function Solicitudes() {
                             <button
                               className="dash-btn dash-btnSoft"
                               onClick={() => nav(`/solicitudes/${encodeURIComponent(String(r.id))}`)}
-                              title="Ver detalle pro"
+                              title="Ver detalle"
                             >
                               Ver
                             </button>
@@ -365,73 +466,10 @@ export default function Solicitudes() {
             </div>
 
             <div className="dash-sideHint" style={{ marginTop: 10 }}>
-              Next: pantalla pro en <code>/solicitudes/:id</code> (sidebar fijo + detalle + stats).
+              Next: detalle en <code>/solicitudes/:id</code>.
             </div>
           </div>
         </section>
-
-        {/* Sidebar derecha (NO se mueve) */}
-        <aside className="dash-side dash-sideRight">
-          <div className="dash-brandRow">
-            <div className="dash-badge">Plinius · Crédito</div>
-            <button className="dash-iconBtn" onClick={() => nav("/dashboard")} title="Regresar al dashboard">
-              ←
-            </button>
-          </div>
-
-          <div className="dash-profileCard">
-            <div className="dash-avatar">
-              {(profile?.nombres?.[0] || "P").toUpperCase()}
-              {(profile?.apellido_paterno?.[0] || "").toUpperCase()}
-            </div>
-            <div>
-              <div className="dash-profileName">
-                {(profile?.nombres || "Usuario") + " " + (profile?.apellido_paterno || "")}
-              </div>
-              <div className="dash-profileEmail">{profile?.email || user?.email || "—"}</div>
-              {isAdmin && <div className="dash-adminPill">ADMIN</div>}
-            </div>
-          </div>
-
-          <div className="dash-nav">
-            <div className="dash-navSection">
-              <div className="dash-navSectionTitle">Crédito</div>
-
-              <button className="dash-navItem is-active">
-                <span className="dash-navIcon">↻</span>
-                <span className="dash-navLabel">Solicitudes</span>
-                <span className="dash-navMeta">{rows.length}</span>
-              </button>
-
-              <button className="dash-navItem" onClick={() => nav("/solicitud")} title="Nueva solicitud">
-                <span className="dash-navIcon">＋</span>
-                <span className="dash-navLabel">Nueva</span>
-                <span />
-              </button>
-
-              <button className="dash-navItem" onClick={() => nav("/")} title="Inicio">
-                <span className="dash-navIcon">⌂</span>
-                <span className="dash-navLabel">Inicio</span>
-                <span />
-              </button>
-            </div>
-          </div>
-
-          <div className="dash-sideFoot">
-            <div className="dash-sideHint">
-              Tip: adjunta Edo. cuenta para acelerar análisis.
-            </div>
-
-            <div className="dash-sideActions">
-              <button className="dash-btn dash-btnPrimary w100" onClick={() => nav("/solicitud")}>
-                Nueva solicitud
-              </button>
-              <button className="dash-btn dash-btnSoft w100" onClick={load} disabled={loading}>
-                {loading ? "Cargando…" : "Refresh"}
-              </button>
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
   );
