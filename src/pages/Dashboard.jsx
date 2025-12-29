@@ -490,15 +490,14 @@ export default function Dashboard() {
     // admin: pendientes globales (con join)
     if (isAdmin) {
       const { data: pendRows, error: pendErr } = await supabase
-        .from("investment_requests")
-        .select(
-          "id,user_id,amount,status,reference,note,created_at,profiles:profiles(email,empresa,nombres,apellido_paterno)"
-        )
-        .eq("status", "pendiente")
-        .order("created_at", { ascending: true })
-        .limit(200);
+  .from("investment_requests")
+  .select("id,user_id,amount,status,reference,note,created_at")
+  .eq("status", "pendiente")
+  .order("created_at", { ascending: true })
+  .limit(200);
 
-      if (pendErr) console.log("pending requests err", pendErr);
+if (pendErr) console.log("pending requests err", pendErr);
+
       setPendingInvRequests(pendRows || []);
     } else {
       setPendingInvRequests([]);
