@@ -551,25 +551,42 @@ export default function Dashboard() {
   };
 
   const approveInvestment = async (requestId) => {
-    if (!isAdmin || busyApprove) return;
-    setBusyApprove(true);
-    setAdminInvMsg("");
+  if (!isAdmin || busyApprove) return;
+  setBusyApprove(true);
+  setAdminInvMsg("");
 
-    try {
-      const { error } = await supabase.rpc("approve_investment_request", {
-        p_request_id: requestId,
-      });
-      if (error) throw error;
+  try {
+    // ✅ DEBUG: confirma sesión y UID
+    const { data: s } = await supabase.auth.getSession();
+    console.log("SESSION", {
+      hasSession: !!s?.session,
+      uid: s?.session?.user?.id,
+      email: s?.session?.user?.email,
+      isAdmin,
+      requestId,
+    });
 
-      setAdminInvMsg("✅ Aprobado y aplicado a ledger.");
-      await loadInvestments();
-    } catch (e) {
-      setAdminInvMsg(`Error: ${e?.message || "No se pudo aprobar"}`);
-    } finally {
-      setBusyApprove(false);
-      setTimeout(() => setAdminInvMsg(""), 4500);
-    }
-  };
+    const { error } = await supabase.rpc("approve_investment_request", {
+      p_request_id: requestId,
+    });
+    if (error) throw error;
+
+    setAdminInvMsg("✅ Aprobado y aplicado a ledger.");
+    await loadInvestments();
+  } catch (e) {
+    console.log("approveInvestment ERROR", e);
+    setAdminInvMsg(
+      `Error: ${e?.message || "No se pudo aprobar"}`
+      + (e?.details ? ` | details: ${e.details}` : "")
+      + (e?.hint ? ` | hint: ${e.hint}` : "")
+      + (e?.code ? ` | code: ${e.code}` : "")
+    );
+  } finally {
+    setBusyApprove(false);
+    setTimeout(() => setAdminInvMsg(""), 4500);
+  }
+};
+
 
   const rejectInvestment = async (requestId) => {
     if (!isAdmin || busyApprove) return;
