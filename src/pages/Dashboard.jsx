@@ -1,9 +1,12 @@
 // src/pages/Dashboard.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "../assets/css/dashboard.css";
 
+/* =======================
+   Helpers
+======================= */
 const pesos = (x) =>
   new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -40,6 +43,9 @@ function initialsFromProfile(p) {
     .join("");
 }
 
+/* =======================
+   Component
+======================= */
 export default function Dashboard() {
   const nav = useNavigate();
 
@@ -49,7 +55,7 @@ export default function Dashboard() {
 
   const [profile, setProfile] = useState(null);
 
-  // ✅ ADMIN: por perfil o por email específico
+  // ✅ ADMIN: por bandera en profiles o por email específico (fallback)
   const isAdmin = useMemo(() => {
     const email = String(profile?.email || user?.email || "").toLowerCase();
     return !!profile?.is_admin || email === "luis@plinius.mx";
@@ -58,7 +64,7 @@ export default function Dashboard() {
   // Tabs
   const [tab, setTab] = useState("resumen"); // resumen | perfil | docs | tesoreria | inversiones
 
-  // KPIs (solicitudes del usuario)
+  // KPIs (solicitudes)
   const [mineSolicitudes, setMineSolicitudes] = useState([]);
   const pendingCount = useMemo(
     () => mineSolicitudes.filter((s) => s.status === "pendiente").length,
@@ -125,14 +131,14 @@ export default function Dashboard() {
       if (r.type === "invest") invested += amt;
       if (r.type === "redeem") invested -= amt;
       if (r.type === "yield") pnl += amt;
-      if (r.type === "adjust") pnl += amt; // ajustes como PnL para MVP
+      if (r.type === "adjust") pnl += amt;
     }
     const yieldPct = invested > 0 ? (pnl / invested) * 100 : 0;
     return {
       invested: Math.max(0, invested),
       pnl,
       yieldPct,
-      positions: 0, // MVP: posiciones después
+      positions: 0, // MVP
     };
   }, [invLedger]);
 
@@ -181,11 +187,10 @@ export default function Dashboard() {
         .eq("id", user.id)
         .single();
 
-      if (!error) {
-         setProfile(data);
-                setIsAdmin(!!data?.is_admin); // <-- importante
-        }
-
+      if (error) {
+        setProfile(null);
+        return;
+      }
 
       setProfile(data || null);
       setEdit({
@@ -204,59 +209,60 @@ export default function Dashboard() {
   }, [user?.id]);
 
   // =========================
-  // Load solicitudes KPI
+  // Load solicitudes (admin ve todas; user ve suyas)
   // =========================
-  const loadSolicitudes = async () => {
-  if (!user?.id) return;
+  const loadSolicitudes = useCallback(async () => {
+    if (!user?.id) return;
 
-  let q = supabase
-    .from("solicitudes")
-    .select("id,status,created_at,user_id")
-    .order("created_at", { ascending: false })
-    .limit(250);
+    let q = supabase
+      .from("solicitudes")
+      .select("id,status,created_at,user_id")
+      .order("created_at", { ascending: false })
+      .limit(250);
 
-  // ✅ Solo filtra si NO eres admin
-  if (!isAdmin) q = q.eq("user_id", user.id);
+    if (!isAdmin) q = q.eq("user_id", user.id);
 
-  const { data, error } = await q;
+    const { data, error } = await q;
+    console.log("loadSolicitudes", { isAdmin, rows: data?.length, error });
 
-  console.log("loadSolicitudes", { isAdmin, rows: data?.length, error });
-
-  setMineSolicitudes(data || []);
-};
-
+    setMineSolicitudes(data || []);
+  }, [user?.id, isAdmin]);
 
   useEffect(() => {
     if (!user?.id) return;
-    loadMineSolicitudes();
-  }, [user?.id]);
+    loadSolicitudes();
+  }, [user?.id, isAdmin, loadSolicitudes]);
 
   // =========================
   // Load treasury
   // =========================
-  const loadTreasury = async () => {
+  const loadTreasury = useCallback(async () => {
     if (!user?.id) return;
 
-    const { data: balRows } = await supabase
+    const { data: balRows, error: balErr } = await supabase
       .from("v_treasury_balance")
       .select("balance")
       .eq("user_id", user.id)
       .maybeSingle();
+
+    if (balErr) console.log("v_treasury_balance err", balErr);
     setBalance(Number(balRows?.balance || 0));
 
-    const { data: ledRows } = await supabase
+    const { data: ledRows, error: ledErr } = await supabase
       .from("treasury_ledger")
       .select("id,type,amount,status,reference,note,created_at,applied_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(120);
+
+    if (ledErr) console.log("treasury_ledger err", ledErr);
     setLedger(ledRows || []);
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
     loadTreasury();
-  }, [user?.id]);
+  }, [user?.id, loadTreasury]);
 
   // =========================
   // Save profile
@@ -315,7 +321,7 @@ export default function Dashboard() {
   // =========================
   // Docs
   // =========================
-  const listDocs = async () => {
+  const listDocs = useCallback(async () => {
     if (!user?.id) return;
     setDocsMsg("");
 
@@ -330,12 +336,12 @@ export default function Dashboard() {
       return;
     }
     setDocs(data || []);
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
     listDocs();
-  }, [user?.id]);
+  }, [user?.id, listDocs]);
 
   const uploadDoc = async (file) => {
     if (!user?.id || !file) return;
@@ -383,6 +389,7 @@ export default function Dashboard() {
 
   const deleteDoc = async (name) => {
     if (!user?.id || !name) return;
+    // eslint-disable-next-line no-restricted-globals
     if (!confirm("¿Eliminar este archivo?")) return;
 
     setDocsMsg("");
@@ -440,40 +447,49 @@ export default function Dashboard() {
 
   // =========================
   // INVERSIONES: load + create request + approve/reject
+  // Admin ve todo ledger y todas requests
   // =========================
-  const loadInvestments = async () => {
+  const loadInvestments = useCallback(async () => {
     if (!user?.id) return;
 
-    // saldo
-    const { data: balRow } = await supabase
+    // saldo (personal)
+    const { data: balRow, error: balErr } = await supabase
       .from("v_invest_balance")
       .select("balance")
       .eq("user_id", user.id)
       .maybeSingle();
+    if (balErr) console.log("v_invest_balance err", balErr);
     setInvBalance(Number(balRow?.balance || 0));
 
-    // ledger (movimientos aplicados)
-    const { data: ledRows } = await supabase
+    // ledger
+    let ledQ = supabase
       .from("investment_ledger")
-      .select("id,type,amount,status,reference,note,created_at,applied_at,request_id")
-      .eq("user_id", user.id)
+      .select("id,type,amount,status,reference,note,created_at,applied_at,request_id,user_id")
       .order("created_at", { ascending: false })
       .limit(120);
+
+    if (!isAdmin) ledQ = ledQ.eq("user_id", user.id);
+
+    const { data: ledRows, error: ledErr } = await ledQ;
+    console.log("loadInvestments ledger", { isAdmin, rows: ledRows?.length, ledErr });
     setInvLedger(ledRows || []);
 
-    // mis solicitudes (pendientes/aprobadas/rechazadas)
-    const { data: reqRows } = await supabase
+    // requests (mías para user normal, todas para admin)
+    let reqQ = supabase
       .from("investment_requests")
       .select("id,amount,currency,status,reference,note,created_at,decided_at,decided_by,user_id")
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(120);
+      .limit(200);
+
+    if (!isAdmin) reqQ = reqQ.eq("user_id", user.id);
+
+    const { data: reqRows, error: reqErr } = await reqQ;
+    console.log("loadInvestments requests", { isAdmin, rows: reqRows?.length, reqErr });
     setMyInvRequests(reqRows || []);
 
-    // admin: pendientes globales
+    // admin: pendientes globales (con join)
     if (isAdmin) {
-      // Intento de join a profiles (si tienes FK/relación en Supabase)
-      const { data: pendRows } = await supabase
+      const { data: pendRows, error: pendErr } = await supabase
         .from("investment_requests")
         .select(
           "id,user_id,amount,currency,status,reference,note,created_at,profiles:profiles(email,empresa,nombres,apellido_paterno)"
@@ -482,17 +498,17 @@ export default function Dashboard() {
         .order("created_at", { ascending: true })
         .limit(200);
 
+      if (pendErr) console.log("pending requests err", pendErr);
       setPendingInvRequests(pendRows || []);
     } else {
       setPendingInvRequests([]);
     }
-  };
+  }, [user?.id, isAdmin]);
 
   useEffect(() => {
     if (!user?.id) return;
     loadInvestments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isAdmin]);
+  }, [user?.id, isAdmin, loadInvestments]);
 
   const createInvestmentRequest = async () => {
     if (!user?.id || busyInv) return;
@@ -558,6 +574,7 @@ export default function Dashboard() {
   const rejectInvestment = async (requestId) => {
     if (!isAdmin || busyApprove) return;
 
+    // eslint-disable-next-line no-restricted-globals
     const reason = prompt("Motivo de rechazo (opcional):") || null;
 
     setBusyApprove(true);
@@ -674,7 +691,9 @@ export default function Dashboard() {
               >
                 <span className="dash-navIcon">⬈</span>
                 <span className="dash-navLabel">Inversiones</span>
-                <span className="dash-navMeta">{myInvRequests.filter((r) => r.status === "pendiente").length}</span>
+                <span className="dash-navMeta">
+                  {myInvRequests.filter((r) => r.status === "pendiente").length}
+                </span>
               </button>
             </div>
 
@@ -763,14 +782,14 @@ export default function Dashboard() {
                     : tab === "tesoreria"
                     ? "Registra depósitos y consulta tu saldo (conciliación por Plinius)."
                     : isAdmin
-                    ? "Aprobación de inversiones + portafolio por usuario."
+                    ? "Aprobación de inversiones + portafolio global."
                     : "Solicita inversión y consulta tu portafolio."}
                 </p>
               </div>
 
               <div className="dash-headRight">
                 <div className="dash-headActions">
-                  <button className="dash-btn dash-btnSoft" onClick={loadMineSolicitudes}>
+                  <button className="dash-btn dash-btnSoft" onClick={loadSolicitudes}>
                     Refresh
                   </button>
                   <button className="dash-btn dash-btnSoft" onClick={loadTreasury}>
@@ -812,7 +831,7 @@ export default function Dashboard() {
                   <div className="dash-kpiCard">
                     <div className="dash-kpiLabel">Saldo inversión</div>
                     <div className="dash-kpiValue">{pesos(invBalance)}</div>
-                    <div className="dash-kpiSub">Aplicado</div>
+                    <div className="dash-kpiSub">Mi saldo</div>
                   </div>
                 </div>
 
@@ -1047,27 +1066,6 @@ export default function Dashboard() {
                       Refresh
                     </button>
                   </div>
-
-                  <div className="dash-divider" />
-
-                  <div className="dash-panelTitle">Instrucciones SPEI (Ve por Más)</div>
-                  <ol className="dash-modList">
-                    <li>En tu banca, elige <strong>Transferencia SPEI</strong>.</li>
-                    <li>
-                      Beneficiario: <strong>Infraestructura en Finanzas AI, S.A.P.I. de C.V.</strong>
-                    </li>
-                    <li>
-                      Banco destino: <strong>Ve por Más (Bx+)</strong>
-                    </li>
-                    <li>
-                      CLABE: <strong>[PEGA_TU_CLABE_AQUI]</strong>
-                    </li>
-                    <li>
-                      Concepto sugerido:{" "}
-                      <strong>PLINIUS TESORERIA · {profile?.email || user?.email || "tu_email"}</strong>
-                    </li>
-                    <li>Luego registra el depósito aquí (monto + referencia).</li>
-                  </ol>
                 </div>
 
                 <div className="dash-panel">
@@ -1117,7 +1115,7 @@ export default function Dashboard() {
                   <div className="dash-kpiCard">
                     <div className="dash-kpiLabel">Saldo inversión</div>
                     <div className="dash-kpiValue">{pesos(invBalance)}</div>
-                    <div className="dash-kpiSub">Aplicado</div>
+                    <div className="dash-kpiSub">Mi saldo</div>
                   </div>
 
                   <div className="dash-kpiCard">
@@ -1144,7 +1142,11 @@ export default function Dashboard() {
                   <div className="dash-panel">
                     <div className="dash-panelTitleRow">
                       <div className="dash-panelTitle">Solicitar inversión</div>
-                      {invMsg ? <div className="dash-miniNote">{invMsg}</div> : <div className="dash-chip">Pendiente aprobación</div>}
+                      {invMsg ? (
+                        <div className="dash-miniNote">{invMsg}</div>
+                      ) : (
+                        <div className="dash-chip">Pendiente aprobación</div>
+                      )}
                     </div>
 
                     <div className="dash-formGrid" style={{ gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
@@ -1174,11 +1176,6 @@ export default function Dashboard() {
                         Refresh
                       </button>
                     </div>
-
-                    <div className="dash-divider" />
-                    <div className="dash-sideHint">
-                      Tus solicitudes quedan en <strong>pendiente</strong> hasta que Plinius las apruebe (admin: luis@plinius.mx).
-                    </div>
                   </div>
                 )}
 
@@ -1206,7 +1203,8 @@ export default function Dashboard() {
                             <div key={r.id} className="dash-listRow">
                               <div>
                                 <div className="dash-listMain">
-                                  <strong>{who}</strong> <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
+                                  <strong>{who}</strong>{" "}
+                                  <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
                                   <span className="dash-status pendiente">pendiente</span>
                                 </div>
                                 <div className="dash-listSub">
@@ -1241,22 +1239,23 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Mis solicitudes */}
+                {/* Requests */}
                 <div className="dash-panel">
                   <div className="dash-panelTitleRow">
-                    <div className="dash-panelTitle">{isAdmin ? "Mis solicitudes (Luis)" : "Mis solicitudes"}</div>
+                    <div className="dash-panelTitle">{isAdmin ? "Solicitudes (global)" : "Mis solicitudes"}</div>
                     <div className="dash-chip">{myInvRequests.length}</div>
                   </div>
 
                   {myInvRequests.length === 0 ? (
-                    <div className="dash-empty">Aún no tienes solicitudes.</div>
+                    <div className="dash-empty">Aún no hay solicitudes.</div>
                   ) : (
                     <div className="dash-list" style={{ marginTop: 10 }}>
                       {myInvRequests.map((r) => (
                         <div key={r.id} className="dash-listRow">
                           <div>
                             <div className="dash-listMain">
-                              <strong>Solicitud</strong> <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
+                              <strong>Solicitud</strong>{" "}
+                              <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
                               <span className={`dash-status ${r.status}`}>{r.status}</span>
                             </div>
                             <div className="dash-listSub">
@@ -1277,10 +1276,10 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* Ledger inversión */}
+                {/* Ledger */}
                 <div className="dash-panel">
                   <div className="dash-panelTitleRow">
-                    <div className="dash-panelTitle">Movimientos de inversión</div>
+                    <div className="dash-panelTitle">{isAdmin ? "Movimientos (global)" : "Movimientos de inversión"}</div>
                     <div className="dash-chip">{invLedger.length}</div>
                   </div>
 
