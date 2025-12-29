@@ -181,10 +181,11 @@ export default function Dashboard() {
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        setProfile(null);
-        return;
-      }
+      if (!error) {
+         setProfile(data);
+                setIsAdmin(!!data?.is_admin); // <-- importante
+        }
+
 
       setProfile(data || null);
       setEdit({
@@ -205,16 +206,25 @@ export default function Dashboard() {
   // =========================
   // Load solicitudes KPI
   // =========================
-  const loadMineSolicitudes = async () => {
-    if (!user?.id) return;
-    const { data } = await supabase
-      .from("solicitudes")
-      .select("id,status,created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(250);
-    setMineSolicitudes(data || []);
-  };
+  const loadSolicitudes = async () => {
+  if (!user?.id) return;
+
+  let q = supabase
+    .from("solicitudes")
+    .select("id,status,created_at,user_id")
+    .order("created_at", { ascending: false })
+    .limit(250);
+
+  // ✅ Solo filtra si NO eres admin
+  if (!isAdmin) q = q.eq("user_id", user.id);
+
+  const { data, error } = await q;
+
+  console.log("loadSolicitudes", { isAdmin, rows: data?.length, error });
+
+  setMineSolicitudes(data || []);
+};
+
 
   useEffect(() => {
     if (!user?.id) return;
