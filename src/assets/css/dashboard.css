@@ -493,7 +493,7 @@
   margin: 12px 0;
 }
 
-/* ✅ NUEVO: balance grande (lo usas en Tesorería) */
+/* ✅ balance grande */
 .dash-balance{
   font-size: 26px;
   font-weight: 950;
@@ -502,8 +502,7 @@
 }
 
 /* =====================================================
-   SOLICITUDES: LISTA -> TABLA CHINGONA
-   - sin tocar JSX: convierte cada row en “grid table”
+   SOLICITUDES / LISTA -> TABLA
    ===================================================== */
 
 .dash-list{
@@ -511,38 +510,19 @@
   gap:8px;
 }
 
-/* header fake (opcional si lo agregas algún día)
-.dash-tableHead { ... }
-*/
-
 .dash-listRow{
   min-height: var(--row-h);
   border-radius: var(--r-16);
   border: var(--b1);
   background: rgba(255,255,255,0.06);
-  padding: 0;               /* 👈 importante: ahora maneja padding por columnas */
+  padding: 0;
   overflow: hidden;
   position: relative;
 
-  /* tabla */
   display: grid;
   grid-template-columns: minmax(260px, 1.35fr) minmax(220px, 1fr) 160px;
   align-items: stretch;
   gap: 0;
-}
-
-/* líneas “tabla” */
-.dash-listRow::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:
-    linear-gradient(to right,
-      transparent 0%,
-      transparent calc(100% - 1px),
-      rgba(148,163,184,0.00) 100%);
-  opacity: 0;
 }
 
 .dash-listRow:hover{
@@ -550,16 +530,15 @@
   background: rgba(255,255,255,0.075);
 }
 
-/* Columna 1 (main) */
 .dash-listRow > div:first-child{
   padding: 10px 12px;
   display:flex;
   flex-direction:column;
   justify-content:center;
   min-width:0;
+  border-right: 1px solid rgba(148,163,184,0.16);
 }
 
-/* Columna 2 (sub/meta) -> lo tomamos desde .dash-listSub */
 .dash-listSub{
   margin-top:6px;
   font-size:12px;
@@ -570,7 +549,6 @@
   min-width:0;
 }
 
-/* Row main line */
 .dash-listMain{
   font-size:13px;
   font-weight:950;
@@ -582,7 +560,6 @@
   min-width:0;
 }
 
-/* Columna derecha (CTA) */
 .dash-listRight{
   padding: 10px 12px;
   display:flex;
@@ -593,14 +570,6 @@
   background: rgba(2,6,23,0.10);
 }
 
-/* columna “middle” visual: hacemos que .dash-listSub se perciba como columna 2
-   sin cambiar JSX: le damos look de “celdas”
-*/
-.dash-listRow > div:first-child{
-  border-right: 1px solid rgba(148,163,184,0.16);
-}
-
-/* Pills status (si las usas) */
 .dash-status{
   display:inline-flex;
   align-items:center;
@@ -615,44 +584,12 @@
 }
 .dash-status.pendiente{ border-color: rgba(251,191,36,0.45); }
 .dash-status.aplicado{ border-color: rgba(34,197,94,0.45); }
+.dash-status.aprobado{ border-color: rgba(34,197,94,0.45); }
 .dash-status.rechazado{ border-color: rgba(239,68,68,0.45); }
+.dash-status.cancelado{ border-color: rgba(148,163,184,0.45); }
 
 /* =====================================================
-   Detalle / Grid info
-   ===================================================== */
-
-.dash-profileGrid{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap:10px;
-}
-
-.dash-info{
-  border-radius: var(--r-16);
-  border: var(--b1);
-  background: rgba(255,255,255,0.06);
-  padding: 12px;
-}
-
-.dash-infoLabel{
-  font-size: 11px;
-  font-weight: 900;
-  color: rgba(148,163,184,0.92);
-}
-
-.dash-infoValue{
-  margin-top: 6px;
-  font-size: 13px;
-  font-weight: 950;
-  color: rgba(226,232,240,0.95);
-  font-variant-numeric: tabular-nums;
-  word-break: break-word;
-}
-
-/* =====================================================
-   Sticky RIGHT PANEL (no se mueva)
-   - usa en el contenedor del panel que quieres fijo:
-     className="dash-stickyRight"
+   Sticky RIGHT PANEL
    ===================================================== */
 
 .dash-stickyRight{
@@ -661,7 +598,6 @@
   align-self: start;
 }
 
-/* si el panel dentro tiene mucho contenido, le damos su propio scroll */
 .dash-stickyRight > .dash-panel{
   max-height: calc(100vh - (var(--stickyTop) * 2));
   overflow: auto;
@@ -742,8 +678,6 @@
   .dash-kpis{ grid-template-columns: 1fr 1fr; }
   .dash-formGrid{ grid-template-columns: 1fr 1fr; }
 
-  .dash-profileGrid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-
   .dash-listRow{
     grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 1fr) 150px;
   }
@@ -795,145 +729,30 @@
 @media (max-width: 560px){
   .dash-kpis{ grid-template-columns: 1fr; }
   .dash-formGrid{ grid-template-columns: 1fr; }
-  .dash-topSignout span{ display:none; } /* en mobile deja solo el icono */
-}
-
-
-/* =====================================================
-   Solicitudes – Tabla pro (usa dashboard.css)
-   ===================================================== */
-.sol-tableWrap{
-  width:100%;
-  overflow:auto;
-  border-radius: 16px;
-  border: 1px solid rgba(148,163,184,0.22);
-  background: rgba(2,6,23,0.18);
-}
-
-.sol-table{
-  min-width: 980px;
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-}
-
-.sol-tr{
-  display:grid;
-  grid-template-columns:
-    92px
-    1.4fr
-    1.1fr
-    110px
-    90px
-    90px
-    120px
-    180px
-    110px;
-  gap: 10px;
-  align-items:center;
-  border-radius: 14px;
-  border: 1px solid rgba(148,163,184,0.16);
-  background: rgba(255,255,255,0.06);
-  padding: 10px 12px;
-}
-
-.sol-th{
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: rgba(2,6,23,0.75);
-  border-color: rgba(148,163,184,0.24);
-  backdrop-filter: blur(10px);
-}
-
-.sol-th > div{
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: rgba(148,163,184,0.95);
-}
-
-.sol-id{
-  font-weight: 950;
-  letter-spacing: .02em;
-  color: rgba(226,232,240,0.95);
-}
-
-.sol-main{
-  font-weight: 950;
-  color: rgba(226,232,240,0.96);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sol-sub{
-  font-weight: 850;
-  color: rgba(148,163,184,0.92);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sol-num{
-  font-variant-numeric: tabular-nums;
-  font-weight: 900;
-  color: rgba(226,232,240,0.92);
-}
-
-.sol-date{
-  font-variant-numeric: tabular-nums;
-  color: rgba(148,163,184,0.92);
-  font-size: 12px;
-}
-
-.sol-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
+  .dash-topSignout span{ display:none; }
 }
 
 /* =====================================================
    FIX: layouts con scroll correcto
-   - el body NO scrollea en vistas dash
-   - el main sí
 ===================================================== */
 
 .dash{
-  height: 100vh;        /* 👈 clave */
-  overflow: hidden;     /* ya lo tenías, pero ahora sí cuenta */
+  height: 100vh;
+  overflow: hidden;
 }
 
-/* el contenedor grid ocupa pantalla completa y NO scrollea */
 .dash-shell{
-  height: 100vh;        /* 👈 clave */
-  overflow: hidden;     /* 👈 clave */
+  height: 100vh;
+  overflow: hidden;
 }
 
-/* el main es el que scrollea */
 .dash-main{
-  height: 100vh;        /* 👈 clave */
-  overflow: auto;       /* 👈 clave */
+  height: 100vh;
+  overflow: auto;
   overscroll-behavior: contain;
 }
 
-/* =====================================================
-   Layout: sidebar DERECHA (para Solicitudes)
-===================================================== */
-.dash-shellRight{
-  grid-template-columns: 1fr var(--dash-side-w);
-}
-
-.dash-sideRight{
-  border-right: none;
-  border-left: 1px solid rgba(148,163,184,0.70);
-  box-shadow: -16px 0 50px rgba(15,23,42,0.18);
-}
-
-/* =====================================================
-   Responsive: en mobile volvemos a flujo normal
-===================================================== */
+/* Responsive: en mobile volvemos a flujo normal */
 @media (max-width: 780px){
   .dash{
     height: auto;
@@ -949,20 +768,8 @@
   }
 }
 
-/* =====================================================
-   Sidebar compact (para que quepa TODO con inversiones)
-===================================================== */
-.dash-nav{
-  gap:8px;              /* antes 10 */
-}
-.dash-navItem{
-  padding:7px 10px;     /* antes 8px 10px */
-  border-radius:13px;
-}
-.dash-navSectionTitle{
-  padding:0 4px;        /* antes 0 6px */
-}
-.dash-sideFoot{
-  gap:8px;              /* antes 10 */
-  padding-top:8px;      /* antes 10 */
+/* ✅ Extra: Admin panel ligeramente destacado */
+.dash-adminPanel{
+  border-color: rgba(251,191,36,0.30);
+  box-shadow: 0 0 0 6px rgba(251,191,36,0.06);
 }
