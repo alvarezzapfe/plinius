@@ -7,6 +7,8 @@ import "../assets/css/dashboard.css";
 /* =======================
    Helpers
 ======================= */
+const ADMIN_EMAIL_FALLBACK = "luis@plinius.mx";
+
 const pesos = (x) =>
   new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -30,6 +32,12 @@ const cleanRFC = (s) =>
     .slice(0, 13);
 
 const cleanPhone = (s) => String(s ?? "").replace(/[^\d+]/g, "").slice(0, 18);
+
+const shortId = (s, n = 8) => {
+  const t = String(s || "").trim();
+  if (!t) return "—";
+  return t.length <= n ? t : `${t.slice(0, n)}…`;
+};
 
 function initialsFromProfile(p) {
   const a = (p?.nombres || "").trim();
@@ -55,10 +63,10 @@ export default function Dashboard() {
 
   const [profile, setProfile] = useState(null);
 
-  // ✅ ADMIN: por bandera en profiles o por email específico (fallback)
+  // ✅ ADMIN: bandera en profiles o email fallback
   const isAdmin = useMemo(() => {
     const email = String(profile?.email || user?.email || "").toLowerCase();
-    return !!profile?.is_admin || email === "luis@plinius.mx";
+    return !!profile?.is_admin || email === ADMIN_EMAIL_FALLBACK;
   }, [profile?.is_admin, profile?.email, user?.email]);
 
   // Tabs
@@ -74,6 +82,7 @@ export default function Dashboard() {
   // Tesorería
   const [balance, setBalance] = useState(0);
   const [ledger, setLedger] = useState([]);
+  const [treasuryOk, setTreasuryOk] = useState(true);
 
   // Perfil editable
   const [edit, setEdit] = useState({
@@ -108,6 +117,7 @@ export default function Dashboard() {
   const [invBalance, setInvBalance] = useState(0);
   const [invLedger, setInvLedger] = useState([]);
   const [myInvRequests, setMyInvRequests] = useState([]);
+  const [investOk, setInvestOk] = useState(true);
 
   // Form solicitud inversión
   const [invAmount, setInvAmount] = useState("");
@@ -239,15 +249,28 @@ export default function Dashboard() {
   const loadTreasury = useCallback(async () => {
     if (!user?.id) return;
 
+    setTreasuryOk(true);
+
+    // balance (view)
     const { data: balRows, error: balErr } = await supabase
       .from("v_treasury_balance")
       .select("balance")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (balErr) console.log("v_treasury_balance err", balErr);
+    if (balErr) {
+      console.log("v_treasury_balance err", balErr);
+      // si no existe en prod -> 404
+      if (balErr?.status === 404) {
+        setTreasuryOk(false);
+        setBalance(0);
+        setLedger([]);
+        return;
+      }
+    }
     setBalance(Number(balRows?.balance || 0));
 
+    // ledger
     const { data: ledRows, error: ledErr } = await supabase
       .from("treasury_ledger")
       .select("id,type,amount,status,reference,note,created_at,applied_at")
@@ -255,7 +278,14 @@ export default function Dashboard() {
       .order("created_at", { ascending: false })
       .limit(120);
 
-    if (ledErr) console.log("treasury_ledger err", ledErr);
+    if (ledErr) {
+      console.log("treasury_ledger err", ledErr);
+      if (ledErr?.status === 404) {
+        setTreasuryOk(false);
+        setLedger([]);
+        return;
+      }
+    }
     setLedger(ledRows || []);
   }, [user?.id]);
 
@@ -447,18 +477,30 @@ export default function Dashboard() {
 
   // =========================
   // INVERSIONES: load + create request + approve/reject
-  // Admin ve todo ledger y todas requests
   // =========================
   const loadInvestments = useCallback(async () => {
     if (!user?.id) return;
 
-    // saldo (personal)
+    setInvestOk(true);
+
+    // saldo (view)
     const { data: balRow, error: balErr } = await supabase
       .from("v_invest_balance")
       .select("balance")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (balErr) console.log("v_invest_balance err", balErr);
+
+    if (balErr) {
+      console.log("v_invest_balance err", balErr);
+      if (balErr?.status === 404) {
+        setInvestOk(false);
+        setInvBalance(0);
+        setInvLedger([]);
+        setMyInvRequests([]);
+        setPendingInvRequests([]);
+        return;
+      }
+    }
     setInvBalance(Number(balRow?.balance || 0));
 
     // ledger
@@ -472,6 +514,14 @@ export default function Dashboard() {
 
     const { data: ledRows, error: ledErr } = await ledQ;
     console.log("loadInvestments ledger", { isAdmin, rows: ledRows?.length, ledErr });
+
+    if (ledErr) {
+      if (ledErr?.status === 404) {
+        setInvestOk(false);
+        setInvLedger([]);
+        return;
+      }
+    }
     setInvLedger(ledRows || []);
 
     // requests (mías para user normal, todas para admin)
@@ -485,19 +535,26 @@ export default function Dashboard() {
 
     const { data: reqRows, error: reqErr } = await reqQ;
     console.log("loadInvestments requests", { isAdmin, rows: reqRows?.length, reqErr });
+
+    if (reqErr) {
+      if (reqErr?.status === 404) {
+        setInvestOk(false);
+        setMyInvRequests([]);
+        return;
+      }
+    }
     setMyInvRequests(reqRows || []);
 
-    // admin: pendientes globales (con join)
+    // admin: pendientes globales (SIN join para evitar 400)
     if (isAdmin) {
       const { data: pendRows, error: pendErr } = await supabase
-  .from("investment_requests")
-  .select("id,user_id,amount,status,reference,note,created_at")
-  .eq("status", "pendiente")
-  .order("created_at", { ascending: true })
-  .limit(200);
+        .from("investment_requests")
+        .select("id,user_id,amount,status,reference,note,created_at")
+        .eq("status", "pendiente")
+        .order("created_at", { ascending: true })
+        .limit(200);
 
-if (pendErr) console.log("pending requests err", pendErr);
-
+      if (pendErr) console.log("pending requests err", pendErr);
       setPendingInvRequests(pendRows || []);
     } else {
       setPendingInvRequests([]);
@@ -525,10 +582,10 @@ if (pendErr) console.log("pending requests err", pendErr);
       const ref = cleanText(invRef, 80) || null;
       const note = cleanText(invNote, 160) || "Solicitud de inversión";
 
+      // 👇 OJO: NO mandamos currency para evitar 400 si no existe la columna
       const { error } = await supabase.from("investment_requests").insert({
         user_id: user.id,
         amount: amt,
-        currency: "MXN",
         reference: ref,
         note,
         status: "pendiente",
@@ -550,42 +607,41 @@ if (pendErr) console.log("pending requests err", pendErr);
   };
 
   const approveInvestment = async (requestId) => {
-  if (!isAdmin || busyApprove) return;
-  setBusyApprove(true);
-  setAdminInvMsg("");
+    if (!isAdmin || busyApprove) return;
+    setBusyApprove(true);
+    setAdminInvMsg("");
 
-  try {
-    // ✅ DEBUG: confirma sesión y UID
-    const { data: s } = await supabase.auth.getSession();
-    console.log("SESSION", {
-      hasSession: !!s?.session,
-      uid: s?.session?.user?.id,
-      email: s?.session?.user?.email,
-      isAdmin,
-      requestId,
-    });
+    try {
+      // ✅ DEBUG: confirma sesión y UID
+      const { data: s } = await supabase.auth.getSession();
+      console.log("SESSION", {
+        hasSession: !!s?.session,
+        uid: s?.session?.user?.id,
+        email: s?.session?.user?.email,
+        isAdmin,
+        requestId,
+      });
 
-    const { error } = await supabase.rpc("approve_investment_request", {
-      p_request_id: requestId,
-    });
-    if (error) throw error;
+      const { error } = await supabase.rpc("approve_investment_request", {
+        p_request_id: requestId,
+      });
+      if (error) throw error;
 
-    setAdminInvMsg("✅ Aprobado y aplicado a ledger.");
-    await loadInvestments();
-  } catch (e) {
-    console.log("approveInvestment ERROR", e);
-    setAdminInvMsg(
-      `Error: ${e?.message || "No se pudo aprobar"}`
-      + (e?.details ? ` | details: ${e.details}` : "")
-      + (e?.hint ? ` | hint: ${e.hint}` : "")
-      + (e?.code ? ` | code: ${e.code}` : "")
-    );
-  } finally {
-    setBusyApprove(false);
-    setTimeout(() => setAdminInvMsg(""), 4500);
-  }
-};
-
+      setAdminInvMsg("✅ Aprobado y aplicado a ledger.");
+      await loadInvestments();
+    } catch (e) {
+      console.log("approveInvestment ERROR", e);
+      setAdminInvMsg(
+        `Error: ${e?.message || "No se pudo aprobar"}` +
+          (e?.details ? ` | details: ${e.details}` : "") +
+          (e?.hint ? ` | hint: ${e.hint}` : "") +
+          (e?.code ? ` | code: ${e.code}` : "")
+      );
+    } finally {
+      setBusyApprove(false);
+      setTimeout(() => setAdminInvMsg(""), 4500);
+    }
+  };
 
   const rejectInvestment = async (requestId) => {
     if (!isAdmin || busyApprove) return;
@@ -841,13 +897,13 @@ if (pendErr) console.log("pending requests err", pendErr);
                   <div className="dash-kpiCard">
                     <div className="dash-kpiLabel">Saldo tesorería</div>
                     <div className="dash-kpiValue">{pesos(balance)}</div>
-                    <div className="dash-kpiSub">Aplicado</div>
+                    <div className="dash-kpiSub">{treasuryOk ? "Aplicado" : "No disponible"}</div>
                   </div>
 
                   <div className="dash-kpiCard">
                     <div className="dash-kpiLabel">Saldo inversión</div>
                     <div className="dash-kpiValue">{pesos(invBalance)}</div>
-                    <div className="dash-kpiSub">Mi saldo</div>
+                    <div className="dash-kpiSub">{investOk ? "Mi saldo" : "No disponible"}</div>
                   </div>
                 </div>
 
@@ -1042,300 +1098,333 @@ if (pendErr) console.log("pending requests err", pendErr);
             {/* TESORERIA */}
             {tab === "tesoreria" && (
               <>
-                <div className="dash-panel">
-                  <div className="dash-panelTitleRow">
-                    <div className="dash-panelTitle">Saldo</div>
-                    <div className="dash-chip">Conciliado</div>
-                  </div>
-                  <div className="dash-balance">{pesos(balance)}</div>
-                  <div className="dash-sideHint">
-                    El saldo muestra movimientos <strong>aplicados</strong>. Depósitos quedan <strong>pendientes</strong>{" "}
-                    hasta conciliación.
-                  </div>
-                </div>
-
-                <div className="dash-panel">
-                  <div className="dash-panelTitleRow">
-                    <div className="dash-panelTitle">Registrar depósito</div>
-                    {depMsg ? <div className="dash-miniNote">{depMsg}</div> : null}
-                  </div>
-
-                  <div className="dash-formGrid" style={{ gridTemplateColumns: "repeat(2, minmax(0,1fr))" }}>
-                    <Field label="Monto (MXN)">
-                      <input
-                        inputMode="numeric"
-                        value={depAmount}
-                        onChange={(e) => setDepAmount(e.target.value)}
-                        placeholder="Ej. 50000"
-                      />
-                    </Field>
-                    <Field label="Referencia SPEI (opcional)">
-                      <input value={depRef} onChange={(e) => setDepRef(e.target.value)} placeholder="Ej. 1234567890" />
-                    </Field>
-                  </div>
-
-                  <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button className="dash-btn dash-btnPrimary" onClick={createDepositIntent} disabled={busyDep}>
-                      {busyDep ? "Registrando…" : "Registrar depósito"}
-                    </button>
-                    <button className="dash-btn dash-btnSoft" onClick={loadTreasury} disabled={busyDep}>
-                      Refresh
-                    </button>
-                  </div>
-                </div>
-
-                <div className="dash-panel">
-                  <div className="dash-panelTitleRow">
-                    <div className="dash-panelTitle">Movimientos</div>
-                    <div className="dash-chip">{ledger.length}</div>
-                  </div>
-
-                  {ledger.length === 0 ? (
-                    <div className="dash-empty" style={{ marginTop: 10 }}>
-                      Sin movimientos aún.
+                {!treasuryOk ? (
+                  <div className="dash-panel">
+                    <div className="dash-panelTitleRow">
+                      <div className="dash-panelTitle">Tesorería</div>
+                      <div className="dash-chip">No disponible</div>
                     </div>
-                  ) : (
-                    <div className="dash-list" style={{ marginTop: 10 }}>
-                      {ledger.map((r) => (
-                        <div key={r.id} className="dash-listRow">
-                          <div>
-                            <div className="dash-listMain">
-                              <strong>{r.type === "deposit_intent" ? "Depósito" : "Ajuste"}</strong>{" "}
-                              <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
-                              <span className={`dash-status ${r.status}`}>{r.status}</span>
-                            </div>
-                            <div className="dash-listSub">
-                              {fmtDT(r.created_at)}
-                              {r.reference ? ` · Ref: ${r.reference}` : ""}
-                              {r.applied_at ? ` · Aplicado: ${fmtDT(r.applied_at)}` : ""}
-                            </div>
-                          </div>
+                    <div className="dash-sideHint">
+                      No encuentro <strong>v_treasury_balance</strong> / <strong>treasury_ledger</strong> en este entorno (404).
+                      Si ya existen en tu SQL local, te falta crearlas en <strong>producción</strong> o exponerlas en el esquema.
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="dash-panel">
+                      <div className="dash-panelTitleRow">
+                        <div className="dash-panelTitle">Saldo</div>
+                        <div className="dash-chip">Conciliado</div>
+                      </div>
+                      <div className="dash-balance">{pesos(balance)}</div>
+                      <div className="dash-sideHint">
+                        El saldo muestra movimientos <strong>aplicados</strong>. Depósitos quedan <strong>pendientes</strong>{" "}
+                        hasta conciliación.
+                      </div>
+                    </div>
 
-                          <div className="dash-listRight">
-                            <button className="dash-btn dash-btnSoft" onClick={() => {}}>
-                              Ver
-                            </button>
-                          </div>
+                    <div className="dash-panel">
+                      <div className="dash-panelTitleRow">
+                        <div className="dash-panelTitle">Registrar depósito</div>
+                        {depMsg ? <div className="dash-miniNote">{depMsg}</div> : null}
+                      </div>
+
+                      <div className="dash-formGrid" style={{ gridTemplateColumns: "repeat(2, minmax(0,1fr))" }}>
+                        <Field label="Monto (MXN)">
+                          <input
+                            inputMode="numeric"
+                            value={depAmount}
+                            onChange={(e) => setDepAmount(e.target.value)}
+                            placeholder="Ej. 50000"
+                          />
+                        </Field>
+                        <Field label="Referencia SPEI (opcional)">
+                          <input
+                            value={depRef}
+                            onChange={(e) => setDepRef(e.target.value)}
+                            placeholder="Ej. 1234567890"
+                          />
+                        </Field>
+                      </div>
+
+                      <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button className="dash-btn dash-btnPrimary" onClick={createDepositIntent} disabled={busyDep}>
+                          {busyDep ? "Registrando…" : "Registrar depósito"}
+                        </button>
+                        <button className="dash-btn dash-btnSoft" onClick={loadTreasury} disabled={busyDep}>
+                          Refresh
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="dash-panel">
+                      <div className="dash-panelTitleRow">
+                        <div className="dash-panelTitle">Movimientos</div>
+                        <div className="dash-chip">{ledger.length}</div>
+                      </div>
+
+                      {ledger.length === 0 ? (
+                        <div className="dash-empty" style={{ marginTop: 10 }}>
+                          Sin movimientos aún.
                         </div>
-                      ))}
+                      ) : (
+                        <div className="dash-list" style={{ marginTop: 10 }}>
+                          {ledger.map((r) => (
+                            <div key={r.id} className="dash-listRow">
+                              <div>
+                                <div className="dash-listMain">
+                                  <strong>{r.type === "deposit_intent" ? "Depósito" : "Ajuste"}</strong>{" "}
+                                  <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
+                                  <span className={`dash-status ${r.status}`}>{r.status}</span>
+                                </div>
+                                <div className="dash-listSub">
+                                  {fmtDT(r.created_at)}
+                                  {r.reference ? ` · Ref: ${r.reference}` : ""}
+                                  {r.applied_at ? ` · Aplicado: ${fmtDT(r.applied_at)}` : ""}
+                                </div>
+                              </div>
+
+                              <div className="dash-listRight">
+                                <button className="dash-btn dash-btnSoft" onClick={() => {}}>
+                                  Ver
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </>
             )}
 
             {/* INVERSIONES */}
             {tab === "inversiones" && (
               <>
-                <div className="dash-kpis">
-                  <div className="dash-kpiCard">
-                    <div className="dash-kpiLabel">Saldo inversión</div>
-                    <div className="dash-kpiValue">{pesos(invBalance)}</div>
-                    <div className="dash-kpiSub">Mi saldo</div>
-                  </div>
-
-                  <div className="dash-kpiCard">
-                    <div className="dash-kpiLabel">Invertido</div>
-                    <div className="dash-kpiValue">{pesos(invSummary.invested)}</div>
-                    <div className="dash-kpiSub">Neto</div>
-                  </div>
-
-                  <div className="dash-kpiCard">
-                    <div className="dash-kpiLabel">Rendimiento</div>
-                    <div className="dash-kpiValue">{pesos(invSummary.pnl)}</div>
-                    <div className="dash-kpiSub">Yield + ajustes</div>
-                  </div>
-
-                  <div className="dash-kpiCard">
-                    <div className="dash-kpiLabel">Yield %</div>
-                    <div className="dash-kpiValue">{invSummary.yieldPct.toFixed(2)}%</div>
-                    <div className="dash-kpiSub">Estimado</div>
-                  </div>
-                </div>
-
-                {/* Usuario: Solicitar inversión */}
-                {!isAdmin && (
+                {!investOk ? (
                   <div className="dash-panel">
                     <div className="dash-panelTitleRow">
-                      <div className="dash-panelTitle">Solicitar inversión</div>
-                      {invMsg ? (
-                        <div className="dash-miniNote">{invMsg}</div>
-                      ) : (
-                        <div className="dash-chip">Pendiente aprobación</div>
-                      )}
+                      <div className="dash-panelTitle">Inversiones</div>
+                      <div className="dash-chip">No disponible</div>
                     </div>
-
-                    <div className="dash-formGrid" style={{ gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
-                      <Field label="Monto (MXN)">
-                        <input
-                          inputMode="numeric"
-                          value={invAmount}
-                          onChange={(e) => setInvAmount(e.target.value)}
-                          placeholder="Ej. 250000"
-                        />
-                      </Field>
-
-                      <Field label="Referencia SPEI / folio (opcional)">
-                        <input value={invRef} onChange={(e) => setInvRef(e.target.value)} placeholder="Ej. 1234567890" />
-                      </Field>
-
-                      <Field label="Nota (opcional)">
-                        <input value={invNote} onChange={(e) => setInvNote(e.target.value)} placeholder="Ej. Aporte diciembre" />
-                      </Field>
-                    </div>
-
-                    <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <button className="dash-btn dash-btnPrimary" onClick={createInvestmentRequest} disabled={busyInv}>
-                        {busyInv ? "Enviando…" : "Enviar solicitud"}
-                      </button>
-                      <button className="dash-btn dash-btnSoft" onClick={loadInvestments} disabled={busyInv}>
-                        Refresh
-                      </button>
+                    <div className="dash-sideHint">
+                      No encuentro <strong>v_invest_balance</strong> / <strong>investment_ledger</strong> /{" "}
+                      <strong>investment_requests</strong> en este entorno (404/errores). Revisa que existan en producción.
                     </div>
                   </div>
-                )}
+                ) : (
+                  <>
+                    <div className="dash-kpis">
+                      <div className="dash-kpiCard">
+                        <div className="dash-kpiLabel">Saldo inversión</div>
+                        <div className="dash-kpiValue">{pesos(invBalance)}</div>
+                        <div className="dash-kpiSub">Mi saldo</div>
+                      </div>
 
-                {/* Admin: Aprobar inversiones */}
-                {isAdmin && (
-                  <div className="dash-panel dash-adminPanel">
-                    <div className="dash-panelTitleRow">
-                      <div className="dash-panelTitle">Aprobación de inversiones</div>
-                      {adminInvMsg ? <div className="dash-miniNote">{adminInvMsg}</div> : <div className="dash-chip">Pendientes</div>}
+                      <div className="dash-kpiCard">
+                        <div className="dash-kpiLabel">Invertido</div>
+                        <div className="dash-kpiValue">{pesos(invSummary.invested)}</div>
+                        <div className="dash-kpiSub">Neto</div>
+                      </div>
+
+                      <div className="dash-kpiCard">
+                        <div className="dash-kpiLabel">Rendimiento</div>
+                        <div className="dash-kpiValue">{pesos(invSummary.pnl)}</div>
+                        <div className="dash-kpiSub">Yield + ajustes</div>
+                      </div>
+
+                      <div className="dash-kpiCard">
+                        <div className="dash-kpiLabel">Yield %</div>
+                        <div className="dash-kpiValue">{invSummary.yieldPct.toFixed(2)}%</div>
+                        <div className="dash-kpiSub">Estimado</div>
+                      </div>
                     </div>
 
-                    {pendingInvRequests.length === 0 ? (
-                      <div className="dash-empty">No hay solicitudes pendientes.</div>
-                    ) : (
-                      <div className="dash-list" style={{ marginTop: 10 }}>
-                        {pendingInvRequests.map((r) => {
-                          const p = r.profiles || {};
-                          const who =
-                            (p?.empresa || "").trim() ||
-                            `${(p?.nombres || "").trim()} ${(p?.apellido_paterno || "").trim()}`.trim() ||
-                            (p?.email || "").trim() ||
-                            r.user_id;
+                    {/* Usuario: Solicitar inversión */}
+                    {!isAdmin && (
+                      <div className="dash-panel">
+                        <div className="dash-panelTitleRow">
+                          <div className="dash-panelTitle">Solicitar inversión</div>
+                          {invMsg ? <div className="dash-miniNote">{invMsg}</div> : <div className="dash-chip">Pendiente aprobación</div>}
+                        </div>
 
-                          return (
+                        <div className="dash-formGrid" style={{ gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
+                          <Field label="Monto (MXN)">
+                            <input
+                              inputMode="numeric"
+                              value={invAmount}
+                              onChange={(e) => setInvAmount(e.target.value)}
+                              placeholder="Ej. 250000"
+                            />
+                          </Field>
+
+                          <Field label="Referencia SPEI / folio (opcional)">
+                            <input
+                              value={invRef}
+                              onChange={(e) => setInvRef(e.target.value)}
+                              placeholder="Ej. 1234567890"
+                            />
+                          </Field>
+
+                          <Field label="Nota (opcional)">
+                            <input
+                              value={invNote}
+                              onChange={(e) => setInvNote(e.target.value)}
+                              placeholder="Ej. Aporte diciembre"
+                            />
+                          </Field>
+                        </div>
+
+                        <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <button className="dash-btn dash-btnPrimary" onClick={createInvestmentRequest} disabled={busyInv}>
+                            {busyInv ? "Enviando…" : "Enviar solicitud"}
+                          </button>
+                          <button className="dash-btn dash-btnSoft" onClick={loadInvestments} disabled={busyInv}>
+                            Refresh
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin: Aprobar inversiones */}
+                    {isAdmin && (
+                      <div className="dash-panel dash-adminPanel">
+                        <div className="dash-panelTitleRow">
+                          <div className="dash-panelTitle">Aprobación de inversiones</div>
+                          {adminInvMsg ? <div className="dash-miniNote">{adminInvMsg}</div> : <div className="dash-chip">Pendientes</div>}
+                        </div>
+
+                        {pendingInvRequests.length === 0 ? (
+                          <div className="dash-empty">No hay solicitudes pendientes.</div>
+                        ) : (
+                          <div className="dash-list" style={{ marginTop: 10 }}>
+                            {pendingInvRequests.map((r) => {
+                              const who = r.user_id; // ✅ sin profiles para evitar 400
+
+                              return (
+                                <div key={r.id} className="dash-listRow">
+                                  <div>
+                                    <div className="dash-listMain">
+                                      <strong>{shortId(who, 12)}</strong>{" "}
+                                      <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
+                                      <span className="dash-status pendiente">pendiente</span>
+                                    </div>
+                                    <div className="dash-listSub">
+                                      {fmtDT(r.created_at)}
+                                      {r.reference ? ` · Ref: ${r.reference}` : ""}
+                                      {r.note ? ` · ${r.note}` : ""}
+                                    </div>
+                                  </div>
+
+                                  <div className="dash-listRight" style={{ gap: 8 }}>
+                                    <button
+                                      className="dash-btn dash-btnPrimary"
+                                      onClick={() => approveInvestment(r.id)}
+                                      disabled={busyApprove}
+                                      title="Aprueba y aplica al ledger"
+                                    >
+                                      Aprobar
+                                    </button>
+                                    <button
+                                      className="dash-btn dash-btnGhost"
+                                      onClick={() => rejectInvestment(r.id)}
+                                      disabled={busyApprove}
+                                    >
+                                      Rechazar
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Requests */}
+                    <div className="dash-panel">
+                      <div className="dash-panelTitleRow">
+                        <div className="dash-panelTitle">{isAdmin ? "Solicitudes (global)" : "Mis solicitudes"}</div>
+                        <div className="dash-chip">{myInvRequests.length}</div>
+                      </div>
+
+                      {myInvRequests.length === 0 ? (
+                        <div className="dash-empty">Aún no hay solicitudes.</div>
+                      ) : (
+                        <div className="dash-list" style={{ marginTop: 10 }}>
+                          {myInvRequests.map((r) => (
                             <div key={r.id} className="dash-listRow">
                               <div>
                                 <div className="dash-listMain">
-                                  <strong>{who}</strong>{" "}
+                                  <strong>Solicitud</strong>{" "}
                                   <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
-                                  <span className="dash-status pendiente">pendiente</span>
+                                  <span className={`dash-status ${r.status}`}>{r.status}</span>
                                 </div>
                                 <div className="dash-listSub">
                                   {fmtDT(r.created_at)}
                                   {r.reference ? ` · Ref: ${r.reference}` : ""}
-                                  {r.note ? ` · ${r.note}` : ""}
+                                  {r.decided_at ? ` · Decidido: ${fmtDT(r.decided_at)}` : ""}
                                 </div>
                               </div>
 
-                              <div className="dash-listRight" style={{ gap: 8 }}>
-                                <button
-                                  className="dash-btn dash-btnPrimary"
-                                  onClick={() => approveInvestment(r.id)}
-                                  disabled={busyApprove}
-                                  title="Aprueba y aplica al ledger"
-                                >
-                                  Aprobar
-                                </button>
-                                <button
-                                  className="dash-btn dash-btnGhost"
-                                  onClick={() => rejectInvestment(r.id)}
-                                  disabled={busyApprove}
-                                >
-                                  Rechazar
+                              <div className="dash-listRight">
+                                <button className="dash-btn dash-btnSoft" onClick={() => {}}>
+                                  Ver
                                 </button>
                               </div>
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ledger */}
+                    <div className="dash-panel">
+                      <div className="dash-panelTitleRow">
+                        <div className="dash-panelTitle">{isAdmin ? "Movimientos (global)" : "Movimientos de inversión"}</div>
+                        <div className="dash-chip">{invLedger.length}</div>
                       </div>
-                    )}
-                  </div>
+
+                      {invLedger.length === 0 ? (
+                        <div className="dash-empty">Sin movimientos aún.</div>
+                      ) : (
+                        <div className="dash-list" style={{ marginTop: 10 }}>
+                          {invLedger.map((r) => (
+                            <div key={r.id} className="dash-listRow">
+                              <div>
+                                <div className="dash-listMain">
+                                  <strong>
+                                    {r.type === "invest"
+                                      ? "Inversión"
+                                      : r.type === "redeem"
+                                      ? "Retiro"
+                                      : r.type === "yield"
+                                      ? "Rendimiento"
+                                      : "Ajuste"}
+                                  </strong>{" "}
+                                  <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
+                                  <span className={`dash-status ${r.status}`}>{r.status}</span>
+                                </div>
+                                <div className="dash-listSub">
+                                  {fmtDT(r.created_at)}
+                                  {r.reference ? ` · Ref: ${r.reference}` : ""}
+                                  {r.applied_at ? ` · Aplicado: ${fmtDT(r.applied_at)}` : ""}
+                                </div>
+                              </div>
+
+                              <div className="dash-listRight">
+                                <button className="dash-btn dash-btnSoft" onClick={() => {}}>
+                                  Ver
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
-
-                {/* Requests */}
-                <div className="dash-panel">
-                  <div className="dash-panelTitleRow">
-                    <div className="dash-panelTitle">{isAdmin ? "Solicitudes (global)" : "Mis solicitudes"}</div>
-                    <div className="dash-chip">{myInvRequests.length}</div>
-                  </div>
-
-                  {myInvRequests.length === 0 ? (
-                    <div className="dash-empty">Aún no hay solicitudes.</div>
-                  ) : (
-                    <div className="dash-list" style={{ marginTop: 10 }}>
-                      {myInvRequests.map((r) => (
-                        <div key={r.id} className="dash-listRow">
-                          <div>
-                            <div className="dash-listMain">
-                              <strong>Solicitud</strong>{" "}
-                              <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
-                              <span className={`dash-status ${r.status}`}>{r.status}</span>
-                            </div>
-                            <div className="dash-listSub">
-                              {fmtDT(r.created_at)}
-                              {r.reference ? ` · Ref: ${r.reference}` : ""}
-                              {r.decided_at ? ` · Decidido: ${fmtDT(r.decided_at)}` : ""}
-                            </div>
-                          </div>
-
-                          <div className="dash-listRight">
-                            <button className="dash-btn dash-btnSoft" onClick={() => {}}>
-                              Ver
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Ledger */}
-                <div className="dash-panel">
-                  <div className="dash-panelTitleRow">
-                    <div className="dash-panelTitle">{isAdmin ? "Movimientos (global)" : "Movimientos de inversión"}</div>
-                    <div className="dash-chip">{invLedger.length}</div>
-                  </div>
-
-                  {invLedger.length === 0 ? (
-                    <div className="dash-empty">Sin movimientos aún.</div>
-                  ) : (
-                    <div className="dash-list" style={{ marginTop: 10 }}>
-                      {invLedger.map((r) => (
-                        <div key={r.id} className="dash-listRow">
-                          <div>
-                            <div className="dash-listMain">
-                              <strong>
-                                {r.type === "invest"
-                                  ? "Inversión"
-                                  : r.type === "redeem"
-                                  ? "Retiro"
-                                  : r.type === "yield"
-                                  ? "Rendimiento"
-                                  : "Ajuste"}
-                              </strong>{" "}
-                              <span style={{ opacity: 0.9 }}>· {pesos(Number(r.amount || 0))}</span>
-                              <span className={`dash-status ${r.status}`}>{r.status}</span>
-                            </div>
-                            <div className="dash-listSub">
-                              {fmtDT(r.created_at)}
-                              {r.reference ? ` · Ref: ${r.reference}` : ""}
-                              {r.applied_at ? ` · Aplicado: ${fmtDT(r.applied_at)}` : ""}
-                            </div>
-                          </div>
-
-                          <div className="dash-listRight">
-                            <button className="dash-btn dash-btnSoft" onClick={() => {}}>
-                              Ver
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </>
             )}
           </div>
