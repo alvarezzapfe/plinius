@@ -21,6 +21,12 @@ function safeNum(x, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function parseMontoMXN(raw) {
+  const cleaned = String(raw ?? "").replace(/[^\d]/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function pillForEstado(estado = "") {
   const s = String(estado || "").toLowerCase();
   if (s.includes("fonde")) return { label: "Fondeando", cls: "cd-pill cd-pillLive" };
@@ -56,9 +62,13 @@ export default function CreditoDetalle() {
   const [err, setErr] = useState("");
   const [row, setRow] = useState(null);
 
-  // UI state (demo)
+  // UI state
   const [tab, setTab] = useState("resumen"); // resumen | riesgo | docs | pagos
   const [montoInvertir, setMontoInvertir] = useState("");
+
+  // Invest flow
+  const [invBusy, setInvBusy] = useState(false);
+  const [invMsg, setInvMsg] = useState("");
 
   const idStr = String(id ?? "").trim();
   const idNum = /^\d+$/.test(idStr) ? Number(idStr) : null;
@@ -155,20 +165,69 @@ export default function CreditoDetalle() {
     // sugerencias para input, nice UX
     const t = view.target || 0;
     if (!t) return [100000, 250000, 500000];
-    return [
-      Math.min(100000, t),
-      Math.min(250000, t),
-      Math.min(500000, t),
-    ].filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
+    return [Math.min(100000, t), Math.min(250000, t), Math.min(500000, t)].filter(
+      (n, i, arr) => n > 0 && arr.indexOf(n) === i
+    );
   }, [view.target]);
 
-  const goInvest = () => {
-    // manda al hub de inversionistas con query para prefill después
-    const m = safeNum(String(montoInvertir).replace(/[^\d]/g, ""), 0);
-    const qs = new URLSearchParams();
-    qs.set("credito", idStr);
-    if (m > 0) qs.set("monto", String(m));
-    nav(`/inversionistas?${qs.toString()}`);
+  const submitInvestment = async () => {
+    if (invBusy) return;
+    setInvMsg("");
+
+    if (!canInvest) {
+      setInvMsg("Este ticket no está fondeando en este momento.");
+      return;
+    }
+
+    const m = parseMontoMXN(montoInvertir);
+    if (!m || m <= 0) {
+      setInvMsg("Pon un monto válido para invertir.");
+      return;
+    }
+
+    // opcional: no permitir invertir más que lo que falta
+    if (view.remaining > 0 && m > view.remaining) {
+      setInvMsg(`El monto excede lo que falta por fondear (${pesos(view.remaining)}).`);
+      return;
+    }
+
+    setInvBusy(true);
+
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const user = sess?.session?.user;
+
+      // Si no hay sesión -> login (con next)
+      if (!user) {
+        const qs = new URLSearchParams();
+        qs.set("registro", "0");
+        qs.set("next", `/credito/${encodeURIComponent(idStr)}?monto=${m}`);
+        nav(`/ingresar?${qs.toString()}`);
+        return;
+      }
+
+      const payload = {
+        user_id: user.id,
+        credit_id: idStr, // 👈 requiere columna credit_id en investment_requests
+        amount: m,
+        currency: "MXN",
+        status: "pendiente",
+        reference: `credito:${idStr}`,
+        note: `Solicitud de inversión en crédito ${idStr}`,
+      };
+
+      const { error } = await supabase.from("investment_requests").insert(payload);
+      if (error) throw error;
+
+      setInvMsg("✅ Solicitud enviada. Queda pendiente de aprobación.");
+      // UX: opcional mandar al dashboard
+      nav("/dashboard");
+    } catch (e) {
+      setInvMsg(e?.message || "No se pudo enviar la solicitud.");
+    } finally {
+      setInvBusy(false);
+      setTimeout(() => setInvMsg(""), 6000);
+    }
   };
 
   if (loading) {
@@ -177,7 +236,9 @@ export default function CreditoDetalle() {
         <div className="cd-bg" aria-hidden />
         <div className="cd-shell">
           <div className="cd-topbar">
-            <Link to="/" className="cd-back">← Inicio</Link>
+            <Link to="/" className="cd-back">
+              ← Inicio
+            </Link>
             <div className="cd-topRight">
               <span className="cd-topHint">Cargando ticket…</span>
             </div>
@@ -198,7 +259,9 @@ export default function CreditoDetalle() {
         <div className="cd-bg" aria-hidden />
         <div className="cd-shell">
           <div className="cd-topbar">
-            <Link to="/" className="cd-back">← Inicio</Link>
+            <Link to="/" className="cd-back">
+              ← Inicio
+            </Link>
           </div>
 
           <div className="cd-error">
@@ -206,8 +269,12 @@ export default function CreditoDetalle() {
             <div className="cd-errorMsg">{err}</div>
 
             <div className="cd-errorActions">
-              <button className="btn btn-outline" onClick={() => nav(-1)}>Regresar</button>
-              <Link className="btn btn-neon" to="/inversionistas">Ir a inversionistas</Link>
+              <button className="btn btn-outline" onClick={() => nav(-1)}>
+                Regresar
+              </button>
+              <Link className="btn btn-neon" to="/inversionistas">
+                Ir a inversionistas
+              </Link>
             </div>
 
             <div className="cd-errorHint">
@@ -227,11 +294,17 @@ export default function CreditoDetalle() {
       <div className="cd-shell">
         {/* Top */}
         <div className="cd-topbar">
-          <Link to="/" className="cd-back">← Inicio</Link>
+          <Link to="/" className="cd-back">
+            ← Inicio
+          </Link>
 
           <div className="cd-topRight">
-            <Link to="/inversionistas" className="cd-topLink">Inversionistas</Link>
-            <Link to="/dashboard" className="cd-topLink">Dashboard</Link>
+            <Link to="/inversionistas" className="cd-topLink">
+              Inversionistas
+            </Link>
+            <Link to="/dashboard" className="cd-topLink">
+              Dashboard
+            </Link>
           </div>
         </div>
 
@@ -258,16 +331,22 @@ export default function CreditoDetalle() {
             <div className="cd-headActions">
               <button
                 className="btn btn-neon"
-                onClick={goInvest}
-                disabled={!canInvest}
-                title={!canInvest ? "Este ticket no está fondeando" : "Continuar a invertir"}
+                onClick={submitInvestment}
+                disabled={!canInvest || invBusy}
+                title={!canInvest ? "Este ticket no está fondeando" : "Enviar solicitud de inversión"}
               >
-                Invertir
+                {invBusy ? "Enviando…" : "Invertir"}
               </button>
 
               <Link className="btn btn-outline" to="/inversionistas">
                 Ver más tickets
               </Link>
+
+              {invMsg ? (
+                <div className="cd-miniDisclaimer" style={{ marginTop: 10 }}>
+                  {invMsg}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -305,10 +384,18 @@ export default function CreditoDetalle() {
           {/* Left: tabs content */}
           <section className="cd-card">
             <div className="cd-tabs">
-              <TabButton active={tab === "resumen"} onClick={() => setTab("resumen")}>Resumen</TabButton>
-              <TabButton active={tab === "riesgo"} onClick={() => setTab("riesgo")}>Riesgo</TabButton>
-              <TabButton active={tab === "docs"} onClick={() => setTab("docs")}>Documentos</TabButton>
-              <TabButton active={tab === "pagos"} onClick={() => setTab("pagos")}>Pagos</TabButton>
+              <TabButton active={tab === "resumen"} onClick={() => setTab("resumen")}>
+                Resumen
+              </TabButton>
+              <TabButton active={tab === "riesgo"} onClick={() => setTab("riesgo")}>
+                Riesgo
+              </TabButton>
+              <TabButton active={tab === "docs"} onClick={() => setTab("docs")}>
+                Documentos
+              </TabButton>
+              <TabButton active={tab === "pagos"} onClick={() => setTab("pagos")}>
+                Pagos
+              </TabButton>
             </div>
 
             {tab === "resumen" && (
@@ -325,15 +412,15 @@ export default function CreditoDetalle() {
 
                 <h3 className="cd-h3">Narrativa del ticket</h3>
                 <p className="cd-p">
-                  Este es un ticket de deuda privada con enfoque en claridad: monto objetivo, avance de fondeo, tasa y plazo.
-                  Aquí podemos añadir (cuando quieras) KPIs, estados financieros, DSCR, covenants y anexos.
+                  Este es un ticket de deuda privada con enfoque en claridad: monto objetivo, avance de fondeo, tasa y
+                  plazo. Aquí podemos añadir (cuando quieras) KPIs, estados financieros, DSCR, covenants y anexos.
                 </p>
 
                 <div className="cd-callout">
                   <div className="cd-calloutTitle">Nota</div>
                   <div className="cd-calloutText">
-                    Si tu tabla <strong>creditos</strong> tiene campos extra (ej. <code>dscr</code>, <code>sector</code>, <code>covenants</code>),
-                    los conectamos y queda aún más pro.
+                    Si tu tabla <strong>creditos</strong> tiene campos extra (ej. <code>dscr</code>, <code>sector</code>,{" "}
+                    <code>covenants</code>), los conectamos y queda aún más pro.
                   </div>
                 </div>
               </div>
@@ -357,9 +444,7 @@ export default function CreditoDetalle() {
                   <MiniKpi label="Reporting" value="Panel" />
                 </div>
 
-                <div className="cd-miniDisclaimer">
-                  *Contenido informativo. No constituye asesoría financiera.
-                </div>
+                <div className="cd-miniDisclaimer">*Contenido informativo. No constituye asesoría financiera.</div>
               </div>
             )}
 
@@ -386,7 +471,9 @@ export default function CreditoDetalle() {
 
                 <div className="cd-emptyBox">
                   <div className="cd-emptyTitle">Calendario pendiente</div>
-                  <div className="cd-emptySub">Lo armamos con tus reglas (amortización, bullet, intereses mensuales, etc.).</div>
+                  <div className="cd-emptySub">
+                    Lo armamos con tus reglas (amortización, bullet, intereses mensuales, etc.).
+                  </div>
                 </div>
               </div>
             )}
@@ -396,9 +483,7 @@ export default function CreditoDetalle() {
           <aside className="cd-card cd-cardSticky">
             <div className="cd-body">
               <div className="cd-sideTitle">Invertir en este ticket</div>
-              <div className="cd-sideSub">
-                Define el monto y continúa al flujo de inversionistas.
-              </div>
+              <div className="cd-sideSub">Define el monto y envía la solicitud.</div>
 
               <div className="cd-inputWrap">
                 <label className="cd-label">Monto a invertir (MXN)</label>
@@ -411,12 +496,7 @@ export default function CreditoDetalle() {
                 />
                 <div className="cd-suggest">
                   {suggested.map((n) => (
-                    <button
-                      key={n}
-                      className="cd-chipBtn"
-                      onClick={() => setMontoInvertir(String(n))}
-                      type="button"
-                    >
+                    <button key={n} className="cd-chipBtn" onClick={() => setMontoInvertir(String(n))} type="button">
                       {pesos(n)}
                     </button>
                   ))}
@@ -426,16 +506,22 @@ export default function CreditoDetalle() {
               <div className="cd-sideActions">
                 <button
                   className="btn btn-neon"
-                  onClick={goInvest}
-                  disabled={!canInvest}
-                  title={!canInvest ? "Este ticket no está fondeando" : "Continuar"}
+                  onClick={submitInvestment}
+                  disabled={!canInvest || invBusy}
+                  title={!canInvest ? "Este ticket no está fondeando" : "Enviar solicitud"}
                 >
-                  Continuar
+                  {invBusy ? "Enviando…" : "Continuar"}
                 </button>
                 <Link className="btn btn-outline" to="/inversionistas">
                   Ver pipeline
                 </Link>
               </div>
+
+              {invMsg ? (
+                <div className="cd-miniDisclaimer" style={{ marginTop: 10 }}>
+                  {invMsg}
+                </div>
+              ) : null}
 
               <div className="cd-sideNote">
                 <strong>Disclaimer:</strong> Invertir implica riesgos. Este ticket es informativo.
@@ -445,9 +531,7 @@ export default function CreditoDetalle() {
         </div>
 
         {/* Footer small */}
-        <div className="cd-footerNote">
-          Plinius · Crédito privado con trazabilidad y control.
-        </div>
+        <div className="cd-footerNote">Plinius · Crédito privado con trazabilidad y control.</div>
       </div>
     </div>
   );
