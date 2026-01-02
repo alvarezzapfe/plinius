@@ -16,7 +16,8 @@ const fmtMXN = (x) =>
     maximumFractionDigits: 0,
   }).format(Number.isFinite(Number(x)) ? Number(x) : 0);
 
-const fmtPct = (x, d = 1) => `${(Number.isFinite(Number(x)) ? Number(x) : 0).toFixed(d)}%`;
+const fmtPct = (x, d = 1) =>
+  `${(Number.isFinite(Number(x)) ? Number(x) : 0).toFixed(d)}%`;
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -29,7 +30,6 @@ const cleanText = (s, max = 120) =>
 
 /* =======================
    MVP Market Data (local)
-   ✅ Cambia luego por Supabase
 ======================= */
 const MARKET_DEALS = [
   {
@@ -118,7 +118,6 @@ export default function Inversionistas() {
   const [fSector, setFSector] = useState("all");
   const [fEstructura, setFEstructura] = useState("all");
   const [sort, setSort] = useState("score");
-
   const [openDeal, setOpenDeal] = useState(null);
 
   // Boot session
@@ -193,7 +192,6 @@ export default function Inversionistas() {
   const goRegister = () => nav("/ingresar?registro=1");
 
   const onInvest = (deal) => {
-    // MVP: manda al dashboard / flujo real cuando exista
     try {
       localStorage.setItem("plinius_last_deal", JSON.stringify({ id: deal.id, ts: Date.now() }));
     } catch {}
@@ -202,7 +200,7 @@ export default function Inversionistas() {
 
   if (booting) {
     return (
-      <div className="page-inv">
+      <div className="page-inv inv-fullbleed">
         <Navbar />
         <main className="inv-main">
           <div className="inv-skeleton">Cargando…</div>
@@ -215,7 +213,7 @@ export default function Inversionistas() {
   // Gate
   if (!user) {
     return (
-      <div className="page-inv">
+      <div className="page-inv inv-fullbleed">
         <Navbar />
 
         <main className="inv-main">
@@ -226,9 +224,7 @@ export default function Inversionistas() {
               </div>
 
               <h1>Acceso restringido</h1>
-              <p className="inv-sub">
-                Para ver oportunidades y tickets necesitas iniciar sesión o crear tu cuenta.
-              </p>
+              <p className="inv-sub">Para ver oportunidades y tickets necesitas iniciar sesión o crear tu cuenta.</p>
 
               <div className="inv-gateActions">
                 <button className="inv-btn-primary" onClick={goLogin}>
@@ -239,9 +235,7 @@ export default function Inversionistas() {
                 </button>
               </div>
 
-              <div className="inv-gateHint">
-                Si ya estabas registrado, entra con tu correo.
-              </div>
+              <div className="inv-gateHint">Si ya estabas registrado, entra con tu correo.</div>
             </div>
 
             <aside className="inv-gateSide">
@@ -263,7 +257,7 @@ export default function Inversionistas() {
   }
 
   return (
-    <div className="page-inv">
+    <div className="page-inv inv-fullbleed">
       <Navbar />
 
       <main className="inv-main">
@@ -272,6 +266,7 @@ export default function Inversionistas() {
           <div className="inv-marketTitle">
             <div className="inv-tagRow">
               <span className="inv-tag">Crédito privado · PYMEs MX</span>
+              <span className="inv-tag inv-tagHot">Live</span>
             </div>
             <h1>Mercado de oportunidades</h1>
             <p className="inv-sub">
@@ -361,92 +356,88 @@ export default function Inversionistas() {
         </section>
 
         {/* FULL table (no horizontal scroll) */}
-        <section className="inv-tableCard">
+        <section className="inv-tableCard inv-tableFullBleed">
           <div className="inv-tableTop">
             <div className="inv-tableTitle">
               Tickets ({filtered.length})
-              <span className="inv-tableHint">· Solo scroll vertical</span>
+              <span className="inv-tableHint">· Full width · Solo scroll vertical</span>
             </div>
           </div>
 
-          <div className="inv-tableBox">
-            <div className="inv-table inv-tableFull">
-              {/* Header */}
-              <div className="inv-row inv-head">
-                <div className="c-id">ID</div>
-                <div className="c-emp">Empresa</div>
-                <div className="c-sec">Sector</div>
-                <div className="c-city">Ciudad</div>
-                <div className="c-amt">Monto</div>
-                <div className="c-rate">Tasa</div>
-                <div className="c-term">Plazo</div>
-                <div className="c-dscr">DSCR</div>
-                <div className="c-ltv">LTV</div>
-                <div className="c-rating">Rating</div>
-                <div className="c-stage">Etapa</div>
-                <div className="c-act"></div>
-              </div>
-
-              {/* Rows */}
-              {filtered.map((d) => {
-                const stage = String(d.stage || "").toLowerCase();
-                const stageCls =
-                  stage.includes("abierto") ? "stage open" : stage.includes("coloc") ? "stage placing" : "stage soon";
-
-                const ltv = clamp(Number(d.ltv || 0), 0, 100);
-                const dscr = Number(d.dscr || 0);
-
-                return (
-                  <div className="inv-row" key={d.id}>
-                    <div className="c-id inv-mono">{d.id}</div>
-
-                    <div className="c-emp">
-                      <div className="inv-emp">{d.empresa}</div>
-                      <div className="inv-mini">{cleanText(d.garantia, 52)}</div>
-                    </div>
-
-                    <div className="c-sec">{d.sector}</div>
-                    <div className="c-city">{d.ciudad}</div>
-
-                    <div className="c-amt inv-num">{fmtMXN(d.monto)}</div>
-                    <div className="c-rate inv-num strong">{fmtPct(d.tasa, 1)}</div>
-                    <div className="c-term inv-num">{d.plazo_meses}m</div>
-
-                    <div className={`c-dscr inv-num ${dscr >= 1.3 ? "ok" : dscr >= 1.15 ? "mid" : "bad"}`}>
-                      {dscr.toFixed(2)}
-                    </div>
-
-                    <div className={`c-ltv inv-num ${ltv <= 55 ? "ok" : ltv <= 65 ? "mid" : "bad"}`}>{ltv}%</div>
-
-                    <div className="c-rating">
-                      <span className="inv-pill rating">{d.rating}</span>
-                    </div>
-
-                    <div className="c-stage">
-                      <span className={stageCls}>{d.stage}</span>
-                    </div>
-
-                    <div className="c-act inv-actions">
-                      <button className="inv-btn-mini" onClick={() => setOpenDeal(d)}>
-                        Ver
-                      </button>
-                      <button className="inv-btn-mini ghost" onClick={() => nav("/dashboard")}>
-                        Simular
-                      </button>
-                      <button className="inv-btn-mini primary" onClick={() => onInvest(d)}>
-                        Invertir
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {filtered.length === 0 && (
-                <div className="inv-empty">
-                  No hay tickets con esos filtros.
-                </div>
-              )}
+          <div className="inv-tableBox" aria-label="Tabla de oportunidades">
+            {/* Header */}
+            <div className="inv-row inv-head" role="row">
+              <div className="c-id" role="columnheader">ID</div>
+              <div className="c-emp" role="columnheader">Empresa</div>
+              <div className="c-sec" role="columnheader">Sector</div>
+              <div className="c-city" role="columnheader">Ciudad</div>
+              <div className="c-amt" role="columnheader">Monto</div>
+              <div className="c-rate" role="columnheader">Tasa</div>
+              <div className="c-term" role="columnheader">Plazo</div>
+              <div className="c-dscr" role="columnheader">DSCR</div>
+              <div className="c-ltv" role="columnheader">LTV</div>
+              <div className="c-rating" role="columnheader">Rating</div>
+              <div className="c-stage" role="columnheader">Etapa</div>
+              <div className="c-act" role="columnheader">Acciones</div>
             </div>
+
+            {/* Rows */}
+            {filtered.map((d) => {
+              const stage = String(d.stage || "").toLowerCase();
+              const stageCls =
+                stage.includes("abierto") ? "stage open" : stage.includes("coloc") ? "stage placing" : "stage soon";
+
+              const ltv = clamp(Number(d.ltv || 0), 0, 100);
+              const dscr = Number(d.dscr || 0);
+
+              return (
+                <div className="inv-row inv-bodyRow" key={d.id} role="row">
+                  <div className="c-id inv-mono" role="cell">{d.id}</div>
+
+                  <div className="c-emp" role="cell">
+                    <div className="inv-emp">{d.empresa}</div>
+                    <div className="inv-mini">{cleanText(d.garantia, 64)}</div>
+                  </div>
+
+                  <div className="c-sec" role="cell">{d.sector}</div>
+                  <div className="c-city" role="cell">{d.ciudad}</div>
+
+                  <div className="c-amt inv-num" role="cell">{fmtMXN(d.monto)}</div>
+                  <div className="c-rate inv-num strong" role="cell">{fmtPct(d.tasa, 1)}</div>
+                  <div className="c-term inv-num" role="cell">{d.plazo_meses}m</div>
+
+                  <div className={`c-dscr inv-num ${dscr >= 1.3 ? "ok" : dscr >= 1.15 ? "mid" : "bad"}`} role="cell">
+                    {dscr.toFixed(2)}
+                  </div>
+
+                  <div className={`c-ltv inv-num ${ltv <= 55 ? "ok" : ltv <= 65 ? "mid" : "bad"}`} role="cell">
+                    {ltv}%
+                  </div>
+
+                  <div className="c-rating" role="cell">
+                    <span className="inv-pill rating">{d.rating}</span>
+                  </div>
+
+                  <div className="c-stage" role="cell">
+                    <span className={stageCls}>{d.stage}</span>
+                  </div>
+
+                  <div className="c-act inv-actions" role="cell">
+                    <button className="inv-btn-mini" onClick={() => setOpenDeal(d)}>
+                      Ver
+                    </button>
+                    <button className="inv-btn-mini ghost" onClick={() => nav("/dashboard")}>
+                      Simular
+                    </button>
+                    <button className="inv-btn-mini primary" onClick={() => onInvest(d)}>
+                      Invertir
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && <div className="inv-empty">No hay tickets con esos filtros.</div>}
           </div>
         </section>
 
