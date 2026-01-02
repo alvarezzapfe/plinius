@@ -189,13 +189,10 @@ export default function Inversionistas() {
   const goRegister = () => nav("/ingresar?registro=1");
 
   const goInvestFlow = (deal) => {
-    // ✅ persist intent
     const payload = { deal, ts: Date.now() };
     try {
       localStorage.setItem("plinius_invest_intent", JSON.stringify(payload));
     } catch {}
-
-    // ✅ route to invest flow (NOT dashboard)
     nav(`/invertir/${encodeURIComponent(deal.id)}`, { state: payload });
   };
 
@@ -244,7 +241,7 @@ export default function Inversionistas() {
                 <ul className="inv-gateList">
                   <li>· Tabla completa, sin scroll horizontal.</li>
                   <li>· Filtros, búsqueda y ranking recomendado.</li>
-                  <li>· Botones: Ver detalle, Invertir.</li>
+                  <li>· Botones separados: Ver / Invertir.</li>
                 </ul>
               </div>
             </aside>
@@ -270,7 +267,7 @@ export default function Inversionistas() {
             </div>
             <h1>Mercado de oportunidades</h1>
             <p className="inv-sub">
-              Filtra tickets. Usa <strong>Ver detalle</strong> para revisar y <strong>Invertir</strong> para iniciar el flujo.
+              Filtra tickets. Usa <strong>Ver</strong> para detalle y <strong>Invertir</strong> para iniciar el flujo.
             </p>
           </div>
 
@@ -377,6 +374,11 @@ export default function Inversionistas() {
               <div className="c-ltv" role="columnheader">LTV</div>
               <div className="c-rating" role="columnheader">Rating</div>
               <div className="c-stage" role="columnheader">Etapa</div>
+
+              {/* ✅ NEW column */}
+              <div className="c-det" role="columnheader">Detalle</div>
+
+              {/* ✅ Actions now only Invest */}
               <div className="c-act" role="columnheader">Acciones</div>
             </div>
 
@@ -420,12 +422,16 @@ export default function Inversionistas() {
                     <span className={stageCls}>{d.stage}</span>
                   </div>
 
-                  {/* ✅ 2 columns: one per button */}
-                  <div className="c-act inv-actions2" role="cell">
-                    <button className="inv-btnAction" onClick={() => setOpenDeal(d)}>
-                      Ver detalle
+                  {/* ✅ New "Detalle" column with smaller button */}
+                  <div className="c-det inv-cellCenter" role="cell">
+                    <button className="inv-btnTiny" onClick={() => setOpenDeal(d)}>
+                      Ver
                     </button>
-                    <button className="inv-btnAction inv-btnActionPrimary" onClick={() => goInvestFlow(d)}>
+                  </div>
+
+                  {/* ✅ Actions column only Invest */}
+                  <div className="c-act inv-cellCenter" role="cell">
+                    <button className="inv-btnTiny inv-btnTinyPrimary" onClick={() => goInvestFlow(d)}>
                       Invertir
                     </button>
                   </div>
