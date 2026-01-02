@@ -150,7 +150,8 @@ export default function Inversionistas() {
 
     if (fStage !== "all") out = out.filter((d) => String(d.stage || "").toLowerCase().includes(fStage));
     if (fSector !== "all") out = out.filter((d) => d.sector === fSector);
-    if (fEstructura !== "all") out = out.filter((d) => String(d.estructura || "").toLowerCase().includes(fEstructura));
+    if (fEstructura !== "all")
+      out = out.filter((d) => String(d.estructura || "").toLowerCase().includes(fEstructura));
 
     if (needle) {
       out = out.filter((d) => {
@@ -244,7 +245,7 @@ export default function Inversionistas() {
                 <ul className="inv-gateList">
                   <li>· Tabla completa, sin scroll horizontal.</li>
                   <li>· Filtros, búsqueda y ranking recomendado.</li>
-                  <li>· Botones: Ver, Simular, Invertir.</li>
+                  <li>· Botones: Ver detalle, Invertir.</li>
                 </ul>
               </div>
             </aside>
@@ -270,7 +271,7 @@ export default function Inversionistas() {
             </div>
             <h1>Mercado de oportunidades</h1>
             <p className="inv-sub">
-              Filtra tickets. Usa <strong>Ver</strong> para detalle y <strong>Invertir</strong> para iniciar el flujo.
+              Filtra tickets. Usa <strong>Ver detalle</strong> para revisar y <strong>Invertir</strong> para iniciar el flujo.
             </p>
           </div>
 
@@ -423,15 +424,14 @@ export default function Inversionistas() {
                   </div>
 
                   <div className="c-act inv-actions" role="cell">
-                    <button className="inv-btn-mini" onClick={() => setOpenDeal(d)}>
-                      Ver
-                    </button>
-                    <button className="inv-btn-mini ghost" onClick={() => nav("/dashboard")}>
-                      Simular
-                    </button>
-                    <button className="inv-btn-mini primary" onClick={() => onInvest(d)}>
-                      Invertir
-                    </button>
+                    <div className="inv-seg" role="group" aria-label="Acciones">
+                      <button className="inv-segBtn" onClick={() => setOpenDeal(d)}>
+                        Ver detalle
+                      </button>
+                      <button className="inv-segBtn primary" onClick={() => onInvest(d)}>
+                        Invertir
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
