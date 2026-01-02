@@ -189,14 +189,13 @@ export default function Inversionistas() {
   const goRegister = () => nav("/ingresar?registro=1");
 
   const goInvestFlow = (deal) => {
-    // ✅ Guardamos el deal para que el flujo lo consuma (state + fallback)
+    // ✅ persist intent
     const payload = { deal, ts: Date.now() };
     try {
       localStorage.setItem("plinius_invest_intent", JSON.stringify(payload));
     } catch {}
 
-    // ✅ Flujo recomendado: ruta dedicada por ID
-    // Crea una pantalla /invertir/:id que lea el deal desde location.state o localStorage.
+    // ✅ route to invest flow (NOT dashboard)
     nav(`/invertir/${encodeURIComponent(deal.id)}`, { state: payload });
   };
 
@@ -421,7 +420,8 @@ export default function Inversionistas() {
                     <span className={stageCls}>{d.stage}</span>
                   </div>
 
-                  <div className="c-act inv-actions" role="cell">
+                  {/* ✅ 2 columns: one per button */}
+                  <div className="c-act inv-actions2" role="cell">
                     <button className="inv-btnAction" onClick={() => setOpenDeal(d)}>
                       Ver detalle
                     </button>
