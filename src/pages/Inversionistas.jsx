@@ -102,9 +102,6 @@ const MARKET_DEALS = [
   },
 ];
 
-/* =======================
-   Component
-======================= */
 export default function Inversionistas() {
   const nav = useNavigate();
 
@@ -120,7 +117,6 @@ export default function Inversionistas() {
   const [sort, setSort] = useState("score");
   const [openDeal, setOpenDeal] = useState(null);
 
-  // Boot session
   useEffect(() => {
     let mounted = true;
 
@@ -192,11 +188,16 @@ export default function Inversionistas() {
   const goLogin = () => nav("/ingresar?registro=0");
   const goRegister = () => nav("/ingresar?registro=1");
 
-  const onInvest = (deal) => {
+  const goInvestFlow = (deal) => {
+    // ✅ Guardamos el deal para que el flujo lo consuma (state + fallback)
+    const payload = { deal, ts: Date.now() };
     try {
-      localStorage.setItem("plinius_last_deal", JSON.stringify({ id: deal.id, ts: Date.now() }));
+      localStorage.setItem("plinius_invest_intent", JSON.stringify(payload));
     } catch {}
-    nav("/dashboard");
+
+    // ✅ Flujo recomendado: ruta dedicada por ID
+    // Crea una pantalla /invertir/:id que lea el deal desde location.state o localStorage.
+    nav(`/invertir/${encodeURIComponent(deal.id)}`, { state: payload });
   };
 
   if (booting) {
@@ -211,7 +212,6 @@ export default function Inversionistas() {
     );
   }
 
-  // Gate
   if (!user) {
     return (
       <div className="page-inv inv-fullbleed">
@@ -356,7 +356,7 @@ export default function Inversionistas() {
           </div>
         </section>
 
-        {/* FULL table (no horizontal scroll) */}
+        {/* Table */}
         <section className="inv-tableCard inv-tableFullBleed">
           <div className="inv-tableTop">
             <div className="inv-tableTitle">
@@ -366,7 +366,6 @@ export default function Inversionistas() {
           </div>
 
           <div className="inv-tableBox" aria-label="Tabla de oportunidades">
-            {/* Header */}
             <div className="inv-row inv-head" role="row">
               <div className="c-id" role="columnheader">ID</div>
               <div className="c-emp" role="columnheader">Empresa</div>
@@ -382,7 +381,6 @@ export default function Inversionistas() {
               <div className="c-act" role="columnheader">Acciones</div>
             </div>
 
-            {/* Rows */}
             {filtered.map((d) => {
               const stage = String(d.stage || "").toLowerCase();
               const stageCls =
@@ -424,14 +422,12 @@ export default function Inversionistas() {
                   </div>
 
                   <div className="c-act inv-actions" role="cell">
-                    <div className="inv-seg" role="group" aria-label="Acciones">
-                      <button className="inv-segBtn" onClick={() => setOpenDeal(d)}>
-                        Ver detalle
-                      </button>
-                      <button className="inv-segBtn primary" onClick={() => onInvest(d)}>
-                        Invertir
-                      </button>
-                    </div>
+                    <button className="inv-btnAction" onClick={() => setOpenDeal(d)}>
+                      Ver detalle
+                    </button>
+                    <button className="inv-btnAction inv-btnActionPrimary" onClick={() => goInvestFlow(d)}>
+                      Invertir
+                    </button>
                   </div>
                 </div>
               );
@@ -478,7 +474,7 @@ export default function Inversionistas() {
                 <button className="inv-btn-ghost" onClick={() => setOpenDeal(null)}>
                   Cerrar
                 </button>
-                <button className="inv-btn-primary" onClick={() => onInvest(openDeal)}>
+                <button className="inv-btn-primary" onClick={() => goInvestFlow(openDeal)}>
                   Invertir
                 </button>
               </div>
