@@ -18,7 +18,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Inversionistas from "./pages/Inversionistas.jsx";
 import Solicitud from "./pages/Solicitud.jsx"; // 👈 ESTE es el nuevo wizard
 import Solicitudes from "./pages/Solicitudes";
-import CreditoDetalle from "./pages/CreditoDetalle";
+
 import SolicitudDetalle from "./pages/SolicitudDetalle";
 import Recuperar from "./pages/Recuperar.jsx";
 
@@ -64,14 +64,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         {/* Alias legacy para enlaces viejos */}
         <Route path="/pricing" element={<Navigate to="/solicitud" replace />} />
 
-        {/* Inversionistas */}
-        <Route path="/inversionistas" element={<Inversionistas />} />
+        {/* Inversionistas por ahora lo QUITAMOS */}
+        
 
         {/* Dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
 
         <Route path="/solicitudes" element={<Solicitudes />} />
-        <Route path="/creditos/:id" element={<CreditoDetalle />} />
+        
         <Route path="/solicitudes/:id" element={<SolicitudDetalle />} />
         <Route path="/recuperar/:id" element={<Recuperar />} />
 
