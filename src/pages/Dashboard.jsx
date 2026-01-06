@@ -51,6 +51,44 @@ function initialsFromProfile(p) {
     .join("");
 }
 
+// ===== Helpers extra SPEI/STP =====
+const maskClabe = (clabe = "") => {
+  const s = String(clabe || "").replace(/\s+/g, "");
+  if (!s) return "—";
+  if (s.length < 8) return s;
+  // Agrupa en bloques para legibilidad (no valida checksum)
+  const parts = [];
+  for (let i = 0; i < s.length; i += 4) parts.push(s.slice(i, i + 4));
+  return parts.join(" ").trim();
+};
+
+const copyText = async (txt) => {
+  try {
+    await navigator.clipboard.writeText(String(txt || ""));
+    return true;
+  } catch {
+    try {
+      const t = document.createElement("textarea");
+      t.value = String(txt || "");
+      document.body.appendChild(t);
+      t.select();
+      document.execCommand("copy");
+      document.body.removeChild(t);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+};
+
+// Referencia numérica SPEI (7 dígitos) – útil para conciliar depósitos
+const makeNumericRef7 = (seed = "") => {
+  const s = String(seed || "");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return (h % 10_000_000).toString().padStart(7, "0");
+};
+
 /* =======================
    Component
 ======================= */
@@ -83,6 +121,11 @@ export default function Dashboard() {
   const [balance, setBalance] = useState(0);
   const [ledger, setLedger] = useState([]);
   const [treasuryOk, setTreasuryOk] = useState(true);
+
+  // ✅ Tesorería: cuenta SPEI (STP)
+  const [treasuryAccount, setTreasuryAccount] = useState(null);
+  const [acctMsg, setAcctMsg] = useState("");
+  const [busyAcct, setBusyAcct] = useState(false);
 
   // Perfil editable
   const [edit, setEdit] = useState({
@@ -251,6 +294,25 @@ export default function Dashboard() {
 
     setTreasuryOk(true);
 
+    // 0) Cuenta SPEI (STP)
+    const { data: acctRow, error: acctErr } = await supabase
+      .from("treasury_accounts")
+      .select("bank_name,clabe,beneficiary,account_label,created_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (acctErr) {
+      console.log("treasury_accounts err", acctErr);
+      if (acctErr?.status === 404) {
+        setTreasuryOk(false);
+        setTreasuryAccount(null);
+        setBalance(0);
+        setLedger([]);
+        return;
+      }
+    }
+    setTreasuryAccount(acctRow || null);
+
     // balance (view)
     const { data: balRows, error: balErr } = await supabase
       .from("v_treasury_balance")
@@ -318,9 +380,7 @@ export default function Dashboard() {
             ? null
             : Number(edit.ventas_mensuales),
         ebitda_mensual:
-          edit.ebitda_mensual === "" || edit.ebitda_mensual === null
-            ? null
-            : Number(edit.ebitda_mensual),
+          edit.ebitda_mensual === "" || edit.ebitda_mensual === null ? null : Number(edit.ebitda_mensual),
       };
 
       if (!Number.isFinite(payload.ventas_mensuales ?? 0)) payload.ventas_mensuales = null;
@@ -451,7 +511,8 @@ export default function Dashboard() {
     setDepMsg("");
 
     try {
-      const ref = cleanText(depRef, 80) || null;
+      // Si no ponen referencia, generamos una numérica de 7 dígitos
+      const ref = cleanText(depRef, 80) || makeNumericRef7(`${user.id}:${Date.now()}`);
 
       const { error } = await supabase.from("treasury_ledger").insert({
         user_id: user.id,
@@ -472,6 +533,31 @@ export default function Dashboard() {
     } finally {
       setBusyDep(false);
       setTimeout(() => setDepMsg(""), 4500);
+    }
+  };
+
+  // ✅ Provisonar/obtener CLABE STP (Edge Function)
+  const provisionStpClabe = async () => {
+    if (!user?.id || busyAcct) return;
+
+    setBusyAcct(true);
+    setAcctMsg("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("stp-provision-clabe", {
+        body: { purpose: "treasury" },
+      });
+      if (error) throw error;
+
+      // data puede traer account, pero igual recargamos para mantener consistencia
+      console.log("stp-provision-clabe", data);
+      setAcctMsg("✅ Cuenta SPEI creada/actualizada.");
+      await loadTreasury();
+    } catch (e) {
+      setAcctMsg(`Error: ${e?.message || "No se pudo crear la cuenta SPEI"}`);
+    } finally {
+      setBusyAcct(false);
+      setTimeout(() => setAcctMsg(""), 4500);
     }
   };
 
@@ -852,7 +938,7 @@ export default function Dashboard() {
                     : tab === "docs"
                     ? "Sube y administra tus documentos."
                     : tab === "tesoreria"
-                    ? "Registra depósitos y consulta tu saldo (conciliación por Plinius)."
+                    ? "Tu cuenta SPEI (STP), depósitos y conciliación."
                     : isAdmin
                     ? "Aprobación de inversiones + portafolio global."
                     : "Solicita inversión y consulta tu portafolio."}
@@ -916,7 +1002,7 @@ export default function Dashboard() {
                   <ul className="dash-modList">
                     <li>Completa perfil (empresa/RFC/teléfono).</li>
                     <li>Sube documentos (edo cuenta / estados financieros).</li>
-                    <li>Registra depósitos en Tesorería si aplica.</li>
+                    <li>En Tesorería: solicita tu CLABE STP y registra depósitos.</li>
                     <li>En Inversiones: solicita inversión y espera aprobación.</li>
                   </ul>
 
@@ -926,6 +1012,9 @@ export default function Dashboard() {
                     </button>
                     <button className="dash-btn dash-btnSoft" onClick={() => setTab("docs")}>
                       Subir docs
+                    </button>
+                    <button className="dash-btn dash-btnSoft" onClick={() => setTab("tesoreria")}>
+                      Ir a tesorería
                     </button>
                     <button className="dash-btn dash-btnSoft" onClick={() => setTab("inversiones")}>
                       Ir a inversiones
@@ -1105,12 +1194,97 @@ export default function Dashboard() {
                       <div className="dash-chip">No disponible</div>
                     </div>
                     <div className="dash-sideHint">
-                      No encuentro <strong>v_treasury_balance</strong> / <strong>treasury_ledger</strong> en este entorno (404).
-                      Si ya existen en tu SQL local, te falta crearlas en <strong>producción</strong> o exponerlas en el esquema.
+                      No encuentro <strong>treasury_accounts</strong> / <strong>v_treasury_balance</strong> /{" "}
+                      <strong>treasury_ledger</strong> en este entorno (404). Si ya existen en tu SQL local, te falta
+                      crearlas en <strong>producción</strong> o exponerlas en el esquema.
                     </div>
                   </div>
                 ) : (
                   <>
+                    {/* Cuenta SPEI (STP) */}
+                    <div className="dash-panel">
+                      <div className="dash-panelTitleRow">
+                        <div className="dash-panelTitle">Cuenta SPEI (STP)</div>
+                        <div className="dash-chip">Fondeo</div>
+                      </div>
+
+                      {acctMsg ? <div className="dash-miniNote">{acctMsg}</div> : null}
+
+                      {!treasuryAccount?.clabe ? (
+                        <>
+                          <div className="dash-sideHint">
+                            Aún no tienes una CLABE asignada. Presiona el botón para solicitar tu{" "}
+                            <strong>CLABE STP</strong>.
+                          </div>
+                          <div className="dash-row" style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                            <button className="dash-btn dash-btnPrimary" onClick={provisionStpClabe} disabled={busyAcct}>
+                              {busyAcct ? "Creando…" : "Solicitar CLABE STP"}
+                            </button>
+                            <button className="dash-btn dash-btnSoft" onClick={loadTreasury} disabled={busyAcct}>
+                              Refresh
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="dash-list" style={{ marginTop: 10 }}>
+                            <div className="dash-listRow">
+                              <div>
+                                <div className="dash-listMain">
+                                  <strong>Beneficiario</strong>
+                                </div>
+                                <div className="dash-listSub">{treasuryAccount.beneficiary || "—"}</div>
+                              </div>
+                              <div className="dash-listRight">
+                                <button
+                                  className="dash-btn dash-btnSoft"
+                                  onClick={async () => {
+                                    const ok = await copyText(treasuryAccount.beneficiary || "");
+                                    setAcctMsg(ok ? "✅ Beneficiario copiado" : "No se pudo copiar");
+                                    setTimeout(() => setAcctMsg(""), 2000);
+                                  }}
+                                >
+                                  Copiar
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="dash-listRow">
+                              <div>
+                                <div className="dash-listMain">
+                                  <strong>CLABE</strong>{" "}
+                                  <span style={{ opacity: 0.8 }}>
+                                    ({treasuryAccount.bank_name || "STP"})
+                                  </span>
+                                </div>
+                                <div className="dash-listSub" style={{ fontSize: 16, letterSpacing: 0.6 }}>
+                                  {maskClabe(treasuryAccount.clabe)}
+                                </div>
+                              </div>
+                              <div className="dash-listRight" style={{ display: "flex", gap: 10 }}>
+                                <button
+                                  className="dash-btn dash-btnPrimary"
+                                  onClick={async () => {
+                                    const ok = await copyText(treasuryAccount.clabe || "");
+                                    setAcctMsg(ok ? "✅ CLABE copiada" : "No se pudo copiar");
+                                    setTimeout(() => setAcctMsg(""), 2000);
+                                  }}
+                                >
+                                  Copiar CLABE
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="dash-sideHint" style={{ marginTop: 10 }}>
+                            Envía tu SPEI a esta CLABE. Para ayudar a conciliar, usa una{" "}
+                            <strong>Referencia numérica</strong> (7 dígitos) o el <strong>Concepto</strong> con tu
+                            identificador.
+                          </div>
+                        </>
+                      )}
+                    </div>
+
                     <div className="dash-panel">
                       <div className="dash-panelTitleRow">
                         <div className="dash-panelTitle">Saldo</div>
@@ -1118,14 +1292,14 @@ export default function Dashboard() {
                       </div>
                       <div className="dash-balance">{pesos(balance)}</div>
                       <div className="dash-sideHint">
-                        El saldo muestra movimientos <strong>aplicados</strong>. Depósitos quedan <strong>pendientes</strong>{" "}
-                        hasta conciliación.
+                        El saldo muestra movimientos <strong>aplicados</strong>. Depósitos quedan{" "}
+                        <strong>pendientes</strong> hasta conciliación.
                       </div>
                     </div>
 
                     <div className="dash-panel">
                       <div className="dash-panelTitleRow">
-                        <div className="dash-panelTitle">Registrar depósito</div>
+                        <div className="dash-panelTitle">Registrar depósito (pre-conciliación)</div>
                         {depMsg ? <div className="dash-miniNote">{depMsg}</div> : null}
                       </div>
 
@@ -1138,11 +1312,11 @@ export default function Dashboard() {
                             placeholder="Ej. 50000"
                           />
                         </Field>
-                        <Field label="Referencia SPEI (opcional)">
+                        <Field label="Referencia numérica SPEI (7 dígitos) (opcional)">
                           <input
                             value={depRef}
                             onChange={(e) => setDepRef(e.target.value)}
-                            placeholder="Ej. 1234567890"
+                            placeholder="Si lo dejas vacío, genero una automáticamente"
                           />
                         </Field>
                       </div>
@@ -1154,6 +1328,11 @@ export default function Dashboard() {
                         <button className="dash-btn dash-btnSoft" onClick={loadTreasury} disabled={busyDep}>
                           Refresh
                         </button>
+                      </div>
+
+                      <div className="dash-sideHint" style={{ marginTop: 10 }}>
+                        Este registro no mueve dinero: solo crea un “intent” para facilitar la conciliación cuando llegue
+                        el abono SPEI. Lo ideal es que el webhook STP aplique el depósito automáticamente.
                       </div>
                     </div>
 
@@ -1210,7 +1389,8 @@ export default function Dashboard() {
                     </div>
                     <div className="dash-sideHint">
                       No encuentro <strong>v_invest_balance</strong> / <strong>investment_ledger</strong> /{" "}
-                      <strong>investment_requests</strong> en este entorno (404/errores). Revisa que existan en producción.
+                      <strong>investment_requests</strong> en este entorno (404/errores). Revisa que existan en
+                      producción.
                     </div>
                   </div>
                 ) : (
@@ -1246,7 +1426,11 @@ export default function Dashboard() {
                       <div className="dash-panel">
                         <div className="dash-panelTitleRow">
                           <div className="dash-panelTitle">Solicitar inversión</div>
-                          {invMsg ? <div className="dash-miniNote">{invMsg}</div> : <div className="dash-chip">Pendiente aprobación</div>}
+                          {invMsg ? (
+                            <div className="dash-miniNote">{invMsg}</div>
+                          ) : (
+                            <div className="dash-chip">Pendiente aprobación</div>
+                          )}
                         </div>
 
                         <div className="dash-formGrid" style={{ gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
@@ -1292,7 +1476,11 @@ export default function Dashboard() {
                       <div className="dash-panel dash-adminPanel">
                         <div className="dash-panelTitleRow">
                           <div className="dash-panelTitle">Aprobación de inversiones</div>
-                          {adminInvMsg ? <div className="dash-miniNote">{adminInvMsg}</div> : <div className="dash-chip">Pendientes</div>}
+                          {adminInvMsg ? (
+                            <div className="dash-miniNote">{adminInvMsg}</div>
+                          ) : (
+                            <div className="dash-chip">Pendientes</div>
+                          )}
                         </div>
 
                         {pendingInvRequests.length === 0 ? (

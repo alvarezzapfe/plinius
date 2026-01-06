@@ -28,11 +28,11 @@ export default function Ingresar() {
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
-      if (data?.session) nav("/dashboard");
+      if (data?.session) nav("/dashboard", { replace: true });
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_ev, s) => {
-      if (s) nav("/dashboard");
+      if (s) nav("/dashboard", { replace: true });
     });
 
     return () => {
@@ -56,9 +56,7 @@ export default function Ingresar() {
               <h2 className="ing-title">
                 {modo === "ingreso" ? "Ingresar a tu panel" : "Crear cuenta empresarial"}
               </h2>
-              <p className="ing-sub">
-                Administra tus créditos y arrendamientos desde un solo lugar.
-              </p>
+              <p className="ing-sub">Administra tus créditos y arrendamientos desde un solo lugar.</p>
             </header>
 
             <nav className="ing-tabs ing-tabs--soft" role="tablist" aria-label="Cambiar modo">
@@ -101,9 +99,9 @@ export default function Ingresar() {
 
             <div className="ing-form-shell">
               {modo === "ingreso" ? (
-                <LoginForm onSuccess={() => nav("/dashboard")} />
+                <LoginForm onSuccess={() => nav("/dashboard", { replace: true })} />
               ) : (
-                <SignupForm onSuccess={() => nav("/dashboard")} />
+                <SignupForm onSuccess={() => nav("/dashboard", { replace: true })} />
               )}
             </div>
 
@@ -157,6 +155,7 @@ function LoginForm({ onSuccess }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
 
   const valid = emailRx.test(email) && pass.length >= 8;
 
@@ -166,6 +165,7 @@ function LoginForm({ onSuccess }) {
 
     setLoading(true);
     setErrorMsg("");
+    setInfoMsg("");
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -193,6 +193,32 @@ function LoginForm({ onSuccess }) {
       setErrorMsg(err?.message || "No se pudo iniciar sesión.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const forgot = async () => {
+    if (loading) return;
+    setErrorMsg("");
+    setInfoMsg("");
+
+    const em = email.trim();
+    if (!emailRx.test(em)) {
+      setErrorMsg("Escribe tu correo primero para enviarte el enlace de recuperación.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const redirectTo = `${window.location.origin}/recuperar`; // crea esta ruta (te dejo archivo abajo)
+      const { error } = await supabase.auth.resetPasswordForEmail(em, { redirectTo });
+      if (error) throw error;
+
+      setInfoMsg("✅ Te mandé un correo para recuperar tu contraseña (revisa spam/promociones).");
+    } catch (e) {
+      setErrorMsg(e?.message || "No pude enviar el correo de recuperación.");
+    } finally {
+      setLoading(false);
+      setTimeout(() => setInfoMsg(""), 6500);
     }
   };
 
@@ -228,7 +254,15 @@ function LoginForm({ onSuccess }) {
         </div>
       </Field>
 
+      <div className="ing-row">
+        <button type="button" className="ing-linkBtn" onClick={forgot} disabled={loading}>
+          Olvidé mi contraseña
+        </button>
+        <span className="ing-helpHint">Recibirás un enlace por correo</span>
+      </div>
+
       {errorMsg && <p className="ing-error">{errorMsg}</p>}
+      {infoMsg && <p className="ing-success">{infoMsg}</p>}
 
       <button type="submit" className="btn btn-neon w100" disabled={!valid || loading}>
         {loading ? "Ingresando..." : "Ingresar"}

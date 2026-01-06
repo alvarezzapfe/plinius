@@ -1,7 +1,5 @@
 /* =====================================================
    INGRESS / AUTH – NAMESPACED .ing-
-   Fondo azul con cuadritos, card centrado (pro)
-   Animaciones rápidas + solo transform/opacity
    ===================================================== */
 
 .ing{
@@ -12,8 +10,6 @@
   align-items:center;
   justify-content:center;
   overflow:hidden;
-
-  /* micro-perf */
   contain: layout paint;
 }
 
@@ -42,9 +38,7 @@
   --ing-med: 160ms;
 }
 
-/* =========================
-   Background layers
-========================= */
+/* Background layers */
 .ing-bg{
   position:absolute;
   inset:0;
@@ -78,9 +72,7 @@
   max-width:420px;
 }
 
-/* =====================================================
-   CARD
-   ===================================================== */
+/* CARD */
 .ing-card.ing-card--light{
   border-radius:var(--ing-r);
   border:1px solid var(--ing-border);
@@ -91,22 +83,28 @@
   padding:22px 22px 20px;
   display:grid;
   gap:16px;
-
   color:var(--ing-text);
 
-  /* tamaño estable entre tabs */
+  /* ✅ estabilidad */
   min-height:470px;
 
-  /* perf */
+  /* ✅ evita que en Windows “explote” el card */
+  max-height: min(84vh, 720px);
+  overflow: hidden;
+
   transform: translateZ(0);
 }
 
-/* Form shell fijo */
+/* Form shell fijo con scroll interno */
 .ing-form-shell{
   margin-top:2px;
   min-height:268px;
   display:flex;
   align-items:flex-start;
+
+  /* ✅ scroll interno */
+  overflow:auto;
+  padding-right: 2px; /* evita salto por scrollbar */
 }
 .ing-form-shell > .ing-form{ width:100%; }
 
@@ -141,9 +139,7 @@
   color:var(--ing-muted);
 }
 
-/* =====================================================
-   TABS
-   ===================================================== */
+/* TABS */
 .ing-tabs.ing-tabs--soft{
   display:flex;
   width:100%;
@@ -191,9 +187,7 @@
 }
 .ing-tab.is-active::after{ transform: scaleX(1); }
 
-/* =====================================================
-   GOOGLE BUTTON
-   ===================================================== */
+/* GOOGLE BUTTON */
 .ing-social{ display:grid; }
 
 .ing-gbtn.ing-gbtn--soft{
@@ -222,9 +216,7 @@
 
 .ing-gicon{ display:inline-grid; place-items:center; }
 
-/* =====================================================
-   Separator
-   ===================================================== */
+/* Separator */
 .ing-sep.ing-sep--soft{
   position:relative;
   display:grid;
@@ -249,9 +241,7 @@
   border-radius:999px;
 }
 
-/* =====================================================
-   Forms
-   ===================================================== */
+/* Forms */
 .ing-form{ display:grid; gap:10px; }
 .ing-form--soft{ margin-top:2px; }
 
@@ -259,13 +249,18 @@
   display:grid;
   gap:8px;
   grid-template-columns: 1fr 1fr;
+
+  /* ✅ clave en Windows para que no “reviente” */
+  min-width: 0;
 }
+.ing-grid2 > *{ min-width:0; }
+
 @media (max-width:640px){
   .ing-grid2{ grid-template-columns:1fr; }
 }
 
 /* Field atom */
-.ing-field{ display:grid; gap:4px; }
+.ing-field{ display:grid; gap:4px; min-width:0; }
 .ing-field__label{
   font-size:12px;
   color: var(--ing-muted);
@@ -279,6 +274,7 @@
   padding:9px 10px;
   display:grid;
   transition: border-color var(--ing-fast) ease, box-shadow var(--ing-fast) ease;
+  min-width:0;
 }
 .ing-field__input--soft:focus-within{
   border-color: rgba(34,197,94,0.75);
@@ -291,6 +287,11 @@
   outline:none;
   color: var(--ing-text);
   font-size:14px;
+
+  /* ✅ evita overflow */
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
 }
 
 /* Password row */
@@ -299,7 +300,10 @@
   grid-template-columns: 1fr auto;
   gap:8px;
   align-items:center;
+  min-width:0;
 }
+.ing-pass > input{ min-width:0; }
+
 .ing-eye{
   border:1px solid rgba(148,163,184,0.86);
   background: rgba(248,250,252,0.96);
@@ -325,15 +329,26 @@
   flex-wrap:wrap;
   margin-top:4px;
 }
-.ing-chk{
+.ing-helpHint{
   font-size:12px;
-  color:#4b5563;
+  color: var(--ing-muted);
 }
-.ing-chk--soft span{ color:#4b5563; }
 
-/* =====================================================
-   Buttons / links / messages
-   ===================================================== */
+/* ✅ Link-button "olvidé mi contraseña" */
+.ing-linkBtn{
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color:#65a30d;
+  font-weight:800;
+  font-size:12px;
+  border-bottom:1px dashed rgba(101,163,13,0.55);
+}
+.ing-linkBtn:hover{ filter: brightness(0.95); }
+.ing-linkBtn:disabled{ opacity:0.6; cursor:not-allowed; border-bottom-color: transparent; }
+
+/* Buttons / links / messages */
 .w100{ width:100%; }
 
 .ing-card--light .btn{
@@ -366,12 +381,6 @@
   box-shadow: 0 0 22px rgba(132,204,22,0.75), 0 0 0 1px rgba(15,23,42,0.12);
 }
 
-.ing-card--light .btn-outline{
-  background: var(--ing-white);
-  color:#111827;
-  border-color: rgba(148,163,184,0.86);
-  box-shadow: var(--ing-shadow2);
-}
 .ing-card--light .btn:disabled{
   opacity:0.6;
   cursor:not-allowed;
@@ -386,7 +395,6 @@
   transition: filter var(--ing-fast) ease;
 }
 .ing-link:hover{ filter: brightness(0.95); }
-.ing-link--sm{ font-size:12px; }
 .ing-link--inline{ border-bottom-style:solid; }
 
 /* Terms */
@@ -410,25 +418,13 @@
   font-weight:700;
 }
 
-/* Demo */
-.ing-demo{
-  margin-top:8px;
-  display:flex;
-  justify-content:center;
-}
-.ing-demo-btn{
-  height:32px !important;
-  padding:0 12px !important;
-  font-size:12px !important;
-  border-radius:999px !important;
-}
-
 /* Focus */
 .ing .ing-tab:focus-visible,
 .ing .btn:focus-visible,
 .ing .ing-link:focus-visible,
 .ing input:focus-visible,
-.ing .ing-eye:focus-visible{
+.ing .ing-eye:focus-visible,
+.ing .ing-linkBtn:focus-visible{
   outline: 2px solid rgba(34,197,94,0.9);
   outline-offset: 2px;
   border-radius: 10px;
@@ -440,6 +436,7 @@
   .ing-card.ing-card--light{
     padding:18px 16px 18px;
     min-height:455px;
+    max-height: min(86vh, 680px);
   }
   .ing-form-shell{ min-height:268px; }
 }
