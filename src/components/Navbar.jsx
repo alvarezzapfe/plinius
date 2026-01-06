@@ -150,14 +150,16 @@ const Navbar = () => {
                 onMouseLeave={closeByHover}
               >
                 <li role="none">
-                  {/* ✅ ahora apunta a sección en Home */}
-                  <Link to="/#sobre-plinius" role="menuitem" className="dropdown-item">
+                  <Link
+                    to="/#sobre-plinius"
+                    role="menuitem"
+                    className="dropdown-item"
+                  >
                     Sobre Plinius
                   </Link>
                 </li>
 
                 <li role="none">
-                  {/* Si NO tienes ruta /productos, cámbialo también a /#productos */}
                   <Link to="/productos" role="menuitem" className="dropdown-item">
                     Productos
                     <span className="dropdown-sub">
@@ -167,7 +169,6 @@ const Navbar = () => {
                 </li>
 
                 <li role="none">
-                  {/* ✅ ahora apunta a sección en Home */}
                   <Link to="/#enfoque" role="menuitem" className="dropdown-item">
                     Enfoque y criterios de crédito
                   </Link>
@@ -176,17 +177,7 @@ const Navbar = () => {
             )}
           </li>
 
-          {/* Inversionistas */}
-          <li className="nav-item">
-            <Link
-              to="/inversionistas"
-              className={`nav-link ${isActive("/inversionistas") ? "active" : ""}`}
-            >
-              Inversionistas
-            </Link>
-          </li>
-
-          {/* Simulador */}
+          {/* ✅ Simulador */}
           <li className="nav-item">
             <Link
               to="/simulador"
@@ -196,7 +187,7 @@ const Navbar = () => {
             </Link>
           </li>
 
-          {/* Solicitud */}
+          {/* ✅ Solicitud */}
           <li className="nav-item">
             <Link
               to="/solicitud"
@@ -212,8 +203,12 @@ const Navbar = () => {
               type="button"
               className={`nav-link nav-link-btn ${
                 isAuthed
-                  ? isActive("/dashboard") ? "active" : ""
-                  : isActive("/ingresar") ? "active" : ""
+                  ? isActive("/dashboard")
+                    ? "active"
+                    : ""
+                  : isActive("/ingresar")
+                  ? "active"
+                  : ""
               }`}
               onClick={onAuthCtaClick}
             >

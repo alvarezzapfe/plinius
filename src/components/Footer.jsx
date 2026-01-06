@@ -1,77 +1,36 @@
 // src/components/Footer.jsx
-import React, { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/images/logo-plinius.png";
 import "../assets/css/footer.css";
 
 const year = new Date().getFullYear();
 
 const Footer = () => {
-  // THEME TOGGLE
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("plinius-theme") || "dark";
-    }
-    return "dark";
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "light") {
-      root.classList.add("theme-light");
-    } else {
-      root.classList.remove("theme-light");
-    }
-    localStorage.setItem("plinius-theme", theme);
-  }, [theme]);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
-  }, []);
-
-  // PWA INSTALL
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [pwaReady, setPwaReady] = useState(false);
-
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setPwaReady(true);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    try {
-      await deferredPrompt.userChoice;
-    } finally {
-      setDeferredPrompt(null);
-      setPwaReady(false);
-    }
-  };
-
-  // STATUS WIDGET (mock)
   const [statusOpen, setStatusOpen] = useState(false);
-  const status = {
-    overall: "operational", // "operational" | "degraded" | "incident"
-    services: [
-      { name: "API", state: "operational" },
-      { name: "Auth", state: "operational" },
-      { name: "Dashboard", state: "operational" },
-    ],
-    uptime90d: "99.97%",
-    lastUpdate: "hace 3 min",
-  };
+  const location = useLocation();
 
-  const statusLabel = {
-    operational: "Operational",
-    degraded: "Degradado",
-    incident: "Incidente",
-  }[status.overall];
+  // STATUS (mock)
+  const status = useMemo(
+    () => ({
+      overall: "operational", // "operational" | "degraded" | "incident"
+      services: [
+        { name: "API", state: "operational" },
+        { name: "Auth", state: "operational" },
+        { name: "Dashboard", state: "operational" },
+      ],
+      uptime90d: "99.97%",
+      lastUpdate: "hace 3 min",
+    }),
+    []
+  );
+
+  const statusLabel =
+    {
+      operational: "Operational",
+      degraded: "Degradado",
+      incident: "Incidente",
+    }[status.overall] || "—";
 
   // Build string (agnóstico al bundler)
   const build =
@@ -84,30 +43,28 @@ const Footer = () => {
     (typeof window !== "undefined" && window.__APP_BUILD__) ||
     "v1.0.0";
 
+  // Scroll a top “inteligente”
+  const toTopHref = location?.pathname === "/" ? "#top" : "/#top";
+
+  const onNewsletterSubmit = (e) => {
+    e.preventDefault();
+    // UI-only por ahora. Cuando conectes backend, aquí haces fetch a tu endpoint.
+    // Mantengo el “toque premium”: feedback visual por CSS (ver footer.css).
+    e.currentTarget.classList.add("sent");
+    setTimeout(() => e.currentTarget.classList.remove("sent"), 1800);
+  };
+
   return (
     <footer className="footer">
+      {/* accent line */}
       <div className="footer-accent" aria-hidden />
 
-      <div className="footer-wrap">
-        {/* Toolbar: Theme / Status / Install */}
-        <div className="f-toolbar" role="toolbar" aria-label="Controles">
-          <button
-            type="button"
-            className="toggler"
-            onClick={toggleTheme}
-            aria-pressed={theme === "light"}
-            aria-label="Cambiar tema"
-            title="Cambiar tema"
-          >
-            <span className="tog-knob" />
-            <span className="tog-ico sun" aria-hidden>
-              ☀️
-            </span>
-            <span className="tog-ico moon" aria-hidden>
-              🌙
-            </span>
-          </button>
+      {/* aurora subtle (extra touch) */}
+      <div className="footer-aurora" aria-hidden />
 
+      <div className="footer-wrap">
+        {/* Toolbar: Status + Build */}
+        <div className="f-toolbar" role="toolbar" aria-label="Controles">
           <button
             type="button"
             className={`status-pill ${status.overall}`}
@@ -120,32 +77,10 @@ const Footer = () => {
             <span className="txt">Status: {statusLabel}</span>
           </button>
 
-          <button
-            type="button"
-            className={`install-btn ${pwaReady ? "ready" : "disabled"}`}
-            onClick={handleInstall}
-            disabled={!pwaReady}
-            title={pwaReady ? "Instalar app" : "Instalación no disponible"}
-          >
-            <span className="ic" aria-hidden>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 3v12m0 0 4-4m-4 4-4-4"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M5 21h14"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </span>
-            <span>Instalar app</span>
-          </button>
+          <span className="build-pill" title="Build actual">
+            <span className="build-dot" aria-hidden />
+            Build <strong className="build-val">{build}</strong>
+          </span>
         </div>
 
         {/* Marca */}
@@ -153,14 +88,39 @@ const Footer = () => {
           <img src={logo} alt="Plinius" className="f-logo" />
           <p className="f-tagline">
             Infraestructura en Finanzas AI, S.A.P.I. de C.V. —{" "}
-            <strong>Plinius</strong> (marca registrada)
+            <strong>Plinius</strong>
           </p>
+
           <div className="f-chips">
             <span className="chip">Crédito simple</span>
             <span className="chip">Arrendamiento puro</span>
             <span className="chip">Capital</span>
-            <span className="chip">Bursatilización</span>
+            <span className="chip">Estructura</span>
           </div>
+
+          {/* Newsletter mini (extra touch) */}
+          <form className="f-news" onSubmit={onNewsletterSubmit}>
+            <div className="f-newsRow">
+              <span className="f-newsKicker">
+                <span className="f-newsDot" aria-hidden />
+                Actualizaciones (0 spam)
+              </span>
+              <div className="f-newsField">
+                <input
+                  type="email"
+                  required
+                  placeholder="tu@email.com"
+                  aria-label="Correo para actualizaciones"
+                />
+                <button type="submit" className="f-newsBtn">
+                  Suscribirme
+                </button>
+              </div>
+            </div>
+            <div className="f-newsHint">
+              Te avisamos cambios de producto, mejoras y disponibilidad.
+            </div>
+          </form>
         </div>
 
         {/* Grid */}
@@ -184,14 +144,11 @@ const Footer = () => {
                   (55) 5551609091
                 </a>
               </li>
+
               <li className="f-item">
                 <span className="ic" aria-hidden>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M4 6h16v12H4z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
+                    <path d="M4 6h16v12H4z" stroke="currentColor" strokeWidth="1.6" />
                     <path
                       d="M4 7l8 6 8-6"
                       stroke="currentColor"
@@ -208,6 +165,7 @@ const Footer = () => {
                   contacto@crowdlink.mx
                 </a>
               </li>
+
               <li className="f-item">
                 <span className="ic" aria-hidden>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -216,13 +174,7 @@ const Footer = () => {
                       stroke="currentColor"
                       strokeWidth="1.6"
                     />
-                    <circle
-                      cx="12"
-                      cy="11"
-                      r="2.5"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
+                    <circle cx="12" cy="11" r="2.5" stroke="currentColor" strokeWidth="1.6" />
                   </svg>
                 </span>
                 <a
@@ -231,8 +183,8 @@ const Footer = () => {
                   rel="noopener noreferrer"
                   href="https://maps.google.com/?q=Torre Esmeralda III, Blvd. Manuel Ávila Camacho 32, Sky Lobby B, Lomas de Chapultepec I, Miguel Hidalgo, CDMX 11000"
                 >
-                  Torre Esmeralda III, Blvd. Manuel Ávila Camacho 32, Sky Lobby
-                  B, Lomas de Chapultepec I, Miguel Hidalgo, CDMX 11000
+                  Torre Esmeralda III, Blvd. Manuel Ávila Camacho 32, Sky Lobby B,
+                  Lomas de Chapultepec I, Miguel Hidalgo, CDMX 11000
                 </a>
               </li>
             </ul>
@@ -255,6 +207,7 @@ const Footer = () => {
                   />
                 </svg>
               </a>
+
               <a
                 className="s-btn"
                 href="https://x.com"
@@ -283,14 +236,18 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                {/* Ancla a sección en Home */}
-                <a href="/#que" className="f-link">
-                  ¿Qué hacemos?
+                <a href="/#sobre-plinius" className="f-link">
+                  Sobre Plinius
                 </a>
               </li>
               <li>
-                <a href="/#track" className="f-link">
-                  Track record
+                <a href="/#enfoque" className="f-link">
+                  Enfoque
+                </a>
+              </li>
+              <li>
+                <a href="/#tailor" className="f-link">
+                  Tailor-made
                 </a>
               </li>
               <li>
@@ -299,17 +256,17 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a href="#simulador" className="f-link">
+                <Link to="/simulador" className="f-link">
                   Simulador
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#solicitud" className="f-link">
+                <Link to="/solicitud" className="f-link">
                   Solicitud
-                </a>
+                </Link>
               </li>
               <li>
-                <Link to="/login" className="f-link">
+                <Link to="/ingresar?registro=0" className="f-link">
                   Ingresar
                 </Link>
               </li>
@@ -340,13 +297,18 @@ const Footer = () => {
                   </span>
                 </a>
               </li>
+
               <li>
                 <span className="f-kicker">PiMX</span> · Financiamiento puente
               </li>
+
+              <li>
+                <span className="f-kicker">Soporte Impulsa</span> · Originación y soporte operativo
+              </li>
             </ul>
+
             <div className="f-badges">
               <span className="badge soft">SOC 2 (en proceso)</span>
-              <span className="badge soft">ISO 27001 (roadmap)</span>
             </div>
           </div>
 
@@ -359,7 +321,6 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                {/* 👇 Navegación interna por Router */}
                 <Link to="/terminos" className="f-link">
                   Términos y condiciones
                 </Link>
@@ -370,10 +331,11 @@ const Footer = () => {
                 </a>
               </li>
             </ul>
+
             <p className="f-micro">
-              La información mostrada tiene fines informativos y no constituye
-              una oferta, recomendación o solicitud para adquirir productos
-              financieros. Sujeta a evaluación y políticas de crédito.
+              La información mostrada tiene fines informativos y no constituye una oferta,
+              recomendación o solicitud para adquirir productos financieros. Sujeta a evaluación
+              y políticas de crédito.
             </p>
           </div>
         </div>
@@ -393,6 +355,7 @@ const Footer = () => {
               Uptime 90d: {status.uptime90d} · {status.lastUpdate}
             </span>
           </div>
+
           <ul className="sd-list">
             {status.services.map((s) => (
               <li key={s.name} className="sd-item">
@@ -404,18 +367,12 @@ const Footer = () => {
               </li>
             ))}
           </ul>
+
           <div className="sd-actions">
-            <a
-              href="/status"
-              className="btn-sd"
-              aria-label="Ver status detallado"
-            >
+            <a href="/status" className="btn-sd" aria-label="Ver status detallado">
               Ver más
             </a>
-            <button
-              className="btn-sd ghost"
-              onClick={() => setStatusOpen(false)}
-            >
+            <button className="btn-sd ghost" onClick={() => setStatusOpen(false)}>
               Cerrar
             </button>
           </div>
@@ -424,14 +381,12 @@ const Footer = () => {
         <hr className="f-divider" />
 
         <div className="f-bottom">
-          <p className="f-copy">
-            &copy; {year} Plinius. Todos los derechos reservados.
-          </p>
+          <p className="f-copy">&copy; {year} Plinius. Todos los derechos reservados.</p>
+
           <nav className="f-bottom-nav" aria-label="Atajos legales">
             <a href="#aviso" className="f-mini">
               Privacidad
             </a>
-            {/* 👇 Usa Link aquí también */}
             <Link to="/terminos" className="f-mini">
               Términos
             </Link>
@@ -443,7 +398,7 @@ const Footer = () => {
       </div>
 
       {/* Back to top */}
-      <a href="#top" className="to-top" aria-label="Volver arriba">
+      <a href={toTopHref} className="to-top" aria-label="Volver arriba">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path
             d="M12 5l7 7M12 5L5 12"

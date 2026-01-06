@@ -103,9 +103,9 @@ export default function Simulador() {
           {/* HEADER */}
           <header className="sim-header">
             <div>
-              <h1>Simulador inteligente</h1>
+              <h1>Simulador</h1>
               <p>
-                Ajusta variables, mira pagos, costo total y una lectura rápida
+                Ajusta variables para obtener una lectura rápida
                 de qué tan sano es el crédito para tu empresa.
               </p>
             </div>
