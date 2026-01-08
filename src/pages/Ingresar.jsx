@@ -1,10 +1,9 @@
 // src/pages/Ingresar.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 import "../assets/css/ingresar.css";
 import { supabase } from "../lib/supabaseClient";
+import plogo from "../assets/images/plogo.png";
 
 const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
@@ -42,10 +41,63 @@ export default function Ingresar() {
   }, [nav]);
 
   return (
-    <div className="app-container">
-      <Navbar />
+    <main className="ingSplit">
+      {/* ========= LEFT (WHITE / INNOVATION) ========= */}
+      <section className="ingLeft" aria-label="Plinius">
+        <div className="ingLeft-bg" aria-hidden />
+        <div className="ingLeft-geo" aria-hidden />
+        <div className="ingLeft-inner">
+          <div className="ingLeft-brandRow">
+            <img src={plogo} alt="Plinius" className="ingLeft-logo" />
+            <span className="ingLeft-wordmark">Plinius</span>
+          </div>
 
-      <main className="ing">
+          <h1 className="ingLeft-title">
+            Plataforma de crédito empresarial
+            <span className="ingLeft-accent"> con trazabilidad y decisión rápida</span>.
+          </h1>
+
+          <p className="ingLeft-sub">
+            Panel 360° para solicitudes, documentos, validaciones, términos y seguimiento. Diseñado para operar rápido, con claridad.
+          </p>
+
+          <div className="ingLeft-kpis" aria-hidden="true">
+            <div className="ingLeft-kpi">
+              <div className="kpiNum">48h</div>
+              <div className="kpiLbl">SLA objetivo</div>
+            </div>
+            <div className="ingLeft-kpi">
+              <div className="kpiNum">1</div>
+              <div className="kpiLbl">panel único</div>
+            </div>
+            <div className="ingLeft-kpi">
+              <div className="kpiNum">360°</div>
+              <div className="kpiLbl">visión completa</div>
+            </div>
+          </div>
+
+          <ul className="ingLeft-points">
+            <li>Onboarding limpio: checklist, OCR (si aplica), y carga de archivos ordenada.</li>
+            <li>Validaciones y eventos: audit trail para cada paso.</li>
+            <li>Términos comparables: estructura clara, sin letra chiquita.</li>
+          </ul>
+
+          <div className="ingLeft-foot" aria-hidden="true">
+            <span className="ingLeft-pill">Security-first</span>
+            <span className="ingLeft-pill">Cashflow-first</span>
+            <span className="ingLeft-pill">Operational clarity</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ========= CENTER DIVIDER (NEON BEAM) ========= */}
+      <div className="ingDivider" aria-hidden="true">
+        <span className="ingDivider-line" />
+        <span className="ingDivider-beam" />
+      </div>
+
+      {/* ========= RIGHT (AUTH CARD) ========= */}
+      <section className="ingRight" aria-label="Acceso">
         <div className="ing-bg" aria-hidden />
         <div className="ing-grid" aria-hidden />
 
@@ -114,10 +166,8 @@ export default function Ingresar() {
             </p>
           </section>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </section>
+    </main>
   );
 }
 
@@ -209,7 +259,7 @@ function LoginForm({ onSuccess }) {
 
     setLoading(true);
     try {
-      const redirectTo = `${window.location.origin}/recuperar`; // crea esta ruta (te dejo archivo abajo)
+      const redirectTo = `${window.location.origin}/recuperar`;
       const { error } = await supabase.auth.resetPasswordForEmail(em, { redirectTo });
       if (error) throw error;
 
@@ -344,8 +394,6 @@ function SignupForm({ onSuccess }) {
       }
 
       setSuccess(true);
-
-      // ✅ si NO hay confirmación por email, ya hay sesión => navega
       if (data?.session) onSuccess?.();
     } catch (err) {
       setErrorMsg(err?.message || "Ocurrió un error. Inténtalo de nuevo.");

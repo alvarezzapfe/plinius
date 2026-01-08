@@ -1,23 +1,11 @@
 /* =====================================================
-   INGRESS / AUTH – NAMESPACED .ing-
+   INGRESS / AUTH – SPLIT SCREEN (namespaced)
    ===================================================== */
-
-.ing{
-  position:relative;
-  min-height:calc(100vh - 72px);
-  padding:72px 16px 88px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-  contain: layout paint;
-}
 
 :root{
   --ing-text:#020617;
   --ing-muted:#6b7280;
   --ing-border:rgba(148,163,184,0.72);
-  --ing-border2:rgba(148,163,184,0.52);
 
   --ing-card1:#f9fafb;
   --ing-card2:#eef2ff;
@@ -36,9 +24,267 @@
 
   --ing-fast: 120ms;
   --ing-med: 160ms;
+
+  --beam: rgba(163,230,53,0.95);
+  --beam2: rgba(34,197,94,0.95);
 }
 
-/* Background layers */
+/* ✅ cero scroll lateral */
+html, body { width: 100%; overflow-x: clip; }
+#root { overflow-x: clip; }
+
+/* ========== LAYOUT ========== */
+.ingSplit{
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: clip;
+}
+
+/* ===== LEFT SIDE (WHITE / GEOMETRY) ===== */
+.ingLeft{
+  position: relative;
+  background: #ffffff;
+  color: #0b1220;
+  overflow: clip;
+}
+
+.ingLeft-bg{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(80% 60% at 10% 0%, rgba(56,189,248,0.16), transparent 60%),
+    radial-gradient(70% 80% at 90% 15%, rgba(163,230,53,0.14), transparent 65%),
+    linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+  opacity: 1;
+}
+
+.ingLeft-geo{
+  position: absolute;
+  inset: -120px;
+  pointer-events: none;
+  opacity: 0.65;
+  background:
+    /* grid fina */
+    repeating-linear-gradient(90deg, rgba(2,6,23,0.06) 0 1px, transparent 1px 78px),
+    repeating-linear-gradient(0deg, rgba(2,6,23,0.05) 0 1px, transparent 1px 78px),
+    /* diagonales “mamonas” */
+    repeating-linear-gradient(135deg, rgba(56,189,248,0.12) 0 2px, transparent 2px 34px),
+    radial-gradient(24% 18% at 24% 20%, rgba(56,189,248,0.18), transparent 60%),
+    radial-gradient(22% 18% at 70% 18%, rgba(163,230,53,0.14), transparent 62%),
+    radial-gradient(26% 22% at 62% 78%, rgba(59,130,246,0.10), transparent 65%);
+  mask-image: radial-gradient(85% 70% at 50% 40%, rgba(0,0,0,0.9), transparent 72%);
+  animation: ingGeoDrift 26s linear infinite;
+}
+
+@keyframes ingGeoDrift{
+  from{ transform: translate3d(0,0,0); }
+  to{ transform: translate3d(-78px, 18px, 0); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ingLeft-geo{ animation:none; }
+}
+
+.ingLeft-inner{
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  padding: 42px clamp(18px, 4vw, 56px);
+  max-width: 720px;
+}
+
+.ingLeft-brandRow{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ingLeft-logo{
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(2,6,23,0.10));
+}
+
+.ingLeft-wordmark{
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  font-size: 22px;
+  color: rgba(2,6,23,0.92);
+}
+
+.ingLeft-title{
+  margin: 0;
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  font-weight: 950;
+  color: rgba(2,6,23,0.92);
+}
+
+.ingLeft-accent{
+  color: rgba(34,197,94,0.95);
+  text-shadow: 0 0 18px rgba(163,230,53,0.20);
+}
+
+.ingLeft-sub{
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(15,23,42,0.76);
+  max-width: 560px;
+}
+
+.ingLeft-kpis{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.ingLeft-kpi{
+  border-radius: 16px;
+  border: 1px solid rgba(2,6,23,0.10);
+  background: rgba(255,255,255,0.78);
+  box-shadow: 0 18px 42px rgba(2,6,23,0.08);
+  padding: 10px 12px;
+  min-width: 120px;
+}
+
+.kpiNum{
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  font-size: 18px;
+  color: rgba(2,6,23,0.92);
+}
+.kpiLbl{
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: rgba(15,23,42,0.64);
+}
+
+.ingLeft-points{
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  max-width: 600px;
+}
+
+.ingLeft-points li{
+  position: relative;
+  padding-left: 18px;
+  color: rgba(15,23,42,0.76);
+  line-height: 1.55;
+  font-weight: 650;
+}
+
+.ingLeft-points li::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--beam2), var(--beam));
+  box-shadow: 0 0 14px rgba(163,230,53,0.22);
+}
+
+.ingLeft-foot{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ingLeft-pill{
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(2,6,23,0.12);
+  background: rgba(255,255,255,0.72);
+  color: rgba(2,6,23,0.72);
+}
+
+/* ===== CENTER DIVIDER (NEON LINE + MOVING BEAM) ===== */
+.ingDivider{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-1px);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.ingDivider-line{
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(163,230,53,0.25),
+    rgba(163,230,53,0.25),
+    transparent
+  );
+  filter: drop-shadow(0 0 14px rgba(163,230,53,0.18));
+  opacity: 0.9;
+}
+
+.ingDivider-beam{
+  position: absolute;
+  left: 50%;
+  width: 10px;
+  height: 140px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    rgba(163,230,53,0.95),
+    rgba(34,197,94,0.55),
+    transparent 70%
+  );
+  filter: blur(0.2px) drop-shadow(0 0 22px rgba(163,230,53,0.45));
+  animation: ingBeamTravel 2.3s ease-in-out infinite;
+  opacity: 0.95;
+}
+
+@keyframes ingBeamTravel{
+  0%   { top: -120px; opacity: 0.0; }
+  12%  { opacity: 0.95; }
+  55%  { opacity: 0.95; }
+  100% { top: calc(100% + 120px); opacity: 0.0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ingDivider-beam{ animation:none; top: 40%; opacity: 0.6; }
+}
+
+/* ===== RIGHT SIDE (AUTH) ===== */
+.ingRight{
+  position: relative;
+  overflow: clip;
+  display: grid;
+  place-items: center;
+  padding: 56px 16px;
+}
+
+/* Background layers (solo derecha) */
 .ing-bg{
   position:absolute;
   inset:0;
@@ -72,7 +318,7 @@
   max-width:420px;
 }
 
-/* CARD */
+/* CARD (misma estructura tuya) */
 .ing-card.ing-card--light{
   border-radius:var(--ing-r);
   border:1px solid var(--ing-border);
@@ -84,14 +330,9 @@
   display:grid;
   gap:16px;
   color:var(--ing-text);
-
-  /* ✅ estabilidad */
   min-height:470px;
-
-  /* ✅ evita que en Windows “explote” el card */
-  max-height: min(84vh, 720px);
+  max-height: min(86vh, 760px);
   overflow: hidden;
-
   transform: translateZ(0);
 }
 
@@ -101,10 +342,8 @@
   min-height:268px;
   display:flex;
   align-items:flex-start;
-
-  /* ✅ scroll interno */
   overflow:auto;
-  padding-right: 2px; /* evita salto por scrollbar */
+  padding-right: 2px;
 }
 .ing-form-shell > .ing-form{ width:100%; }
 
@@ -249,8 +488,6 @@
   display:grid;
   gap:8px;
   grid-template-columns: 1fr 1fr;
-
-  /* ✅ clave en Windows para que no “reviente” */
   min-width: 0;
 }
 .ing-grid2 > *{ min-width:0; }
@@ -287,8 +524,6 @@
   outline:none;
   color: var(--ing-text);
   font-size:14px;
-
-  /* ✅ evita overflow */
   width:100%;
   min-width:0;
   box-sizing:border-box;
@@ -334,7 +569,7 @@
   color: var(--ing-muted);
 }
 
-/* ✅ Link-button "olvidé mi contraseña" */
+/* Link-button */
 .ing-linkBtn{
   background: transparent;
   border: none;
@@ -348,7 +583,7 @@
 .ing-linkBtn:hover{ filter: brightness(0.95); }
 .ing-linkBtn:disabled{ opacity:0.6; cursor:not-allowed; border-bottom-color: transparent; }
 
-/* Buttons / links / messages */
+/* Buttons */
 .w100{ width:100%; }
 
 .ing-card--light .btn{
@@ -362,7 +597,6 @@
   font-size:13px;
   cursor:pointer;
   text-decoration:none;
-
   transition: transform var(--ing-fast) ease, filter var(--ing-fast) ease, box-shadow var(--ing-fast) ease;
   will-change: transform;
 }
@@ -397,7 +631,6 @@
 .ing-link:hover{ filter: brightness(0.95); }
 .ing-link--inline{ border-bottom-style:solid; }
 
-/* Terms */
 .ing-terms{
   margin:0;
   font-size:11.5px;
@@ -418,25 +651,64 @@
   font-weight:700;
 }
 
-/* Focus */
-.ing .ing-tab:focus-visible,
-.ing .btn:focus-visible,
-.ing .ing-link:focus-visible,
-.ing input:focus-visible,
-.ing .ing-eye:focus-visible,
-.ing .ing-linkBtn:focus-visible{
+/* Focus visible */
+.ingSplit .ing-tab:focus-visible,
+.ingSplit .btn:focus-visible,
+.ingSplit .ing-link:focus-visible,
+.ingSplit input:focus-visible,
+.ingSplit .ing-eye:focus-visible,
+.ingSplit .ing-linkBtn:focus-visible{
   outline: 2px solid rgba(34,197,94,0.9);
   outline-offset: 2px;
   border-radius: 10px;
 }
 
-/* Responsive */
+/* ========== RESPONSIVE ========== */
+@media (max-width: 980px){
+  .ingSplit{
+    grid-template-columns: 1fr;
+  }
+
+  .ingDivider{
+    left: 0;
+    right: 0;
+    top: 50%;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+    transform: translateY(-1px);
+  }
+
+  .ingDivider-line{
+    background: linear-gradient(to right, transparent, rgba(163,230,53,0.25), rgba(163,230,53,0.25), transparent);
+  }
+
+  .ingDivider-beam{
+    width: 140px;
+    height: 10px;
+    left: -120px;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: ingBeamTravelH 2.3s ease-in-out infinite;
+  }
+
+  @keyframes ingBeamTravelH{
+    0%   { left: -120px; opacity: 0.0; }
+    12%  { opacity: 0.95; }
+    55%  { opacity: 0.95; }
+    100% { left: calc(100% + 120px); opacity: 0.0; }
+  }
+
+  .ingRight{ padding: 48px 14px 64px; }
+  .ingLeft-inner{ padding: 38px 18px; }
+}
+
 @media (max-width:600px){
-  .ing{ padding:64px 14px 72px; }
+  .ingRight{ padding: 40px 14px 56px; }
   .ing-card.ing-card--light{
     padding:18px 16px 18px;
     min-height:455px;
-    max-height: min(86vh, 680px);
+    max-height: min(88vh, 760px);
   }
   .ing-form-shell{ min-height:268px; }
 }
