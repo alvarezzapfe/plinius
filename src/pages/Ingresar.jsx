@@ -54,11 +54,11 @@ export default function Ingresar() {
 
           <h1 className="ingLeft-title">
             Plataforma de crédito empresarial
-            <span className="ingLeft-accent"> con trazabilidad y decisión rápida</span>.
+            <span className="ingLeft-accent"> comienza a gestionar tus decisiones de forma rápida</span>.
           </h1>
 
           <p className="ingLeft-sub">
-            Panel 360° para solicitudes, documentos, validaciones, términos y seguimiento. Diseñado para operar rápido, con claridad.
+            Una plataforma 360° para gestionar los creditos de tu empresa.
           </p>
 
           <div className="ingLeft-kpis" aria-hidden="true">
@@ -104,6 +104,13 @@ export default function Ingresar() {
         <div className="ing-shell">
           <section className="ing-card ing-card--light">
             <header className="ing-head">
+
+
+              <Link to="/" className="ing-backHome" aria-label="Regresar a Home">
+                <span className="ing-backIcon" aria-hidden="true">←</span>
+                Regresar a Home
+              </Link>
+              
               <div className="ing-pill">Plinius · Acceso</div>
               <h2 className="ing-title">
                 {modo === "ingreso" ? "Ingresar a tu panel" : "Crear cuenta empresarial"}

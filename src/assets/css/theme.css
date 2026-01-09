@@ -12,11 +12,11 @@
 
   --container: 1180px;
 
-  /* más compacto entre secciones */
-  --section-pad: 62px;
-  --section-pad-bottom: 56px;
+  /* ✅ más grande entre secciones (antes 62/56) */
+  --section-pad: 86px;
+  --section-pad-bottom: 78px;
 
-  /* NUEVO: cards/boxes claros */
+  /* cards/boxes claros */
   --pearl: rgba(246, 248, 255, 0.92);
   --pearl-2: rgba(235, 242, 255, 0.88);
   --ink: #0b1220;
@@ -781,113 +781,255 @@ select:focus-visible {
 }
 
 /* =====================================================
-   SOBRE PLINIUS & ENFOQUE (Boxes claros)
+   SECTION LG (más grande y con “halo” sutil)
    ===================================================== */
-.about { padding-top: 44px; }
-
-.box-grid {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+.section-lg {
+  padding-top: calc(var(--section-pad) + 10px);
+  padding-bottom: calc(var(--section-pad-bottom) + 10px);
 }
 
-/* Cards claros */
-.box,
-.focus-card {
-  border-radius: 18px;
-  border: 1px solid var(--metal-blue);
+.section-lg::after{
+  content:"";
+  position:absolute;
+  inset:-54px 0 -54px 0;
+  pointer-events:none;
+  background:
+    radial-gradient(44% 34% at 20% 25%, rgba(56,189,248,0.10), transparent 60%),
+    radial-gradient(36% 30% at 78% 38%, rgba(215,255,0,0.08), transparent 62%),
+    radial-gradient(48% 38% at 50% 90%, rgba(15,23,42,0.65), transparent 70%);
+  filter: blur(2px);
+  opacity: .92;
+  z-index: 0;
+}
+
+/* para que el halo no tape contenido */
+.section .section-inner { position: relative; z-index: 1; }
+
+.section-head-lg h2{
+  font-size: clamp(32px, 4.8vw, 46px);
+}
+
+.section-head-lg .section-sub{
+  font-size: 15px;
+  max-width: 860px;
+}
+
+/* =====================================================
+   SOBRE PLINIUS & ENFOQUE – Cards grandes + FX
+   ===================================================== */
+.about { padding-top: 0; }
+
+.box-grid,
+.focus-grid { margin-top: 26px; }
+
+.box-grid-lg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.focus-grid-lg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+/* Card base */
+.pCard{
+  position: relative;
+  border-radius: 24px;
+  padding: 24px 24px 18px;
+  border: 1px solid rgba(56,189,248,0.88);
   background: linear-gradient(180deg, var(--pearl), var(--pearl-2));
   color: var(--ink);
   box-shadow:
-    0 18px 46px rgba(0,0,0,0.22),
+    0 24px 78px rgba(0,0,0,0.22),
     0 0 0 1px rgba(56,189,248,0.10) inset,
-    0 0 46px var(--metal-glow);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    0 0 74px rgba(56,189,248,0.16);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    filter 180ms ease;
   will-change: transform;
+  transform: perspective(950px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  overflow: hidden;
 }
 
-.box:hover,
-.focus-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(56,189,248,0.92);
+/* borde premium */
+.pCard::before{
+  content:"";
+  position:absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(56,189,248,0.88), rgba(215,255,0,0.55), rgba(30,64,175,0.55));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events:none;
+  opacity: .55;
+}
+
+/* glow follow */
+.pCard::after{
+  content:"";
+  position:absolute;
+  inset:-44px;
+  background:
+    radial-gradient(240px 190px at var(--mx, 50%) var(--my, 50%),
+      rgba(56,189,248,0.26),
+      rgba(215,255,0,0.12) 42%,
+      transparent 74%);
+  opacity: .92;
+  filter: blur(2px);
+  pointer-events:none;
+  transition: opacity 220ms ease;
+}
+
+.pCard:hover{
+  transform: perspective(950px) translateY(-8px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  border-color: rgba(56,189,248,0.98);
   box-shadow:
-    0 28px 74px rgba(0,0,0,0.26),
+    0 34px 100px rgba(0,0,0,0.26),
     0 0 0 1px rgba(56,189,248,0.14) inset,
-    0 0 60px rgba(56,189,248,0.22);
+    0 0 92px rgba(56,189,248,0.22);
 }
 
-.box { padding: 16px 16px 14px; }
-
-.box-top {
-  display: flex;
-  align-items: center;
+.pCardTop{
+  display:flex;
+  align-items:center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 /* icon wrap metálico */
 .box-iconWrap {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(56,189,248,0.70);
-  background:
-    linear-gradient(180deg, rgba(56,189,248,0.95), rgba(30,64,175,0.75));
-  box-shadow: 0 0 22px rgba(56,189,248,0.22);
+  border: 1px solid rgba(56,189,248,0.75);
+  background: linear-gradient(180deg, rgba(56,189,248,0.96), rgba(30,64,175,0.78));
+  box-shadow: 0 0 28px rgba(56,189,248,0.22);
   color: rgba(255,255,255,0.95);
 }
-
-.box-icon { color: rgba(255,255,255,0.95); }
 
 .box-meta {
   font-size: 11px;
   font-weight: 950;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: 999px;
   border: 1px solid rgba(30,64,175,0.30);
   background: rgba(30,64,175,0.08);
   color: rgba(11,18,32,0.92);
 }
 
-.box h3,
-.focus-card h3 {
-  margin: 0 0 6px;
-  font-size: 18px;
+.pCard h3{
+  margin: 2px 0 8px;
+  font-size: 20px;
   font-weight: 950;
+  letter-spacing: -0.02em;
+  color: rgba(11,18,32,0.98);
+}
+
+.pCard p{
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(11,18,32,0.86);
+}
+
+/* stats row */
+.pStats{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pStatsCompact{ margin-top: 12px; }
+
+.pStat{
+  border-radius: 16px;
+  border: 1px solid rgba(56,189,248,0.22);
+  background: rgba(2,6,23,0.04);
+  padding: 10px 12px;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.10);
+}
+
+.pStatNum{
+  font-weight: 950;
+  font-size: 18px;
   letter-spacing: -0.02em;
   color: rgba(11,18,32,0.96);
 }
 
-.box p,
-.focus-card p {
-  margin: 0;
-  font-size: 14px;
-  color: rgba(11,18,32,0.86);
-  line-height: 1.55;
+.pStatLbl{
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(11,18,32,0.70);
 }
 
-/* Enfoque grid */
-.focus-grid {
-  margin-top: 18px;
+/* chips */
+.pChips{
+  margin-top: 12px;
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pChip{
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(56,189,248,0.22);
+  background: rgba(2,6,23,0.04);
+  color: rgba(11,18,32,0.84);
+}
+
+/* footer line inside card */
+.pCardFoot{
+  margin-top: 14px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(56,189,248,0.18);
+  color: rgba(11,18,32,0.78);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.pPulseDot{
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(56,189,248,0.95);
+  box-shadow: 0 0 18px rgba(56,189,248,0.22);
+  animation: pPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pPulse{
+  0%,100%{ transform: scale(1); opacity: .95; }
+  50%{ transform: scale(1.45); opacity: .70; }
+}
+
+/* Enfoque head + lista */
+.focus-head-lg{
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 56px minmax(0, 1fr);
   gap: 14px;
-}
-
-.focus-card { padding: 16px 16px 14px; }
-
-.focus-head {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 12px;
   align-items: start;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .focus-list {
@@ -898,47 +1040,36 @@ select:focus-visible {
   gap: 8px;
 }
 
-.focus-list li {
-  position: relative;
-  padding-left: 16px;
-  color: rgba(11,18,32,0.86);
-  font-size: 13px;
-  line-height: 1.45;
+.focus-list-lg{
+  margin-top: 12px;
+  gap: 10px;
 }
 
-.focus-list li::before {
+.focus-list-lg li{
+  position: relative;
+  padding-left: 18px;
+  color: rgba(11,18,32,0.86);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.focus-list-lg li::before{
   content: "";
   position: absolute;
   left: 0;
-  top: 9px;
-  width: 8px;
+  top: 10px;
+  width: 10px;
   height: 2px;
   border-radius: 99px;
   background: rgba(56,189,248,0.95);
-  box-shadow: 0 0 14px rgba(56,189,248,0.22);
+  box-shadow: 0 0 16px rgba(56,189,248,0.24);
 }
 
-/* note */
-.focus-note { margin-top: 14px; display: grid; grid-template-columns: 1fr; }
-
-.focus-noteCard {
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(2, 6, 23, 0.22);
-  padding: 12px 14px;
-  display: grid;
-  gap: 6px;
-  box-shadow: 0 18px 42px rgba(0,0,0,0.24);
-}
-.focus-noteCard b {
-  font-weight: 950;
-  letter-spacing: -0.01em;
-  color: rgba(226,232,240,0.95);
-}
-.focus-noteCard span {
-  color: rgba(203,213,245,0.92);
-  font-weight: 800;
-  line-height: 1.5;
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce){
+  .pCard{ transform: none !important; }
+  .pPulseDot{ animation: none; }
+  .pCard::after{ transition: none; }
 }
 
 /* =====================================================
@@ -1047,11 +1178,14 @@ select:focus-visible {
 @media (max-width: 1024px) {
   .hero-inner { grid-template-columns: 1fr; }
   .hero-visual { justify-self: start; max-width: 560px; }
+
+  /* ✅ mantenemos los layouts “lg” a 1 columna en tablet */
+  .box-grid-lg { grid-template-columns: 1fr; }
+  .focus-grid-lg { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 840px) {
-  .box-grid { grid-template-columns: 1fr; }
-  .focus-grid { grid-template-columns: 1fr; }
+  /* ✅ OJO: ya NO pisamos box-grid-lg / focus-grid-lg */
   .faq-grid { grid-template-columns: 1fr; }
   .final-cta-inner { flex-direction: column; align-items: flex-start; }
 }
@@ -1060,4 +1194,7 @@ select:focus-visible {
   .section { padding-inline: 18px; }
   .hero { padding-inline: 18px; }
   .pc-status { left: 10px; bottom: 10px; }
+
+  .pCard { padding: 18px 16px 16px; border-radius: 20px; }
+  .pCard::before { border-radius: 20px; }
 }

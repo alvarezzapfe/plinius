@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -35,7 +35,6 @@ function IconSpark(props) {
     </svg>
   );
 }
-
 function IconBolt(props) {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
@@ -48,7 +47,6 @@ function IconBolt(props) {
     </svg>
   );
 }
-
 function IconShield(props) {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
@@ -68,7 +66,6 @@ function IconShield(props) {
     </svg>
   );
 }
-
 function IconLayout(props) {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
@@ -88,7 +85,6 @@ function IconLayout(props) {
     </svg>
   );
 }
-
 function IconRadar(props) {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
@@ -117,13 +113,106 @@ function IconRadar(props) {
 }
 
 /* =======================
+   React FX: Tilt + Glow follow
+======================= */
+function useCardFX() {
+  const onMove = (e) => {
+    const el = e.currentTarget;
+    const r = el.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+
+    // glow follow
+    el.style.setProperty("--mx", `${x}px`);
+    el.style.setProperty("--my", `${y}px`);
+
+    // tilt
+    const px = (x / r.width) * 2 - 1; // -1..1
+    const py = (y / r.height) * 2 - 1; // -1..1
+    const tilt = 7; // grados
+    el.style.setProperty("--rx", `${(-py * tilt).toFixed(2)}deg`);
+    el.style.setProperty("--ry", `${(px * tilt).toFixed(2)}deg`);
+  };
+
+  const onLeave = (e) => {
+    const el = e.currentTarget;
+    el.style.setProperty("--rx", `0deg`);
+    el.style.setProperty("--ry", `0deg`);
+    el.style.setProperty("--mx", `50%`);
+    el.style.setProperty("--my", `50%`);
+  };
+
+  return { onMove, onLeave };
+}
+
+/* =======================
+   React FX: CountUp on visible
+======================= */
+function CountUp({ value = 0, suffix = "", duration = 900 }) {
+  const ref = useRef(null);
+  const [n, setN] = useState(0);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let raf = 0;
+    let start = 0;
+    let done = false;
+
+    const startAnim = () => {
+      if (done) return;
+      done = true;
+
+      const target = Number(value) || 0;
+      const from = 0;
+
+      const step = (t) => {
+        if (!start) start = t;
+        const p = Math.min(1, (t - start) / duration);
+        const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+        const cur = from + (target - from) * eased;
+        setN(cur);
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+
+      raf = requestAnimationFrame(step);
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) startAnim();
+        });
+      },
+      { threshold: 0.35, rootMargin: "0px 0px -10% 0px" }
+    );
+
+    io.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      io.disconnect();
+    };
+  }, [value, duration]);
+
+  const isInt = Number.isInteger(Number(value));
+  const shown = isInt ? Math.round(n) : n.toFixed(1);
+
+  return (
+    <span ref={ref}>
+      {shown}
+      {suffix}
+    </span>
+  );
+}
+
+/* =======================
    Hero Visual (Monitor + 360° Console)
 ======================= */
 function Platform360() {
   return (
     <div className="hero-visual" aria-hidden="true">
       <div className="monitor">
-        {/* bezel/top */}
         <div className="monitor-top">
           <div className="monitor-brand">
             <span className="monitor-brandDot" />
@@ -132,7 +221,6 @@ function Platform360() {
           <div className="monitor-cam" />
         </div>
 
-        {/* screen */}
         <div className="monitor-screen">
           <div className="monitor-reflection" />
           <div className="screen-header">
@@ -147,13 +235,11 @@ function Platform360() {
             </div>
           </div>
 
-          {/* orbit content */}
           <div className="orbit">
             <div className="orbit-ring ring-1" />
             <div className="orbit-ring ring-2" />
             <div className="orbit-ring ring-3" />
 
-            {/* Panel A */}
             <div className="platform platform-a">
               <div className="ui-top">
                 <span className="ui-pill">Risk Engine</span>
@@ -196,7 +282,6 @@ function Platform360() {
               </div>
             </div>
 
-            {/* Panel B */}
             <div className="platform platform-b">
               <div className="ui-top">
                 <span className="ui-pill">Workflow</span>
@@ -228,7 +313,6 @@ function Platform360() {
               </div>
             </div>
 
-            {/* Panel C */}
             <div className="platform platform-c">
               <div className="ui-top">
                 <span className="ui-pill">Terms</span>
@@ -266,7 +350,6 @@ function Platform360() {
           </div>
         </div>
 
-        {/* stand */}
         <div className="monitor-stand">
           <div className="stand-neck" />
           <div className="stand-base" />
@@ -306,41 +389,82 @@ export default function App() {
     setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }, [location.hash]);
 
-  const about = [
-    {
-      icon: <IconBolt className="box-icon" />,
-      title: "Velocidad real",
-      text: "Solicitud y respuesta rápida.",
-      meta: "SLA 48h",
-    },
-    {
-      icon: <IconLayout className="box-icon" />,
-      title: "Un panel para todo",
-      text: "Docs, estatus, términos, vencimientos y comunicación.",
-      meta: "Control",
-    },
-    {
-      icon: <IconShield className="box-icon" />,
-      title: "Estructura con sentido",
-      text: "Calendarios y condiciones alineadas al flujo.",
-      meta: "Cashflow",
-    },
-  ];
+  const about = useMemo(
+    () => [
+      {
+        icon: <IconBolt className="box-icon" />,
+        title: "Velocidad real",
+        text: "Del intake a oferta: menos fricción, más claridad. Checklist + validaciones para no rebotarte.",
+        meta: "SLA",
+        stats: [
+          { label: "Objetivo", value: 48, suffix: "h" },
+          { label: "Tiempo por paso", value: 1.2, suffix: "s" },
+        ],
+        chips: ["Carga de docs", "Checklist", "Seguimiento"],
+      },
+      {
+        icon: <IconLayout className="box-icon" />,
+        title: "Un panel para todo",
+        text: "Docs, estatus, términos, vencimientos y comunicación en un mismo lugar. Menos correos, más control.",
+        meta: "Control",
+        stats: [
+          { label: "Paneles", value: 1, suffix: "" },
+          { label: "Trazabilidad", value: 100, suffix: "%" },
+        ],
+        chips: ["Dashboard", "Historial", "Alertas"],
+      },
+      {
+        icon: <IconShield className="box-icon" />,
+        title: "Estructura con sentido",
+        text: "Condiciones alineadas al flujo. Calendarios, covenants y fees visibles para que no te “sorprendan”.",
+        meta: "Cashflow",
+        stats: [
+          { label: "DSCR min", value: 1.2, suffix: "x" },
+          { label: "Plazo", value: 36, suffix: "m" },
+        ],
+        chips: ["Covenants", "Calendarios", "Términos claros"],
+      },
+    ],
+    []
+  );
 
-  const focus = [
-    {
-      icon: <IconRadar className="box-icon" />,
-      title: "Criterio: flujo y operación",
-      text: "Revisamos capacidad de pago.",
-      bullets: ["Flujo libre + estacionalidad", "Concentración y riesgo operativo"],
-    },
-    {
-      icon: <IconSpark className="box-icon" />,
-      title: "Decisión: clara y accionable",
-      text: "Respuesta directa con razón concreta y siguientes pasos.",
-      bullets: ["Oferta", "Términos simples, comparables"],
-    },
-  ];
+  const focus = useMemo(
+    () => [
+      {
+        icon: <IconRadar className="box-icon" />,
+        title: "Criterio: flujo + operación",
+        text: "No es magia: es capacidad de pago. Priorizamos señales que sí explican riesgo y continuidad operativa.",
+        bullets: [
+          "Flujo libre + estacionalidad (no “foto” mensual)",
+          "Concentración de clientes/proveedores y margen",
+          "Riesgo operativo (ciclos, inventario, cobranza)",
+        ],
+        chips: ["Cash-flow first", "Señales", "Riesgo real"],
+        stats: [
+          { label: "Variables clave", value: 18, suffix: "+" },
+          { label: "Alerts", value: 6, suffix: "+" },
+        ],
+      },
+      {
+        icon: <IconSpark className="box-icon" />,
+        title: "Decisión: clara y accionable",
+        text: "Sí / no / sí-pero-así. Con razón concreta, ajuste directo y siguientes pasos para cerrar rápido.",
+        bullets: [
+          "Oferta estructurada (términos comparables)",
+          "Siguientes pasos claros (docs faltantes / ajustes)",
+          "Transparencia en fees y calendario",
+        ],
+        chips: ["Oferta", "Siguientes pasos", "Cierre"],
+        stats: [
+          { label: "Iteraciones", value: 2, suffix: " max" },
+          { label: "Respuesta", value: 48, suffix: "h" },
+        ],
+      },
+    ],
+    []
+  );
+
+  const fx = useCardFX();
 
   return (
     <div className="app-container">
@@ -361,13 +485,13 @@ export default function App() {
             </div>
 
             <h1>
-              Crédito empresarial 
+              Crédito empresarial
               <br />
               <span className="hero-highlight">Rápido y claro.</span>
             </h1>
 
             <p className="hero-sub">
-              Solicita, sube documentos y recibe una oferta estructurada. Monitorea el proceso, términos y trazabilidad en un solo lugar.
+              Solicita, sube documentos y recibe una oferta estructurada. Monitorea proceso, términos y trazabilidad en un solo lugar.
             </p>
 
             <div className="hero-cta-row">
@@ -391,7 +515,7 @@ export default function App() {
                 <span className="trust-kpi">48h</span>
                 <span className="trust-label">respuesta objetivo</span>
               </div>
-              
+
               <div className="trust-pill">
                 <span className="trust-kpi">1</span>
                 <span className="trust-label">panel para todo</span>
@@ -404,22 +528,55 @@ export default function App() {
       </main>
 
       {/* ---------- SOBRE PLINIUS ---------- */}
-      <section className="section about reveal reveal-left" id="sobre-plinius">
+      <section className="section section-lg about reveal reveal-left" id="sobre-plinius">
         <div className="section-inner">
-          <header className="section-head">
+          <header className="section-head section-head-lg">
             <h2>Sobre Plinius</h2>
-            <p className="section-sub">Somos un facilitador de herramientas financieras.</p>
+            <p className="section-sub">
+              Infra financiera para crédito empresarial: intake, validación, estructura y seguimiento — con obsesión por claridad.
+            </p>
           </header>
 
-          <div className="box-grid">
-            {about.map((b) => (
-              <article className="box" key={b.title}>
-                <div className="box-top">
+          <div className="box-grid box-grid-lg">
+            {about.map((b, idx) => (
+              <article
+                className="box pCard"
+                key={b.title}
+                onMouseMove={fx.onMove}
+                onMouseLeave={fx.onLeave}
+                style={{ transitionDelay: `${idx * 90}ms` }}
+              >
+                <div className="pCardTop">
                   <div className="box-iconWrap">{b.icon}</div>
                   <div className="box-meta">{b.meta}</div>
                 </div>
+
                 <h3>{b.title}</h3>
                 <p>{b.text}</p>
+
+                <div className="pStats">
+                  {b.stats.map((s) => (
+                    <div className="pStat" key={s.label}>
+                      <div className="pStatNum">
+                        <CountUp value={s.value} suffix={s.suffix} />
+                      </div>
+                      <div className="pStatLbl">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pChips">
+                  {b.chips.map((c) => (
+                    <span className="pChip" key={c}>
+                      {c}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="pCardFoot">
+                  <span className="pPulseDot" />
+                  <span>Listo para solicitud y seguimiento sin fricción</span>
+                </div>
               </article>
             ))}
           </div>
@@ -427,17 +584,25 @@ export default function App() {
       </section>
 
       {/* ---------- ENFOQUE Y CRITERIOS ---------- */}
-      <section className="section focus reveal reveal-right" id="enfoque">
+      <section className="section section-lg focus reveal reveal-right" id="enfoque">
         <div className="section-inner">
-          <header className="section-head">
+          <header className="section-head section-head-lg">
             <h2>Enfoque y criterios</h2>
-            <p className="section-sub">Buscamos agregar valor a empresas que buscan crecer.</p>
+            <p className="section-sub">
+              Menos “story”, más señales. Evaluación práctica para estructurar crédito que sí aguanta el flujo real.
+            </p>
           </header>
 
-          <div className="focus-grid">
-            {focus.map((c) => (
-              <article className="focus-card" key={c.title}>
-                <div className="focus-head">
+          <div className="focus-grid focus-grid-lg">
+            {focus.map((c, idx) => (
+              <article
+                className="focus-card pCard"
+                key={c.title}
+                onMouseMove={fx.onMove}
+                onMouseLeave={fx.onLeave}
+                style={{ transitionDelay: `${idx * 110}ms` }}
+              >
+                <div className="focus-head focus-head-lg">
                   <div className="box-iconWrap">{c.icon}</div>
                   <div>
                     <h3>{c.title}</h3>
@@ -445,17 +610,37 @@ export default function App() {
                   </div>
                 </div>
 
-                <ul className="focus-list">
+                <div className="pStats pStatsCompact">
+                  {c.stats.map((s) => (
+                    <div className="pStat" key={s.label}>
+                      <div className="pStatNum">
+                        <CountUp value={s.value} suffix={s.suffix} />
+                      </div>
+                      <div className="pStatLbl">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <ul className="focus-list focus-list-lg">
                   {c.bullets.map((x) => (
                     <li key={x}>{x}</li>
                   ))}
                 </ul>
+
+                <div className="pChips">
+                  {c.chips.map((x) => (
+                    <span className="pChip" key={x}>
+                      {x}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="pCardFoot">
+                  <span className="pPulseDot" />
+                  <span>Decisión = razón concreta + siguientes pasos</span>
+                </div>
               </article>
             ))}
-          </div>
-
-          <div className="focus-note">
-            
           </div>
         </div>
       </section>
