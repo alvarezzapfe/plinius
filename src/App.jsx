@@ -209,9 +209,12 @@ function CountUp({ value = 0, suffix = "", duration = 900 }) {
 /* =======================
    Hero Visual (Monitor + 360° Console)
 ======================= */
-function Platform360() {
+/* =======================
+   Hero Visual (Dashboard)
+======================= */
+function HeroDashboard() {
   return (
-    <div className="hero-visual" aria-hidden="true">
+    <div className="hero-visual hero-visual-dash" aria-hidden="true">
       <div className="monitor">
         <div className="monitor-top">
           <div className="monitor-brand">
@@ -221,132 +224,172 @@ function Platform360() {
           <div className="monitor-cam" />
         </div>
 
-        <div className="monitor-screen">
+        <div className="monitor-screen dash">
           <div className="monitor-reflection" />
-          <div className="screen-header">
-            <div className="screen-title">
-              <span className="screen-kicker">360° Plataforma</span>
-              <b className="screen-headline">Crédito empresarial — monitoreo y decisión</b>
-            </div>
-            <div className="screen-badges">
-              <span className="sBadge">KYC</span>
-              <span className="sBadge">OCR</span>
-              <span className="sBadge">Audit Trail</span>
-            </div>
-          </div>
 
-          <div className="orbit">
-            <div className="orbit-ring ring-1" />
-            <div className="orbit-ring ring-2" />
-            <div className="orbit-ring ring-3" />
-
-            <div className="platform platform-a">
-              <div className="ui-top">
-                <span className="ui-pill">Risk Engine</span>
-                <span className="ui-pill dim">Signals</span>
-                <span className="ui-pill dim">Score</span>
-              </div>
-
-              <div className="ui-body">
-                <div className="ui-kpi2">
-                  <div>
-                    <div className="kpiLabel">Latency</div>
-                    <div className="kpiValue">&lt; 1.2s</div>
-                  </div>
-                  <div>
-                    <div className="kpiLabel">Decision SLA</div>
-                    <div className="kpiValue">48h</div>
-                  </div>
-                </div>
-
-                <div className="ui-code">
-                  <div className="codeLine">
-                    <span className="codeKey">model</span>
-                    <span className="codeVal">cashflow_v2</span>
-                  </div>
-                  <div className="codeLine">
-                    <span className="codeKey">dscr_min</span>
-                    <span className="codeVal">1.20x</span>
-                  </div>
-                  <div className="codeLine">
-                    <span className="codeKey">alerts</span>
-                    <span className="codeVal">concentration, seasonality</span>
-                  </div>
-                </div>
-
-                <div className="ui-row">
-                  <div className="ui-chip">Bancos</div>
-                  <div className="ui-chip">CFDI / SAT</div>
-                  <div className="ui-chip">Buró</div>
-                </div>
-              </div>
+          {/* Topbar */}
+          <div className="dash-topbar">
+            <div className="dash-crumbs">
+              <span className="dash-pill">Dashboard</span>
+              <span className="dash-sep">/</span>
+              <span className="dash-muted">Perfil de pasivos</span>
             </div>
 
-            <div className="platform platform-b">
-              <div className="ui-top">
-                <span className="ui-pill">Workflow</span>
-                <span className="ui-pill dim">Docs</span>
-                <span className="ui-pill dim">Tasks</span>
-              </div>
-
-              <div className="ui-body">
-                <div className="ui-cardMini">
-                  <div className="ui-miniTitle">Documentos</div>
-                  <div className="ui-progress">
-                    <i style={{ width: "78%" }} />
-                  </div>
-                  <div className="ui-miniMeta">checklist 78%</div>
-                </div>
-
-                <div className="ui-cardMini">
-                  <div className="ui-miniTitle">Validaciones</div>
-                  <div className="ui-progress">
-                    <i style={{ width: "54%" }} />
-                  </div>
-                  <div className="ui-miniMeta">KYC / AML / firmas</div>
-                </div>
-
-                <div className="ui-note">
-                  <span className="ui-dot" />
-                  trazabilidad por evento
-                </div>
-              </div>
-            </div>
-
-            <div className="platform platform-c">
-              <div className="ui-top">
-                <span className="ui-pill">Terms</span>
-                <span className="ui-pill dim">Covenants</span>
-                <span className="ui-pill dim">Calendar</span>
-              </div>
-
-              <div className="ui-body">
-                <div className="ui-table">
-                  <div className="ui-tr">
-                    <b>Amort</b>
-                    <span>mensual</span>
-                  </div>
-                  <div className="ui-tr">
-                    <b>Plazo</b>
-                    <span>12–36m</span>
-                  </div>
-                  <div className="ui-tr">
-                    <b>DSCR</b>
-                    <span>&ge; 1.20x</span>
-                  </div>
-                </div>
-
-                <div className="ui-row">
-                  <div className="ui-chip">Fees visibles</div>
-                  <div className="ui-chip">Cláusulas claras</div>
-                </div>
-              </div>
+            <div className="dash-actions">
+              <span className="dash-badge">Audit trail</span>
+              <span className="dash-badge">Alerts</span>
+              <span className="dash-avatar" title="Admin" />
             </div>
           </div>
 
-          <div className="pc-status">
+          {/* Body */}
+          <div className="dash-body">
+            {/* Sidebar */}
+            <aside className="dash-sidebar">
+              <div className="dash-brandMini">
+                <span className="dash-logoDot" />
+                <div>
+                  <div className="dash-brandName">Plinius</div>
+                  <div className="dash-brandSub">Financial OS</div>
+                </div>
+              </div>
+
+              <nav className="dash-nav">
+                <a className="dash-navItem isActive">Overview</a>
+                <a className="dash-navItem">Pasivos</a>
+                <a className="dash-navItem">Calendario</a>
+                <a className="dash-navItem">Covenants</a>
+                <a className="dash-navItem">Documentos</a>
+                <a className="dash-navItem">Reportes</a>
+              </nav>
+
+              <div className="dash-sideCard">
+                <div className="dash-sideTitle">Estado</div>
+                <div className="dash-sideRow">
+                  <span className="dash-dot live" />
+                  <span>Señales en monitoreo</span>
+                </div>
+                <div className="dash-sideMeta">Última actualización: hoy</div>
+              </div>
+            </aside>
+
+            {/* Main */}
+            <section className="dash-main">
+              <div className="dash-kpis">
+                <div className="dash-kpiCard">
+                  <div className="dash-kpiLabel">Deuda total</div>
+                  <div className="dash-kpiValue">$12.4m</div>
+                  <div className="dash-kpiMeta">consolidada</div>
+                </div>
+
+                <div className="dash-kpiCard">
+                  <div className="dash-kpiLabel">Costo promedio</div>
+                  <div className="dash-kpiValue">18.2%</div>
+                  <div className="dash-kpiMeta">ponderado</div>
+                </div>
+
+                <div className="dash-kpiCard">
+                  <div className="dash-kpiLabel">DSCR</div>
+                  <div className="dash-kpiValue">1.36x</div>
+                  <div className="dash-kpiMeta">últimos 3M</div>
+                </div>
+              </div>
+
+              <div className="dash-grid">
+                {/* Chart */}
+                <div className="dash-card dash-cardChart">
+                  <div className="dash-cardHead">
+                    <div>
+                      <div className="dash-cardTitle">Perfil de vencimientos</div>
+                      <div className="dash-cardSub">maturity ladder · próximos 24 meses</div>
+                    </div>
+                    <div className="dash-miniPills">
+                      <span className="dash-miniPill">12m</span>
+                      <span className="dash-miniPill isOn">24m</span>
+                      <span className="dash-miniPill">36m</span>
+                    </div>
+                  </div>
+
+                  <div className="dash-bars" aria-hidden="true">
+                    {Array.from({ length: 14 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className="dash-bar"
+                        style={{
+                          height: `${28 + ((i * 17) % 58)}%`,
+                          opacity: i % 5 === 0 ? 0.95 : 0.78,
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="dash-footnote">
+                    <span className="dash-dot" />
+                    <span>Concentración y picos detectados automáticamente</span>
+                  </div>
+                </div>
+
+                {/* Right panel */}
+                <div className="dash-card dash-cardSide">
+                  <div className="dash-cardHead">
+                    <div>
+                      <div className="dash-cardTitle">Decisión de financiamiento</div>
+                      <div className="dash-cardSub">opciones comparables, mismo marco</div>
+                    </div>
+                    <span className="dash-score">Score 8.7</span>
+                  </div>
+
+                  <div className="dash-split">
+                    <div className="dash-donut" aria-hidden="true">
+                      <div className="dash-donutInner">
+                        <div className="dash-donutBig">3</div>
+                        <div className="dash-donutLbl">alternativas</div>
+                      </div>
+                    </div>
+
+                    <div className="dash-metrics">
+                      <div className="dash-metric">
+                        <span className="dash-metricLbl">Riesgo</span>
+                        <b className="dash-metricVal">Controlado</b>
+                      </div>
+                      <div className="dash-metric">
+                        <span className="dash-metricLbl">Transparencia</span>
+                        <b className="dash-metricVal">Alta</b>
+                      </div>
+                      <div className="dash-metric">
+                        <span className="dash-metricLbl">Siguientes pasos</span>
+                        <b className="dash-metricVal">2 acciones</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dash-list">
+                    <div className="dash-row">
+                      <b>Refinanciar pico</b>
+                      <span>↓ estrés 6M</span>
+                    </div>
+                    <div className="dash-row">
+                      <b>Unificar pasivos</b>
+                      <span>↓ costo prom.</span>
+                    </div>
+                    <div className="dash-row">
+                      <b>Calendarizar covenants</b>
+                      <span>↓ sorpresas</span>
+                    </div>
+                  </div>
+
+                  <div className="dash-footnote">
+                    <span className="dash-dot live" />
+                    <span>Vista demo — UI lista para producto real</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="pc-status pc-status-dash">
             <span className="dot live" />
-            <span className="label">Vista interactiva (360°)</span>
+            <span className="label">Dashboard interactivo (demo)</span>
           </div>
         </div>
 
@@ -360,6 +403,7 @@ function Platform360() {
     </div>
   );
 }
+
 
 export default function App() {
   const location = useLocation();
@@ -471,61 +515,64 @@ export default function App() {
       <Navbar />
 
       {/* ---------- HERO ---------- */}
-      <main className="hero">
-        <div className="hero-bg" aria-hidden />
-        <div className="hero-grid" aria-hidden />
+      {/* ---------- HERO ---------- */}
+<main className="hero">
+  <div className="hero-bg" aria-hidden />
+  <div className="hero-grid" aria-hidden />
 
-        <div className="hero-inner">
-          <header className="hero-header">
-            <div className="hero-miniBrand">
-              <img src={plogo} alt="Plinius" className="hero-miniLogo" />
-              <span className="hero-miniText">Oferta objetivo en 48h · sin fricción</span>
-              <span className="hero-miniDot" aria-hidden />
-              <span className="hero-miniTag">Crédito empresarial</span>
-            </div>
+  <div className="hero-inner">
+    <header className="hero-header">
+      <div className="hero-miniBrand">
+        <img src={plogo} alt="Plinius" className="hero-miniLogo" />
+        <span className="hero-miniText">Perfil de pasivos · decisiones claras</span>
+        <span className="hero-miniDot" aria-hidden />
+        <span className="hero-miniTag">Plataforma</span>
+      </div>
 
-            <h1>
-              Crédito empresarial
-              <br />
-              <span className="hero-highlight">Rápido y claro.</span>
-            </h1>
+      <h1>
+        Plinius
+        <br />
+        <span className="hero-highlight">Financiamiento con claridad.</span>
+      </h1>
 
-            <p className="hero-sub">
-              Solicita, sube documentos y recibe una oferta estructurada. Monitorea proceso, términos y trazabilidad en un solo lugar.
-            </p>
+      <p className="hero-sub">
+        Plinius es la plataforma de financiamiento que, además de ayudarte a obtener capital, te da una consola para visualizar el
+        perfil de pasivos de tu negocio y tomar la mejor decisión.
+      </p>
 
-            <div className="hero-cta-row">
-              <Link to="/ingresar" className="btn btn-neon">
-                Iniciar solicitud
-              </Link>
-              <Link to="/simulador" className="btn btn-outline">
-                Simular crédito
-              </Link>
-            </div>
+      <div className="hero-cta-row">
+        <Link to="/#sobre-plinius" className="btn btn-neon">
+          Ver la plataforma
+        </Link>
+        <Link to="/#enfoque" className="btn btn-outline">
+          Ver cómo decidimos
+        </Link>
+      </div>
 
-            <div className="hero-badges">
-              <span className="hero-badge">Cash-flow first</span>
-              <span className="hero-badge">Trazabilidad</span>
-              <span className="hero-badge">Docs + checklist</span>
-              <span className="hero-badge">Calendarios</span>
-            </div>
+      <div className="hero-badges">
+        <span className="hero-badge">Perfil de pasivos</span>
+        <span className="hero-badge">Calendario de deuda</span>
+        <span className="hero-badge">Covenants</span>
+        <span className="hero-badge">Decisión accionable</span>
+      </div>
 
-            <div className="trust-strip">
-              <div className="trust-pill">
-                <span className="trust-kpi">48h</span>
-                <span className="trust-label">respuesta objetivo</span>
-              </div>
-
-              <div className="trust-pill">
-                <span className="trust-kpi">1</span>
-                <span className="trust-label">panel para todo</span>
-              </div>
-            </div>
-          </header>
-
-          <Platform360 />
+      <div className="trust-strip">
+        <div className="trust-pill">
+          <span className="trust-kpi">1</span>
+          <span className="trust-label">dashboard para todo</span>
         </div>
-      </main>
+
+        <div className="trust-pill">
+          <span className="trust-kpi">24m</span>
+          <span className="trust-label">maturity ladder</span>
+        </div>
+      </div>
+    </header>
+
+    <HeroDashboard />
+  </div>
+</main>
+
 
       {/* ---------- SOBRE PLINIUS ---------- */}
       <section className="section section-lg about reveal reveal-left" id="sobre-plinius">
