@@ -77,8 +77,8 @@ export default function Ingresar() {
           </div>
 
           <ul className="ingLeft-points">
-            <li>Onboarding limpio: checklist, OCR (si aplica), y carga de archivos ordenada.</li>
-            <li>Validaciones y eventos: audit trail para cada paso.</li>
+            <li>Onboarding senscillo.</li>
+            <li>Recibe assesment sobre perfil de pasivos de tu negocio.</li>
             <li>Términos comparables: estructura clara, sin letra chiquita.</li>
           </ul>
 
