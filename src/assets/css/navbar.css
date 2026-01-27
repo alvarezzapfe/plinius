@@ -1,7 +1,11 @@
 /* =========================
    PLINIUS NAVBAR — v4 (UX hover estable, sin bullets)
    ========================= */
-:root {
+
+/* ❌ Antes: :root { ... }  (rompe todo el sitio)
+   ✅ Ahora: tokens scoping SOLO al navbar
+*/
+.navbar {
   --bg: #0b0d10; /* fondo principal */
   --surface: #11141a; /* tarjeta/menus */
   --fg: #f2f3f5; /* texto principal */
@@ -19,10 +23,8 @@
   --pad-x: 16px;
   --gap: 16px;
   --z-nav: 50;
-}
 
-/* Barra fija */
-.navbar {
+  /* Barra fija */
   position: sticky;
   top: 0;
   z-index: var(--z-nav);
@@ -275,8 +277,6 @@
     display: none;
   }
 }
-
-
 
 /* Bloque izquierdo: logo + tagline */
 .navbar-left {

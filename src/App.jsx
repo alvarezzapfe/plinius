@@ -1,414 +1,15 @@
 // src/App.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import "./assets/css/theme.css";
 import plogo from "./assets/images/plogo.png";
 
-/* =======================
-   Inline Icons (sin librerías)
-======================= */
-function IconSpark(props) {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
-      <path
-        d="M12 2l1.2 5.2L18 9l-4.8 1.8L12 16l-1.2-5.2L6 9l4.8-1.8L12 2z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 13l.7 3L7 17l-2.3 1-.7 3-.7-3L1 17l2.3-1L4 13z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        opacity=".8"
-      />
-      <path
-        d="M19 13l.7 3L22 17l-2.3 1-.7 3-.7-3L16 17l2.3-1L19 13z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        opacity=".8"
-      />
-    </svg>
-  );
-}
-function IconBolt(props) {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
-      <path
-        d="M13 2L3 14h8l-1 8 11-14h-8l0-6z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-function IconShield(props) {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
-      <path
-        d="M12 2l8 4v6c0 5-3.2 9.4-8 10-4.8-.6-8-5-8-10V6l8-4z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.2 12.2l1.8 1.8 3.8-3.8"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-function IconLayout(props) {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
-      <path
-        d="M4 5h16v14H4V5z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 9h16M9 9v10"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        opacity=".9"
-      />
-    </svg>
-  );
-}
-function IconRadar(props) {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" {...props}>
-      <path
-        d="M12 21a9 9 0 1 1 9-9"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M12 18a6 6 0 1 1 6-6"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        opacity=".85"
-      />
-      <path
-        d="M12 12l6-6"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <circle cx="12" cy="12" r="1.6" fill="currentColor" />
-    </svg>
-  );
-}
-
-/* =======================
-   React FX: Tilt + Glow follow
-======================= */
-function useCardFX() {
-  const onMove = (e) => {
-    const el = e.currentTarget;
-    const r = el.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
-
-    // glow follow
-    el.style.setProperty("--mx", `${x}px`);
-    el.style.setProperty("--my", `${y}px`);
-
-    // tilt
-    const px = (x / r.width) * 2 - 1; // -1..1
-    const py = (y / r.height) * 2 - 1; // -1..1
-    const tilt = 7; // grados
-    el.style.setProperty("--rx", `${(-py * tilt).toFixed(2)}deg`);
-    el.style.setProperty("--ry", `${(px * tilt).toFixed(2)}deg`);
-  };
-
-  const onLeave = (e) => {
-    const el = e.currentTarget;
-    el.style.setProperty("--rx", `0deg`);
-    el.style.setProperty("--ry", `0deg`);
-    el.style.setProperty("--mx", `50%`);
-    el.style.setProperty("--my", `50%`);
-  };
-
-  return { onMove, onLeave };
-}
-
-/* =======================
-   React FX: CountUp on visible
-======================= */
-function CountUp({ value = 0, suffix = "", duration = 900 }) {
-  const ref = useRef(null);
-  const [n, setN] = useState(0);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    let raf = 0;
-    let start = 0;
-    let done = false;
-
-    const startAnim = () => {
-      if (done) return;
-      done = true;
-
-      const target = Number(value) || 0;
-      const from = 0;
-
-      const step = (t) => {
-        if (!start) start = t;
-        const p = Math.min(1, (t - start) / duration);
-        const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-        const cur = from + (target - from) * eased;
-        setN(cur);
-        if (p < 1) raf = requestAnimationFrame(step);
-      };
-
-      raf = requestAnimationFrame(step);
-    };
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) startAnim();
-        });
-      },
-      { threshold: 0.35, rootMargin: "0px 0px -10% 0px" }
-    );
-
-    io.observe(el);
-    return () => {
-      cancelAnimationFrame(raf);
-      io.disconnect();
-    };
-  }, [value, duration]);
-
-  const isInt = Number.isInteger(Number(value));
-  const shown = isInt ? Math.round(n) : n.toFixed(1);
-
-  return (
-    <span ref={ref}>
-      {shown}
-      {suffix}
-    </span>
-  );
-}
-
-/* =======================
-   Hero Visual (Monitor + 360° Console)
-======================= */
-/* =======================
-   Hero Visual (Dashboard)
-======================= */
-function HeroDashboard() {
-  return (
-    <div className="hero-visual hero-visual-dash" aria-hidden="true">
-      <div className="monitor">
-        <div className="monitor-top">
-          <div className="monitor-brand">
-            <span className="monitor-brandDot" />
-            <span className="monitor-brandTxt">Plinius Console</span>
-          </div>
-          <div className="monitor-cam" />
-        </div>
-
-        <div className="monitor-screen dash">
-          <div className="monitor-reflection" />
-
-          {/* Topbar */}
-          <div className="dash-topbar">
-            <div className="dash-crumbs">
-              <span className="dash-pill">Dashboard</span>
-              <span className="dash-sep">/</span>
-              <span className="dash-muted">Perfil de pasivos</span>
-            </div>
-
-            <div className="dash-actions">
-              <span className="dash-badge">Audit trail</span>
-              <span className="dash-badge">Alerts</span>
-              <span className="dash-avatar" title="Admin" />
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="dash-body">
-            {/* Sidebar */}
-            <aside className="dash-sidebar">
-              <div className="dash-brandMini">
-                <span className="dash-logoDot" />
-                <div>
-                  <div className="dash-brandName">Plinius</div>
-                  <div className="dash-brandSub">Financial OS</div>
-                </div>
-              </div>
-
-              <nav className="dash-nav">
-                <a className="dash-navItem isActive">Overview</a>
-                <a className="dash-navItem">Pasivos</a>
-                <a className="dash-navItem">Calendario</a>
-                <a className="dash-navItem">Covenants</a>
-                <a className="dash-navItem">Documentos</a>
-                <a className="dash-navItem">Reportes</a>
-              </nav>
-
-              <div className="dash-sideCard">
-                <div className="dash-sideTitle">Estado</div>
-                <div className="dash-sideRow">
-                  <span className="dash-dot live" />
-                  <span>Señales en monitoreo</span>
-                </div>
-                <div className="dash-sideMeta">Última actualización: hoy</div>
-              </div>
-            </aside>
-
-            {/* Main */}
-            <section className="dash-main">
-              <div className="dash-kpis">
-                <div className="dash-kpiCard">
-                  <div className="dash-kpiLabel">Deuda total</div>
-                  <div className="dash-kpiValue">$12.4m</div>
-                  <div className="dash-kpiMeta">consolidada</div>
-                </div>
-
-                <div className="dash-kpiCard">
-                  <div className="dash-kpiLabel">Costo promedio</div>
-                  <div className="dash-kpiValue">18.2%</div>
-                  <div className="dash-kpiMeta">ponderado</div>
-                </div>
-
-                <div className="dash-kpiCard">
-                  <div className="dash-kpiLabel">DSCR</div>
-                  <div className="dash-kpiValue">1.36x</div>
-                  <div className="dash-kpiMeta">últimos 3M</div>
-                </div>
-              </div>
-
-              <div className="dash-grid">
-                {/* Chart */}
-                <div className="dash-card dash-cardChart">
-                  <div className="dash-cardHead">
-                    <div>
-                      <div className="dash-cardTitle">Perfil de vencimientos</div>
-                      <div className="dash-cardSub">maturity ladder · próximos 24 meses</div>
-                    </div>
-                    <div className="dash-miniPills">
-                      <span className="dash-miniPill">12m</span>
-                      <span className="dash-miniPill isOn">24m</span>
-                      <span className="dash-miniPill">36m</span>
-                    </div>
-                  </div>
-
-                  <div className="dash-bars" aria-hidden="true">
-                    {Array.from({ length: 14 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="dash-bar"
-                        style={{
-                          height: `${28 + ((i * 17) % 58)}%`,
-                          opacity: i % 5 === 0 ? 0.95 : 0.78,
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="dash-footnote">
-                    <span className="dash-dot" />
-                    <span>Concentración y picos detectados automáticamente</span>
-                  </div>
-                </div>
-
-                {/* Right panel */}
-                <div className="dash-card dash-cardSide">
-                  <div className="dash-cardHead">
-                    <div>
-                      <div className="dash-cardTitle">Decisión de financiamiento</div>
-                      <div className="dash-cardSub">opciones comparables, mismo marco</div>
-                    </div>
-                    <span className="dash-score">Score 8.7</span>
-                  </div>
-
-                  <div className="dash-split">
-                    <div className="dash-donut" aria-hidden="true">
-                      <div className="dash-donutInner">
-                        <div className="dash-donutBig">3</div>
-                        <div className="dash-donutLbl">alternativas</div>
-                      </div>
-                    </div>
-
-                    <div className="dash-metrics">
-                      <div className="dash-metric">
-                        <span className="dash-metricLbl">Riesgo</span>
-                        <b className="dash-metricVal">Controlado</b>
-                      </div>
-                      <div className="dash-metric">
-                        <span className="dash-metricLbl">Transparencia</span>
-                        <b className="dash-metricVal">Alta</b>
-                      </div>
-                      <div className="dash-metric">
-                        <span className="dash-metricLbl">Siguientes pasos</span>
-                        <b className="dash-metricVal">2 acciones</b>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="dash-list">
-                    <div className="dash-row">
-                      <b>Refinanciar pico</b>
-                      <span>↓ estrés 6M</span>
-                    </div>
-                    <div className="dash-row">
-                      <b>Unificar pasivos</b>
-                      <span>↓ costo prom.</span>
-                    </div>
-                    <div className="dash-row">
-                      <b>Calendarizar covenants</b>
-                      <span>↓ sorpresas</span>
-                    </div>
-                  </div>
-
-                  <div className="dash-footnote">
-                    <span className="dash-dot live" />
-                    <span>Vista demo — UI lista para producto real</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <div className="pc-status pc-status-dash">
-            <span className="dot live" />
-            <span className="label">Dashboard interactivo (demo)</span>
-          </div>
-        </div>
-
-        <div className="monitor-stand">
-          <div className="stand-neck" />
-          <div className="stand-base" />
-        </div>
-      </div>
-
-      <div className="monitor-shadow" />
-    </div>
-  );
-}
-
-
-export default function App() {
-  const location = useLocation();
-
-  /* Reveal on scroll */
+/* =========================
+   Helpers
+========================= */
+function useReveal() {
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
@@ -423,8 +24,10 @@ export default function App() {
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
+}
 
-  /* Scroll to hash sections */
+function useHashScroll() {
+  const location = useLocation();
   useEffect(() => {
     if (!location.hash) return;
     const id = location.hash.replace("#", "");
@@ -432,325 +35,375 @@ export default function App() {
     if (!el) return;
     setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }, [location.hash]);
+}
 
-  const about = useMemo(
+/* =========================
+   UI bits
+========================= */
+function Pill({ children, tone = "muted" }) {
+  return <span className={`pill pill--${tone}`}>{children}</span>;
+}
+
+function Stat({ label, value, sub, tone = "neutral" }) {
+  return (
+    <div className={`stat stat--${tone}`}>
+      <div className="stat__label">{label}</div>
+      <div className="stat__value">{value}</div>
+      {sub ? <div className="stat__sub">{sub}</div> : null}
+    </div>
+  );
+}
+
+/* =========================
+   MiniDash — geometric perfection
+   - strict grid
+   - equal gutters
+   - align baselines
+========================= */
+function MiniDash() {
+  const [tab, setTab] = useState("overview");
+
+  const rows = useMemo(
     () => [
-      {
-        icon: <IconBolt className="box-icon" />,
-        title: "Velocidad real",
-        text: "Del intake a oferta: menos fricción, más claridad. Checklist + validaciones para no rebotarte.",
-        meta: "SLA",
-        stats: [
-          { label: "Objetivo", value: 48, suffix: "h" },
-          { label: "Tiempo por paso", value: 1.2, suffix: "s" },
-        ],
-        chips: ["Carga de docs", "Checklist", "Seguimiento"],
-      },
-      {
-        icon: <IconLayout className="box-icon" />,
-        title: "Un panel para todo",
-        text: "Docs, estatus, términos, vencimientos y comunicación en un mismo lugar. Menos correos, más control.",
-        meta: "Control",
-        stats: [
-          { label: "Paneles", value: 1, suffix: "" },
-          { label: "Trazabilidad", value: 100, suffix: "%" },
-        ],
-        chips: ["Dashboard", "Historial", "Alertas"],
-      },
-      {
-        icon: <IconShield className="box-icon" />,
-        title: "Estructura con sentido",
-        text: "Condiciones alineadas al flujo. Calendarios, covenants y fees visibles para que no te “sorprendan”.",
-        meta: "Cashflow",
-        stats: [
-          { label: "DSCR min", value: 1.2, suffix: "x" },
-          { label: "Plazo", value: 36, suffix: "m" },
-        ],
-        chips: ["Covenants", "Calendarios", "Términos claros"],
-      },
+      { name: "Línea revolvente", rate: "18.4%", term: "24m", fee: "1.5%", score: "8.6" },
+      { name: "Refinanciamiento", rate: "17.2%", term: "36m", fee: "1.0%", score: "8.9" },
+      { name: "Arrendamiento", rate: "19.1%", term: "48m", fee: "0.8%", score: "8.3" },
     ],
     []
   );
-
-  const focus = useMemo(
-    () => [
-      {
-        icon: <IconRadar className="box-icon" />,
-        title: "Criterio: flujo + operación",
-        text: "No es magia: es capacidad de pago. Priorizamos señales que sí explican riesgo y continuidad operativa.",
-        bullets: [
-          "Flujo libre + estacionalidad (no “foto” mensual)",
-          "Concentración de clientes/proveedores y margen",
-          "Riesgo operativo (ciclos, inventario, cobranza)",
-        ],
-        chips: ["Cash-flow first", "Señales", "Riesgo real"],
-        stats: [
-          { label: "Variables clave", value: 18, suffix: "+" },
-          { label: "Alerts", value: 6, suffix: "+" },
-        ],
-      },
-      {
-        icon: <IconSpark className="box-icon" />,
-        title: "Decisión: clara y accionable",
-        text: "Sí / no / sí-pero-así. Con razón concreta, ajuste directo y siguientes pasos para cerrar rápido.",
-        bullets: [
-          "Oferta estructurada (términos comparables)",
-          "Siguientes pasos claros (docs faltantes / ajustes)",
-          "Transparencia en fees y calendario",
-        ],
-        chips: ["Oferta", "Siguientes pasos", "Cierre"],
-        stats: [
-          { label: "Iteraciones", value: 2, suffix: " max" },
-          { label: "Respuesta", value: 48, suffix: "h" },
-        ],
-      },
-    ],
-    []
-  );
-
-  const fx = useCardFX();
 
   return (
-    <div className="app-container">
-      <Navbar />
-
-      {/* ---------- HERO ---------- */}
-      {/* ---------- HERO ---------- */}
-<main className="hero">
-  <div className="hero-bg" aria-hidden />
-  <div className="hero-grid" aria-hidden />
-
-  <div className="hero-inner">
-    <header className="hero-header">
-      <div className="hero-miniBrand">
-        <img src={plogo} alt="Plinius" className="hero-miniLogo" />
-        <span className="hero-miniText">Perfil de pasivos · decisiones claras</span>
-        <span className="hero-miniDot" aria-hidden />
-        <span className="hero-miniTag">Plataforma</span>
-      </div>
-
-      <h1>
-        Plinius
-        <br />
-        <span className="hero-highlight">Financiamiento con claridad.</span>
-      </h1>
-
-      <p className="hero-sub">
-        Plinius es la plataforma de financiamiento que, además de ayudarte a obtener capital, te da una consola para visualizar el
-        perfil de pasivos de tu negocio y tomar la mejor decisión.
-      </p>
-
-      <div className="hero-cta-row">
-        <Link to="/#sobre-plinius" className="btn btn-neon">
-          Ver la plataforma
-        </Link>
-        <Link to="/#enfoque" className="btn btn-outline">
-          Ver cómo decidimos
-        </Link>
-      </div>
-
-      <div className="hero-badges">
-        <span className="hero-badge">Perfil de pasivos</span>
-        <span className="hero-badge">Calendario de deuda</span>
-        <span className="hero-badge">Covenants</span>
-        <span className="hero-badge">Decisión accionable</span>
-      </div>
-
-      <div className="trust-strip">
-        <div className="trust-pill">
-          <span className="trust-kpi">1</span>
-          <span className="trust-label">dashboard para todo</span>
-        </div>
-
-        <div className="trust-pill">
-          <span className="trust-kpi">24m</span>
-          <span className="trust-label">maturity ladder</span>
-        </div>
-      </div>
-    </header>
-
-    <HeroDashboard />
-  </div>
-</main>
-
-
-      {/* ---------- SOBRE PLINIUS ---------- */}
-      <section className="section section-lg about reveal reveal-left" id="sobre-plinius">
-        <div className="section-inner">
-          <header className="section-head section-head-lg">
-            <h2>Sobre Plinius</h2>
-            <p className="section-sub">
-              Infra financiera para crédito empresarial: intake, validación, estructura y seguimiento — con obsesión por claridad.
-            </p>
-          </header>
-
-          <div className="box-grid box-grid-lg">
-            {about.map((b, idx) => (
-              <article
-                className="box pCard"
-                key={b.title}
-                onMouseMove={fx.onMove}
-                onMouseLeave={fx.onLeave}
-                style={{ transitionDelay: `${idx * 90}ms` }}
-              >
-                <div className="pCardTop">
-                  <div className="box-iconWrap">{b.icon}</div>
-                  <div className="box-meta">{b.meta}</div>
-                </div>
-
-                <h3>{b.title}</h3>
-                <p>{b.text}</p>
-
-                <div className="pStats">
-                  {b.stats.map((s) => (
-                    <div className="pStat" key={s.label}>
-                      <div className="pStatNum">
-                        <CountUp value={s.value} suffix={s.suffix} />
-                      </div>
-                      <div className="pStatLbl">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pChips">
-                  {b.chips.map((c) => (
-                    <span className="pChip" key={c}>
-                      {c}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="pCardFoot">
-                  <span className="pPulseDot" />
-                  <span>Listo para solicitud y seguimiento sin fricción</span>
-                </div>
-              </article>
-            ))}
+    <section className="dash" aria-label="Mini dashboard preview">
+      {/* Header */}
+      <div className="dash__head">
+        <div className="dash__brand">
+          <div className="dash__mark" aria-hidden="true">
+            <img src={plogo} alt="" />
+          </div>
+          <div className="dash__brandText">
+            <div className="dash__title">PLINIUS</div>
+            <div className="dash__subtitle">Debt Console</div>
           </div>
         </div>
-      </section>
 
-      {/* ---------- ENFOQUE Y CRITERIOS ---------- */}
-      <section className="section section-lg focus reveal reveal-right" id="enfoque">
-        <div className="section-inner">
-          <header className="section-head section-head-lg">
-            <h2>Enfoque y criterios</h2>
-            <p className="section-sub">
-              Menos “story”, más señales. Evaluación práctica para estructurar crédito que sí aguanta el flujo real.
-            </p>
-          </header>
+        <div className="dash__right">
+          <Pill tone="good">Live</Pill>
+          <Pill tone="muted">Audit trail</Pill>
+          <Pill tone="muted">v0.9</Pill>
+        </div>
+      </div>
 
-          <div className="focus-grid focus-grid-lg">
-            {focus.map((c, idx) => (
-              <article
-                className="focus-card pCard"
-                key={c.title}
-                onMouseMove={fx.onMove}
-                onMouseLeave={fx.onLeave}
-                style={{ transitionDelay: `${idx * 110}ms` }}
-              >
-                <div className="focus-head focus-head-lg">
-                  <div className="box-iconWrap">{c.icon}</div>
-                  <div>
-                    <h3>{c.title}</h3>
-                    <p>{c.text}</p>
+      {/* Tabs */}
+      <div className="dash__tabs" role="tablist" aria-label="Dashboard tabs">
+        {[
+          { id: "overview", label: "Overview" },
+          { id: "liabilities", label: "Liabilities" },
+          { id: "covenants", label: "Covenants" },
+        ].map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`dashTab ${tab === t.id ? "isOn" : ""}`}
+            onClick={() => setTab(t.id)}
+            type="button"
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Grid body */}
+      <div className="dash__grid">
+        {/* Left: maturity timeline */}
+        <div className="dashCard dashCard--span2">
+          <div className="dashCard__top">
+            <div>
+              <div className="dashCard__kicker">Maturity</div>
+              <div className="dashCard__title">Peak risk window</div>
+            </div>
+            <Pill tone="warn">6M</Pill>
+          </div>
+
+          <div className="timeline">
+            <div className="timeline__labels">
+              <span>Now</span>
+              <span>6m</span>
+              <span>12m</span>
+              <span>18m</span>
+              <span>24m</span>
+            </div>
+
+            <div className="timeline__bars" aria-hidden="true">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="barRow">
+                  <span className="barRow__name">{["Credit A", "Credit B", "Lease", "Invoice", "Bridge", "Line", "Term", "Other"][i]}</span>
+                  <div className="barRow__track">
+                    <span
+                      className={`barRow__fill ${i === 2 || i === 5 ? "isHot" : ""}`}
+                      style={{
+                        width: `${48 + ((i * 11) % 40)}%`,
+                        left: `${(i * 7) % 18}%`,
+                      }}
+                    />
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="pStats pStatsCompact">
-                  {c.stats.map((s) => (
-                    <div className="pStat" key={s.label}>
-                      <div className="pStatNum">
-                        <CountUp value={s.value} suffix={s.suffix} />
-                      </div>
-                      <div className="pStatLbl">{s.label}</div>
-                    </div>
-                  ))}
+            <div className="timeline__foot">
+              <div className="monoNote">Stress-tested: cashflow −12%</div>
+              <div className="monoNote">Coverage target: ≥ 1.25×</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: score + stats */}
+        <div className="dashCard">
+          <div className="dashCard__top">
+            <div>
+              <div className="dashCard__kicker">Decision</div>
+              <div className="dashCard__title">Quality score</div>
+            </div>
+            <Pill tone="good">8.7</Pill>
+          </div>
+
+          <div className="scoreRing" aria-hidden="true">
+            <svg viewBox="0 0 120 120" width="120" height="120">
+              <circle cx="60" cy="60" r="48" className="ring ring--bg" />
+              <circle cx="60" cy="60" r="48" className="ring ring--fg" />
+              <text x="60" y="58" textAnchor="middle" className="ringText__big">
+                8.7
+              </text>
+              <text x="60" y="78" textAnchor="middle" className="ringText__small">
+                decision-grade
+              </text>
+            </svg>
+          </div>
+
+          <div className="split">
+            <div className="split__item">
+              <div className="split__k">WAC</div>
+              <div className="split__v mono">18.2%</div>
+            </div>
+            <div className="split__item">
+              <div className="split__k">Debt</div>
+              <div className="split__v mono">$12.4m</div>
+            </div>
+          </div>
+
+          <div className="dashHint">
+            <span className="dot dot--good" />
+            Signals normalized across comparable terms.
+          </div>
+        </div>
+
+        <div className="dashCard">
+          <div className="dashCard__top">
+            <div>
+              <div className="dashCard__kicker">Covenants</div>
+              <div className="dashCard__title">Calendar</div>
+            </div>
+            <Pill tone="muted">Next</Pill>
+          </div>
+
+          <div className="cal">
+            <div className="cal__row">
+              <div className="cal__d mono">Feb 14</div>
+              <div className="cal__t">DSCR reporting</div>
+              <div className="cal__s"><span className="badge badge--good">OK</span></div>
+            </div>
+            <div className="cal__row">
+              <div className="cal__d mono">Mar 01</div>
+              <div className="cal__t">Borrowing base</div>
+              <div className="cal__s"><span className="badge badge--warn">Review</span></div>
+            </div>
+            <div className="cal__row">
+              <div className="cal__d mono">Mar 20</div>
+              <div className="cal__t">Insurance update</div>
+              <div className="cal__s"><span className="badge badge--muted">Queued</span></div>
+            </div>
+          </div>
+
+          <div className="dashHint">
+            <span className="dot dot--warn" />
+            Alerts trigger before breach windows.
+          </div>
+        </div>
+
+        {/* Bottom: offers table */}
+        <div className="dashCard dashCard--span3">
+          <div className="dashCard__top">
+            <div>
+              <div className="dashCard__kicker">Comparables</div>
+              <div className="dashCard__title">Offer table</div>
+            </div>
+            <div className="dashActions">
+              <Pill tone="muted">Same metric</Pill>
+              <Pill tone="muted">Same assumptions</Pill>
+            </div>
+          </div>
+
+          <div className="table">
+            <div className="tHead">
+              <div>Product</div>
+              <div className="mono tNum">Rate</div>
+              <div className="mono tNum">Term</div>
+              <div className="mono tNum">Fee</div>
+              <div className="mono tNum">Score</div>
+              <div></div>
+            </div>
+
+            {rows.map((r) => (
+              <div className="tRow" key={r.name}>
+                <div className="tName">{r.name}</div>
+                <div className="mono tNum">{r.rate}</div>
+                <div className="mono tNum">{r.term}</div>
+                <div className="mono tNum">{r.fee}</div>
+                <div className="mono tNum">{r.score}</div>
+                <div className="tCta">
+                  <button className="miniBtn" type="button">Select</button>
                 </div>
-
-                <ul className="focus-list focus-list-lg">
-                  {c.bullets.map((x) => (
-                    <li key={x}>{x}</li>
-                  ))}
-                </ul>
-
-                <div className="pChips">
-                  {c.chips.map((x) => (
-                    <span className="pChip" key={x}>
-                      {x}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="pCardFoot">
-                  <span className="pPulseDot" />
-                  <span>Decisión = razón concreta + siguientes pasos</span>
-                </div>
-              </article>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ---------- FAQ ---------- */}
-      <section className="section faq reveal reveal-left" id="faq">
-        <div className="section-inner">
-          <header className="section-head">
-            <h2>FAQ</h2>
-            <p className="section-sub">Lo típico que te preguntarías (y sí, aquí va directo).</p>
-          </header>
-
-          <div className="faq-grid">
-            <details className="faq-item">
-              <summary>¿Qué necesito para que sí salga en 48 horas?</summary>
-              <div className="faq-body">
-                Estados de cuenta, estados financieros (aunque sea internos), y claridad del uso del crédito. Entre más completo,
-                más rápido.
-              </div>
-            </details>
-
-            <details className="faq-item">
-              <summary>¿Cómo se ve el seguimiento?</summary>
-              <div className="faq-body">
-                En tu dashboard: docs, estatus, historial y claridad de lo que sigue. Cero “¿me lo reenvías?”.
-              </div>
-            </details>
-
-            <details className="faq-item">
-              <summary>¿Qué significa “respuesta clara”?</summary>
-              <div className="faq-body">
-                “Sí”, “no” o “sí, pero así”. Con razón concreta, comparación simple y siguientes pasos.
-              </div>
-            </details>
-
-            <details className="faq-item">
-              <summary>¿Tasa promedio?</summary>
-              <div className="faq-body">
-                Depende de la capacidad de pago y el caso. Podemos darte rango desde el simulador y afinar con documentos.
-              </div>
-            </details>
+          <div className="tableFoot">
+            <div className="monoNote">Decision output: yes / no / yes-but-structure</div>
+            <div className="monoNote">Audit: input → model → recommendation</div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ---------- CTA FINAL ---------- */}
-      <section className="section final-cta reveal reveal-up">
-        <div className="section-inner final-cta-inner">
-          <div>
-            <h2>¿Listo para una oferta que sí te quede?</h2>
-            <p className="section-sub">Haz la solicitud. Nosotros nos encargamos de estructurarla con sentido.</p>
-          </div>
-
-          <div className="cta-inline">
-            <Link to="/ingresar" className="btn btn-neon">
-              Iniciar solicitud
-            </Link>
-            <Link to="/simulador" className="btn btn-outline">
-              Simular crédito
-            </Link>
-          </div>
+      {/* Footer strip */}
+      <div className="dash__foot">
+        <div className="footItem">
+          <span className="dot dot--good" /> Risk lens: cashflow-first
         </div>
-      </section>
+        <div className="footItem">
+          <span className="dot dot--muted" /> Traceability: full audit trail
+        </div>
+        <div className="footItem">
+          <span className="dot dot--warn" /> Monitoring: maturity + covenants
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================
+   Page
+========================= */
+export default function App() {
+  useReveal();
+  useHashScroll();
+
+  const features = useMemo(
+    () => [
+      { k: "Clarity", t: "Comparables limpios", d: "Misma métrica y supuestos para comparar términos sin ruido." },
+      { k: "Control", t: "Maturity map", d: "Detecta picos y concentración de vencimientos con anticipación." },
+      { k: "Governance", t: "Covenants calendar", d: "Calendario + alertas para evitar sorpresas y estrés operativo." },
+      { k: "Ops", t: "Intake → oferta", d: "Checklist y validaciones: menos fricción, más velocidad real." },
+      { k: "Risk", t: "Señales útiles", d: "Estacionalidad, concentración y cobranza; no “score cosmético”." },
+      { k: "Trust", t: "Audit trail", d: "Trazabilidad de inputs a decisión: listo para compliance e inversionistas." },
+    ],
+    []
+  );
+
+  return (
+    <div className="app">
+      <Navbar />
+
+      <main className="page">
+        <section className="hero">
+          <div className="wrap hero__wrap">
+            <div className="hero__left reveal">
+              <div className="brandline">
+                <img className="brandline__logo" src={plogo} alt="Plinius" />
+                <div className="brandline__txt">
+                  <div className="brandline__name">Plinius</div>
+                  <div className="brandline__tag">Debt intelligence for serious operators</div>
+                </div>
+              </div>
+
+              <h1 className="h1">
+                Financiamiento con control.
+                <br />
+                <span className="h1__muted">No más decisiones a ciegas.</span>
+              </h1>
+
+              <p className="lead">
+                Un sistema operativo de deuda empresarial: comparables consistentes, calendario de covenants y monitoreo
+                para operar con claridad.
+              </p>
+
+              <div className="ctaRow">
+                <Link to="/#plataforma" className="btn btn--primary">Ver plataforma</Link>
+                <Link to="/#demo" className="btn btn--secondary">Ver demo</Link>
+              </div>
+
+              <div className="proof">
+                <div className="proof__item">
+                  <div className="proof__k">Response</div>
+                  <div className="proof__v mono">48h</div>
+                </div>
+                <div className="proof__item">
+                  <div className="proof__k">Metrics</div>
+                  <div className="proof__v mono">Normalized</div>
+                </div>
+                <div className="proof__item">
+                  <div className="proof__k">Audit</div>
+                  <div className="proof__v mono">On</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="hero__right reveal" id="demo">
+              <MiniDash />
+            </div>
+          </div>
+        </section>
+
+        <section className="section" id="plataforma">
+          <div className="wrap">
+            <div className="section__head reveal">
+              <h2 className="h2">Plataforma</h2>
+              <p className="sub">
+                Diseño sobrio, consistente y tech-pro. Todo está alineado a una grilla estricta para que se vea “producto real”.
+              </p>
+            </div>
+
+            <div className="featureGrid reveal">
+              {features.map((f) => (
+                <article className="fCard" key={f.t}>
+                  <div className="fCard__k mono">{f.k}</div>
+                  <div className="fCard__t">{f.t}</div>
+                  <div className="fCard__d">{f.d}</div>
+                </article>
+              ))}
+            </div>
+
+            <div className="section__cta reveal">
+              <div className="ctaBox">
+                <div className="ctaBox__copy">
+                  <div className="ctaBox__title">Listo para convertirlo en dashboard real</div>
+                  <div className="ctaBox__desc">
+                    Si quieres, lo conectamos a tus datos (requests, ledger, covenants) y queda “production-grade”.
+                  </div>
+                </div>
+                <div className="ctaBox__btns">
+                  <Link to="/ingresar" className="btn btn--primary">Iniciar solicitud</Link>
+                  <Link to="/simulador" className="btn btn--secondary">Simular</Link>
+                </div>
+              </div>
+            </div>
+
+            <div className="note reveal">
+              Tip: si tu `Navbar` es fixed, deja padding-top arriba (en CSS ya lo consideré de forma safe).
+            </div>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>
