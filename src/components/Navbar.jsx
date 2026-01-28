@@ -1,5 +1,5 @@
 // src/components/Navbar.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/images/logo-plinius.png";
 import "../assets/css/navbar.css";
@@ -7,23 +7,27 @@ import { supabase } from "../lib/supabaseClient";
 
 const Navbar = () => {
   const nav = useNavigate();
+  const location = useLocation();
+
+  const navRef = useRef(null);
+  const hoverTimerRef = useRef(null);
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState(null); // "nosotros" | null
-  const hoverTimerRef = useRef(null);
-  const navRef = useRef(null);
-  const location = useLocation();
 
   // Auth
   const [session, setSession] = useState(null);
   const isAuthed = !!session?.user;
 
-  // ✅ Cierra menú al cambiar de ruta O hash
+  const isActive = (path) => location.pathname === path;
+
+  // ✅ Cierra menú al cambiar de ruta o hash
   useEffect(() => {
     setMobileOpen(false);
     setOpenMenu(null);
   }, [location.pathname, location.hash]);
 
-  // Cierra dropdown al hacer click fuera
+  // ✅ Cierra dropdown al hacer click fuera
   useEffect(() => {
     const onDocClick = (e) => {
       if (navRef.current && !navRef.current.contains(e.target)) {
@@ -34,7 +38,19 @@ const Navbar = () => {
     return () => document.removeEventListener("click", onDocClick);
   }, []);
 
-  // Sesión Supabase (para cambiar Ingresar -> Dashboard)
+  // ✅ Cierra con ESC
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setOpenMenu(null);
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // ✅ Sesión Supabase
   useEffect(() => {
     let mounted = true;
 
@@ -54,8 +70,7 @@ const Navbar = () => {
     };
   }, []);
 
-  const isActive = (path) => location.pathname === path;
-
+  // Hover dropdown estable (sin flicker)
   const openByHover = (id) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     setOpenMenu(id);
@@ -68,12 +83,9 @@ const Navbar = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
   };
 
-  const onAuthCtaClick = async () => {
-    if (!isAuthed) {
-      nav("/ingresar?registro=0");
-      return;
-    }
-    nav("/dashboard");
+  const onAuthCtaClick = () => {
+    if (!isAuthed) nav("/ingresar?registro=0");
+    else nav("/dashboard");
   };
 
   const signOut = async () => {
@@ -81,10 +93,13 @@ const Navbar = () => {
     nav("/ingresar?registro=0");
   };
 
+  // Para aria-controls único
+  const dropdownId = useMemo(() => "plinius-dd-nosotros", []);
+
   return (
-    <nav className="navbar" ref={navRef}>
+    <nav className={`navbar ${mobileOpen ? "is-mobile-open" : ""}`} ref={navRef}>
       <div className="navbar-container">
-        {/* Bloque logo + tagline */}
+        {/* Left: logo + tagline */}
         <div className="navbar-left">
           <Link to="/" className="navbar-logo" aria-label="Plinius inicio">
             <img
@@ -94,28 +109,30 @@ const Navbar = () => {
               draggable="false"
             />
           </Link>
+
           <span className="navbar-tagline">
             Plataforma para inversionistas de crédito privado
           </span>
+
+          {/* Micro badge tech (opcional; se ve pro) */}
+          <span className="nav-badge" aria-hidden="true">
+            AI Credit Infra
+          </span>
         </div>
 
-        {/* Botón móvil */}
-        <button
-          className={`hamburger ${mobileOpen ? "is-active" : ""}`}
-          aria-label="Abrir menú"
-          aria-expanded={mobileOpen}
-          onClick={() => setMobileOpen((v) => !v)}
+        {/* Center: links */}
+        <ul
+          className={`navbar-links ${mobileOpen ? "open" : ""}`}
+          id="navLinks"
+          role="menubar"
         >
-          <span />
-          <span />
-          <span />
-        </button>
-
-        {/* Links principales */}
-        <ul className={`navbar-links ${mobileOpen ? "open" : ""}`}>
-          {/* Inicio */}
-          <li className="nav-item">
-            <Link to="/" className={`nav-link ${isActive("/") ? "active" : ""}`}>
+          <li className="nav-item" role="none">
+            <Link
+              to="/"
+              role="menuitem"
+              className={`nav-link ${isActive("/") ? "active" : ""}`}
+              onClick={() => setMobileOpen(false)}
+            >
               Inicio
             </Link>
           </li>
@@ -123,6 +140,8 @@ const Navbar = () => {
           {/* Nosotros (dropdown) */}
           <li
             className={`nav-item dropdown ${openMenu === "nosotros" ? "open" : ""}`}
+            data-dropdown
+            role="none"
             onMouseEnter={() => openByHover("nosotros")}
             onMouseLeave={closeByHover}
             onFocus={() => openByHover("nosotros")}
@@ -135,16 +154,20 @@ const Navbar = () => {
               className="nav-link dropdown-toggle"
               aria-haspopup="true"
               aria-expanded={openMenu === "nosotros"}
+              aria-controls={dropdownId}
               onClick={() =>
                 setOpenMenu((prev) => (prev === "nosotros" ? null : "nosotros"))
               }
             >
-              Nosotros <span className="caret" />
+              Nosotros <span className="caret" aria-hidden="true" />
             </button>
+
+            <div className="dropdown-bridge" aria-hidden="true" />
 
             {openMenu === "nosotros" && (
               <ul
                 className="dropdown-menu"
+                id={dropdownId}
                 role="menu"
                 onMouseEnter={cancelClose}
                 onMouseLeave={closeByHover}
@@ -154,14 +177,21 @@ const Navbar = () => {
                     to="/#sobre-plinius"
                     role="menuitem"
                     className="dropdown-item"
+                    onClick={() => setMobileOpen(false)}
                   >
-                    Sobre Plinius
+                    <span className="dropdown-title">Sobre Plinius</span>
+                    <span className="dropdown-sub">Visión, equipo y misión</span>
                   </Link>
                 </li>
 
                 <li role="none">
-                  <Link to="/productos" role="menuitem" className="dropdown-item">
-                    Productos
+                  <Link
+                    to="/productos"
+                    role="menuitem"
+                    className="dropdown-item"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <span className="dropdown-title">Productos</span>
                     <span className="dropdown-sub">
                       Crédito simple, arrendamiento y revolvente
                     </span>
@@ -169,39 +199,48 @@ const Navbar = () => {
                 </li>
 
                 <li role="none">
-                  <Link to="/#enfoque" role="menuitem" className="dropdown-item">
-                    Enfoque y criterios de crédito
+                  <Link
+                    to="/#enfoque"
+                    role="menuitem"
+                    className="dropdown-item"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <span className="dropdown-title">Enfoque</span>
+                    <span className="dropdown-sub">Criterios de crédito</span>
                   </Link>
                 </li>
               </ul>
             )}
           </li>
 
-          {/* ✅ Simulador */}
-          <li className="nav-item">
+          <li className="nav-item" role="none">
             <Link
               to="/simulador"
+              role="menuitem"
               className={`nav-link ${isActive("/simulador") ? "active" : ""}`}
+              onClick={() => setMobileOpen(false)}
             >
               Simulador
             </Link>
           </li>
 
-          {/* ✅ Solicitud */}
-          <li className="nav-item">
+          <li className="nav-item" role="none">
             <Link
               to="/solicitud"
+              role="menuitem"
               className={`nav-link ${isActive("/solicitud") ? "active" : ""}`}
+              onClick={() => setMobileOpen(false)}
             >
               Solicitud
             </Link>
           </li>
 
-          {/* CTA auth: Ingresar -> Dashboard */}
-          <li className="nav-item">
+          {/* Auth CTA */}
+          <li className="nav-item" role="none">
             <button
               type="button"
-              className={`nav-link nav-link-btn ${
+              role="menuitem"
+              className={`nav-link nav-link-btn nav-cta ${
                 isAuthed
                   ? isActive("/dashboard")
                     ? "active"
@@ -212,16 +251,18 @@ const Navbar = () => {
               }`}
               onClick={onAuthCtaClick}
             >
+              <span className="cta-glow" aria-hidden="true" />
               {isAuthed ? "Dashboard" : "Ingresar"}
             </button>
           </li>
 
-          {/* Salir (si hay sesión) */}
+          {/* Salir */}
           {isAuthed && (
-            <li className="nav-item">
+            <li className="nav-item" role="none">
               <button
                 type="button"
-                className="nav-link nav-link-btn"
+                role="menuitem"
+                className="nav-link nav-link-btn nav-danger"
                 onClick={signOut}
               >
                 Salir
@@ -229,7 +270,28 @@ const Navbar = () => {
             </li>
           )}
         </ul>
+
+        {/* Right: hamburger */}
+        <button
+          className={`hamburger ${mobileOpen ? "is-active" : ""}`}
+          aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-controls="navLinks"
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </div>
+
+      {/* Backdrop mobile (cierra al click) */}
+      <button
+        type="button"
+        className={`nav-backdrop ${mobileOpen ? "open" : ""}`}
+        aria-label="Cerrar menú"
+        onClick={() => setMobileOpen(false)}
+      />
     </nav>
   );
 };

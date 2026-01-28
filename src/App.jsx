@@ -4,7 +4,6 @@ import { Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import "./assets/css/theme.css";
-import plogo from "./assets/images/plogo.png";
 
 /* =========================
    Helpers
@@ -13,12 +12,8 @@ function useReveal() {
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) e.target.classList.add("in");
-          else e.target.classList.remove("in");
-        });
-      },
+      (entries) =>
+        entries.forEach((e) => e.isIntersecting && e.target.classList.add("in")),
       { threshold: 0.12, rootMargin: "0px 0px -10% 0px" }
     );
     els.forEach((el) => io.observe(el));
@@ -38,253 +33,108 @@ function useHashScroll() {
 }
 
 /* =========================
-   UI bits
+   MiniDash (simple, 5 metrics)
 ========================= */
-function Pill({ children, tone = "muted" }) {
-  return <span className={`pill pill--${tone}`}>{children}</span>;
-}
-
-function Stat({ label, value, sub, tone = "neutral" }) {
+function MiniDashSimple({ metrics }) {
   return (
-    <div className={`stat stat--${tone}`}>
-      <div className="stat__label">{label}</div>
-      <div className="stat__value">{value}</div>
-      {sub ? <div className="stat__sub">{sub}</div> : null}
-    </div>
+    <section className="miniDash reveal" aria-label="Mini dashboard (5 métricas)">
+      <div className="miniDash__head">
+        <div className="miniDash__kicker mono">private credit</div>
+        <div className="miniDash__title">Risk snapshot</div>
+        <div className="miniDash__sub">5 métricas, una lectura. Sin humo.</div>
+
+        <div className="miniDash__live" aria-label="Estado: funcionando">
+          <span className="liveDot" aria-hidden="true" />
+          <span className="mono liveText">app funcionando</span>
+        </div>
+      </div>
+
+      <div className="miniDash__grid">
+        {metrics.map((m) => (
+          <div className={`mCard ${m.tone ? `mCard--${m.tone}` : ""}`} key={m.k}>
+            <div className="mCard__k mono">{m.k}</div>
+            <div className="mCard__v mono">{m.v}</div>
+            <div className="mCard__sub">{m.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="miniDash__foot">
+        <div className="monoNote">
+          Fuente de pago al SPV: derechos de cobro (auditable).
+        </div>
+        <div className="monoNote">Input → lógica → recomendación</div>
+      </div>
+    </section>
   );
 }
 
 /* =========================
-   MiniDash — geometric perfection
-   - strict grid
-   - equal gutters
-   - align baselines
+   Interactive cards
 ========================= */
-function MiniDash() {
-  const [tab, setTab] = useState("overview");
+function FeatureCards({ title, sub, items, anchor }) {
+  const [active, setActive] = useState(items?.[0]?.k || null);
 
-  const rows = useMemo(
-    () => [
-      { name: "Línea revolvente", rate: "18.4%", term: "24m", fee: "1.5%", score: "8.6" },
-      { name: "Refinanciamiento", rate: "17.2%", term: "36m", fee: "1.0%", score: "8.9" },
-      { name: "Arrendamiento", rate: "19.1%", term: "48m", fee: "0.8%", score: "8.3" },
-    ],
-    []
+  const activeItem = useMemo(
+    () => items.find((x) => x.k === active) || items[0],
+    [active, items]
   );
 
   return (
-    <section className="dash" aria-label="Mini dashboard preview">
-      {/* Header */}
-      <div className="dash__head">
-        <div className="dash__brand">
-          <div className="dash__mark" aria-hidden="true">
-            <img src={plogo} alt="" />
-          </div>
-          <div className="dash__brandText">
-            <div className="dash__title">PLINIUS</div>
-            <div className="dash__subtitle">Debt Console</div>
-          </div>
+    <section className="section section--cards" id={anchor}>
+      <div className="wrap">
+        <div className="sectionHead reveal">
+          <div className="sectionHead__kicker mono">modules</div>
+          <h2 className="sectionHead__title">{title}</h2>
+          <p className="sectionHead__sub">{sub}</p>
         </div>
 
-        <div className="dash__right">
-          <Pill tone="good">Live</Pill>
-          <Pill tone="muted">Audit trail</Pill>
-          <Pill tone="muted">v0.9</Pill>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="dash__tabs" role="tablist" aria-label="Dashboard tabs">
-        {[
-          { id: "overview", label: "Overview" },
-          { id: "liabilities", label: "Liabilities" },
-          { id: "covenants", label: "Covenants" },
-        ].map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            className={`dashTab ${tab === t.id ? "isOn" : ""}`}
-            onClick={() => setTab(t.id)}
-            type="button"
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Grid body */}
-      <div className="dash__grid">
-        {/* Left: maturity timeline */}
-        <div className="dashCard dashCard--span2">
-          <div className="dashCard__top">
-            <div>
-              <div className="dashCard__kicker">Maturity</div>
-              <div className="dashCard__title">Peak risk window</div>
-            </div>
-            <Pill tone="warn">6M</Pill>
-          </div>
-
-          <div className="timeline">
-            <div className="timeline__labels">
-              <span>Now</span>
-              <span>6m</span>
-              <span>12m</span>
-              <span>18m</span>
-              <span>24m</span>
-            </div>
-
-            <div className="timeline__bars" aria-hidden="true">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="barRow">
-                  <span className="barRow__name">{["Credit A", "Credit B", "Lease", "Invoice", "Bridge", "Line", "Term", "Other"][i]}</span>
-                  <div className="barRow__track">
-                    <span
-                      className={`barRow__fill ${i === 2 || i === 5 ? "isHot" : ""}`}
-                      style={{
-                        width: `${48 + ((i * 11) % 40)}%`,
-                        left: `${(i * 7) % 18}%`,
-                      }}
-                    />
-                  </div>
+        <div className="cardsLayout">
+          <div className="cardsGrid reveal" role="list">
+            {items.map((f) => (
+              <button
+                key={f.k}
+                type="button"
+                role="listitem"
+                className={`iCard ${active === f.k ? "is-active" : ""}`}
+                onClick={() => setActive(f.k)}
+              >
+                <div className="iCard__top">
+                  <div className="iCard__k mono">{f.k}</div>
+                  <div className="iCard__tag mono">{f.tag}</div>
                 </div>
-              ))}
-            </div>
-
-            <div className="timeline__foot">
-              <div className="monoNote">Stress-tested: cashflow −12%</div>
-              <div className="monoNote">Coverage target: ≥ 1.25×</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: score + stats */}
-        <div className="dashCard">
-          <div className="dashCard__top">
-            <div>
-              <div className="dashCard__kicker">Decision</div>
-              <div className="dashCard__title">Quality score</div>
-            </div>
-            <Pill tone="good">8.7</Pill>
-          </div>
-
-          <div className="scoreRing" aria-hidden="true">
-            <svg viewBox="0 0 120 120" width="120" height="120">
-              <circle cx="60" cy="60" r="48" className="ring ring--bg" />
-              <circle cx="60" cy="60" r="48" className="ring ring--fg" />
-              <text x="60" y="58" textAnchor="middle" className="ringText__big">
-                8.7
-              </text>
-              <text x="60" y="78" textAnchor="middle" className="ringText__small">
-                decision-grade
-              </text>
-            </svg>
-          </div>
-
-          <div className="split">
-            <div className="split__item">
-              <div className="split__k">WAC</div>
-              <div className="split__v mono">18.2%</div>
-            </div>
-            <div className="split__item">
-              <div className="split__k">Debt</div>
-              <div className="split__v mono">$12.4m</div>
-            </div>
-          </div>
-
-          <div className="dashHint">
-            <span className="dot dot--good" />
-            Signals normalized across comparable terms.
-          </div>
-        </div>
-
-        <div className="dashCard">
-          <div className="dashCard__top">
-            <div>
-              <div className="dashCard__kicker">Covenants</div>
-              <div className="dashCard__title">Calendar</div>
-            </div>
-            <Pill tone="muted">Next</Pill>
-          </div>
-
-          <div className="cal">
-            <div className="cal__row">
-              <div className="cal__d mono">Feb 14</div>
-              <div className="cal__t">DSCR reporting</div>
-              <div className="cal__s"><span className="badge badge--good">OK</span></div>
-            </div>
-            <div className="cal__row">
-              <div className="cal__d mono">Mar 01</div>
-              <div className="cal__t">Borrowing base</div>
-              <div className="cal__s"><span className="badge badge--warn">Review</span></div>
-            </div>
-            <div className="cal__row">
-              <div className="cal__d mono">Mar 20</div>
-              <div className="cal__t">Insurance update</div>
-              <div className="cal__s"><span className="badge badge--muted">Queued</span></div>
-            </div>
-          </div>
-
-          <div className="dashHint">
-            <span className="dot dot--warn" />
-            Alerts trigger before breach windows.
-          </div>
-        </div>
-
-        {/* Bottom: offers table */}
-        <div className="dashCard dashCard--span3">
-          <div className="dashCard__top">
-            <div>
-              <div className="dashCard__kicker">Comparables</div>
-              <div className="dashCard__title">Offer table</div>
-            </div>
-            <div className="dashActions">
-              <Pill tone="muted">Same metric</Pill>
-              <Pill tone="muted">Same assumptions</Pill>
-            </div>
-          </div>
-
-          <div className="table">
-            <div className="tHead">
-              <div>Product</div>
-              <div className="mono tNum">Rate</div>
-              <div className="mono tNum">Term</div>
-              <div className="mono tNum">Fee</div>
-              <div className="mono tNum">Score</div>
-              <div></div>
-            </div>
-
-            {rows.map((r) => (
-              <div className="tRow" key={r.name}>
-                <div className="tName">{r.name}</div>
-                <div className="mono tNum">{r.rate}</div>
-                <div className="mono tNum">{r.term}</div>
-                <div className="mono tNum">{r.fee}</div>
-                <div className="mono tNum">{r.score}</div>
-                <div className="tCta">
-                  <button className="miniBtn" type="button">Select</button>
-                </div>
-              </div>
+                <div className="iCard__t">{f.t}</div>
+                <div className="iCard__d">{f.d}</div>
+                <div className="iCard__hint mono">Click para ver detalle</div>
+              </button>
             ))}
           </div>
 
-          <div className="tableFoot">
-            <div className="monoNote">Decision output: yes / no / yes-but-structure</div>
-            <div className="monoNote">Audit: input → model → recommendation</div>
-          </div>
-        </div>
-      </div>
+          <aside className="cardsDetail reveal" aria-label="Detalle del módulo seleccionado">
+            <div className="cardsDetail__panel">
+              <div className="cardsDetail__k mono">{activeItem.k}</div>
+              <div className="cardsDetail__t">{activeItem.t}</div>
+              <p className="cardsDetail__p">{activeItem.detail}</p>
 
-      {/* Footer strip */}
-      <div className="dash__foot">
-        <div className="footItem">
-          <span className="dot dot--good" /> Risk lens: cashflow-first
-        </div>
-        <div className="footItem">
-          <span className="dot dot--muted" /> Traceability: full audit trail
-        </div>
-        <div className="footItem">
-          <span className="dot dot--warn" /> Monitoring: maturity + covenants
+              <div className="cardsDetail__bullets">
+                {activeItem.bullets.map((b) => (
+                  <div className="bullet" key={b}>
+                    <span className="bullet__dot" aria-hidden="true" />
+                    <span>{b}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="cardsDetail__cta">
+                <Link to={activeItem.ctaHref} className="btn btn--primary">
+                  {activeItem.ctaText}
+                </Link>
+                <Link to="/simulador" className="btn btn--secondary">
+                  Ver simulador
+                </Link>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </section>
@@ -298,14 +148,145 @@ export default function App() {
   useReveal();
   useHashScroll();
 
-  const features = useMemo(
+  const metrics = useMemo(
     () => [
-      { k: "Clarity", t: "Comparables limpios", d: "Misma métrica y supuestos para comparar términos sin ruido." },
-      { k: "Control", t: "Maturity map", d: "Detecta picos y concentración de vencimientos con anticipación." },
-      { k: "Governance", t: "Covenants calendar", d: "Calendario + alertas para evitar sorpresas y estrés operativo." },
-      { k: "Ops", t: "Intake → oferta", d: "Checklist y validaciones: menos fricción, más velocidad real." },
-      { k: "Risk", t: "Señales útiles", d: "Estacionalidad, concentración y cobranza; no “score cosmético”." },
-      { k: "Trust", t: "Audit trail", d: "Trazabilidad de inputs a decisión: listo para compliance e inversionistas." },
+      { k: "WAC", v: "18.2%", sub: "costo promedio", tone: "good" },
+      { k: "DSCR", v: "1.34×", sub: "mín 1.25×", tone: "warn" },
+      { k: "Headroom", v: "+0.09×", sub: "buffer covenant", tone: "warn" },
+      { k: "Debt", v: "$12.4m", sub: "saldo total", tone: "neutral" },
+      { k: "Peak maturity", v: "6–12M", sub: "ventana de riesgo", tone: "warn" },
+    ],
+    []
+  );
+
+  const modulesA = useMemo(
+    () => [
+      {
+        k: "Intake",
+        tag: "funnel",
+        t: "Solicitud sin fricción",
+        d: "Validaciones, checklist y evidencia desde el inicio.",
+        detail:
+          "Un intake que se siente como software: menos campos inútiles, más señales accionables. Ideal para escalar originación sin perder control.",
+        bullets: [
+          "Campos inteligentes + validación en vivo",
+          "Documentos / KYC listos para comité",
+          "Estructura sugerida por perfil de riesgo",
+        ],
+        ctaText: "Iniciar solicitud",
+        ctaHref: "/solicitud",
+      },
+      {
+        k: "Comparables",
+        tag: "terms",
+        t: "Términos comparables",
+        d: "Misma métrica, mismos supuestos. Comparas de verdad.",
+        detail:
+          "Comparables limpios: costo total, covenants, amortización, comisiones y ventanas de riesgo. Sin ruido, sin ‘marketing terms’.",
+        bullets: [
+          "Costo total (all-in) y sensibilidad",
+          "Estructura: bullet / amort / revolvente",
+          "Bandas de covenants y triggers",
+        ],
+        ctaText: "Ver productos",
+        ctaHref: "/productos",
+      },
+      {
+        k: "Covenants",
+        tag: "monitor",
+        t: "Calendar + alertas",
+        d: "Antes del breach window, ya lo viste venir.",
+        detail:
+          "Monitoreo operativo: covenants, vencimientos, DSCR, concentración y alertas. Diseñado para no sorprenderte en el peor momento.",
+        bullets: [
+          "Calendario de covenants y reportes",
+          "Alertas por umbral y tendencia",
+          "Bitácora auditable por periodo",
+        ],
+        ctaText: "Entrar al dashboard",
+        ctaHref: "/dashboard",
+      },
+      {
+        k: "Audit trail",
+        tag: "compliance",
+        t: "Decisión trazable",
+        d: "De input → lógica → recomendación, todo queda.",
+        detail:
+          "Lo que se decide, se puede explicar. Trazabilidad para comité, compliance y terceros. El sistema registra supuestos, fuentes y cambios.",
+        bullets: [
+          "Historial de cambios y supuestos",
+          "Evidencia por fuente de pago",
+          "Listo para auditoría / comité",
+        ],
+        ctaText: "Ver plataforma",
+        ctaHref: "/#plataforma",
+      },
+    ],
+    []
+  );
+
+  const modulesB = useMemo(
+    () => [
+      {
+        k: "Structure",
+        tag: "spv",
+        t: "SPV / fideicomiso",
+        d: "Estructuras por fuente de pago y derechos de cobro.",
+        detail:
+          "Estructuración pragmática: defines fuente de pago, garantías, waterfall y controles. Lo importante: que se ejecute bien.",
+        bullets: [
+          "Waterfall simple y verificable",
+          "Triggers y reservas (si aplica)",
+          "Reporting estándar para inversionista",
+        ],
+        ctaText: "Ver productos",
+        ctaHref: "/productos",
+      },
+      {
+        k: "Risk ops",
+        tag: "signals",
+        t: "Señales útiles",
+        d: "Cobranza, estacionalidad, concentración: señales reales.",
+        detail:
+          "Menos ‘score bonito’, más señales que mueven el resultado: comportamiento de flujo, concentración de clientes, rezagos y ciclos.",
+        bullets: [
+          "Señales de stress temprano",
+          "Concentración y estacionalidad",
+          "Revisión mensual con trazabilidad",
+        ],
+        ctaText: "Simular",
+        ctaHref: "/simulador",
+      },
+      {
+        k: "Pipeline",
+        tag: "speed",
+        t: "Velocidad con control",
+        d: "Intake → análisis → estructura → decisión.",
+        detail:
+          "Estandarizas el flujo y reduces fricción: checklist, validaciones y outputs repetibles. Operación sólida sin improvisación.",
+        bullets: [
+          "SLA operable por etapas",
+          "Checklist y validaciones por rol",
+          "Outputs: yes/no/structure + razones",
+        ],
+        ctaText: "Iniciar",
+        ctaHref: "/ingresar",
+      },
+      {
+        k: "Governance",
+        tag: "committee",
+        t: "Listo para comité",
+        d: "Material claro, consistente y defendible.",
+        detail:
+          "La gobernanza deja de ser PDFs dispersos: todo vive en el sistema. El comité ve el mismo lenguaje, las mismas métricas, y el mismo audit trail.",
+        bullets: [
+          "Paquetes por operación",
+          "Métricas consistentes",
+          "Evidencia ordenada y rápida",
+        ],
+        ctaText: "Entrar",
+        ctaHref: "/dashboard",
+      },
     ],
     []
   );
@@ -315,91 +296,86 @@ export default function App() {
       <Navbar />
 
       <main className="page">
-        <section className="hero">
-          <div className="wrap hero__wrap">
-            <div className="hero__left reveal">
-              <div className="brandline">
-                <img className="brandline__logo" src={plogo} alt="Plinius" />
-                <div className="brandline__txt">
-                  <div className="brandline__name">Plinius</div>
-                  <div className="brandline__tag">Debt intelligence for serious operators</div>
-                </div>
-              </div>
-
-              <h1 className="h1">
-                Financiamiento con control.
-                <br />
-                <span className="h1__muted">No más decisiones a ciegas.</span>
+        {/* =========================
+            SECTION 1 — INTRO + MINIDASH
+        ========================= */}
+        <section className="intro" id="top" aria-label="Intro">
+          <div className="wrap intro__wrap">
+            <div className="intro__copy reveal">
+              <div className="kicker mono">plinius</div>
+              <h1 className="intro__h1">
+                Private credit, <span className="muted">sin caos.</span>
               </h1>
-
-              <p className="lead">
-                Un sistema operativo de deuda empresarial: comparables consistentes, calendario de covenants y monitoreo
-                para operar con claridad.
+              <p className="intro__lead">
+                Una plataforma para <b>estructurar</b>, <b>medir</b> y <b>monitorear</b> deuda como software:
+                comparables, covenants, vencimientos y trazabilidad.
               </p>
 
-              <div className="ctaRow">
-                <Link to="/#plataforma" className="btn btn--primary">Ver plataforma</Link>
-                <Link to="/#demo" className="btn btn--secondary">Ver demo</Link>
+              <div className="intro__cta">
+                <Link to="/solicitud" className="btn btn--primary">
+                  Iniciar solicitud
+                </Link>
+                <Link to="/#modulos" className="btn btn--secondary">
+                  Ver módulos
+                </Link>
               </div>
 
-              <div className="proof">
-                <div className="proof__item">
-                  <div className="proof__k">Response</div>
-                  <div className="proof__v mono">48h</div>
+              <div className="intro__proof">
+                <div className="proofChip">
+                  <span className="proofChip__k mono">SLA</span>
+                  <span className="proofChip__v mono">48h</span>
                 </div>
-                <div className="proof__item">
-                  <div className="proof__k">Metrics</div>
-                  <div className="proof__v mono">Normalized</div>
+                <div className="proofChip">
+                  <span className="proofChip__k mono">Outputs</span>
+                  <span className="proofChip__v mono">yes/no/structure</span>
                 </div>
-                <div className="proof__item">
-                  <div className="proof__k">Audit</div>
-                  <div className="proof__v mono">On</div>
+                <div className="proofChip">
+                  <span className="proofChip__k mono">Governance</span>
+                  <span className="proofChip__v mono">on</span>
                 </div>
               </div>
             </div>
 
-            <div className="hero__right reveal" id="demo">
-              <MiniDash />
+            <div className="intro__dash">
+              <MiniDashSimple metrics={metrics} />
             </div>
           </div>
         </section>
 
-        <section className="section" id="plataforma">
-          <div className="wrap">
-            <div className="section__head reveal">
-              <h2 className="h2">Plataforma</h2>
-              <p className="sub">
-                Diseño sobrio, consistente y tech-pro. Todo está alineado a una grilla estricta para que se vea “producto real”.
-              </p>
-            </div>
+        {/* =========================
+            SECTION 2 — INFO (cards interactivas)
+        ========================= */}
+        <FeatureCards
+          anchor="modulos"
+          title="Módulos que sí mueven el resultado"
+          sub="Menos pantalla por pantalla. Más señales útiles, control operativo y trazabilidad."
+          items={modulesA}
+        />
 
-            <div className="featureGrid reveal">
-              {features.map((f) => (
-                <article className="fCard" key={f.t}>
-                  <div className="fCard__k mono">{f.k}</div>
-                  <div className="fCard__t">{f.t}</div>
-                  <div className="fCard__d">{f.d}</div>
-                </article>
-              ))}
-            </div>
+        {/* =========================
+            SECTION 3 — INFO (cards interactivas)
+        ========================= */}
+        <FeatureCards
+          anchor="gobernanza"
+          title="Estructura + operación + gobernanza"
+          sub="Estructuras por fuente de pago, monitoreo y comité: todo bajo un mismo lenguaje."
+          items={modulesB}
+        />
 
-            <div className="section__cta reveal">
-              <div className="ctaBox">
-                <div className="ctaBox__copy">
-                  <div className="ctaBox__title">Listo para convertirlo en dashboard real</div>
-                  <div className="ctaBox__desc">
-                    Si quieres, lo conectamos a tus datos (requests, ledger, covenants) y queda “production-grade”.
-                  </div>
-                </div>
-                <div className="ctaBox__btns">
-                  <Link to="/ingresar" className="btn btn--primary">Iniciar solicitud</Link>
-                  <Link to="/simulador" className="btn btn--secondary">Simular</Link>
+        {/* Footer CTA */}
+        <section className="endCta">
+          <div className="wrap reveal">
+            <div className="endCta__box">
+              <div className="endCta__copy">
+                <div className="endCta__t">Listo para data real</div>
+                <div className="endCta__d">
+                  Conecta requests, ledger, covenants y fuentes de pago y se vuelve production-grade.
                 </div>
               </div>
-            </div>
-
-            <div className="note reveal">
-              Tip: si tu `Navbar` es fixed, deja padding-top arriba (en CSS ya lo consideré de forma safe).
+              <div className="endCta__btns">
+                <Link to="/ingresar" className="btn btn--primary">Entrar</Link>
+                <Link to="/simulador" className="btn btn--secondary">Simular</Link>
+              </div>
             </div>
           </div>
         </section>
