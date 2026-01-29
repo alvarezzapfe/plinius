@@ -39,9 +39,9 @@ function MiniDashSimple({ metrics }) {
   return (
     <section className="miniDash reveal" aria-label="Mini dashboard (5 métricas)">
       <div className="miniDash__head">
-        <div className="miniDash__kicker mono">private credit</div>
-        <div className="miniDash__title">Risk snapshot</div>
-        <div className="miniDash__sub">5 métricas, una lectura. Sin humo.</div>
+        <div className="miniDash__kicker mono">Plinius</div>
+        <div className="miniDash__title">Administrador de Riesgo</div>
+        <div className="miniDash__sub"></div>
 
         <div className="miniDash__live" aria-label="Estado: funcionando">
           <span className="liveDot" aria-hidden="true" />
@@ -61,9 +61,9 @@ function MiniDashSimple({ metrics }) {
 
       <div className="miniDash__foot">
         <div className="monoNote">
-          Fuente de pago al SPV: derechos de cobro (auditable).
+          Panel de Empresa
         </div>
-        <div className="monoNote">Input → lógica → recomendación</div>
+        <div className="monoNote"></div>
       </div>
     </section>
   );
@@ -150,10 +150,10 @@ export default function App() {
 
   const metrics = useMemo(
     () => [
-      { k: "WAC", v: "18.2%", sub: "costo promedio", tone: "good" },
+      { k: "Costo de la Deuda", v: "18.2%", sub: "costo promedio", tone: "good" },
       { k: "DSCR", v: "1.34×", sub: "mín 1.25×", tone: "warn" },
       { k: "Headroom", v: "+0.09×", sub: "buffer covenant", tone: "warn" },
-      { k: "Debt", v: "$12.4m", sub: "saldo total", tone: "neutral" },
+      { k: "Deuda a Corto Plazo", v: "$12.4m", sub: "saldo total", tone: "neutral" },
       { k: "Peak maturity", v: "6–12M", sub: "ventana de riesgo", tone: "warn" },
     ],
     []
@@ -302,13 +302,12 @@ export default function App() {
         <section className="intro" id="top" aria-label="Intro">
           <div className="wrap intro__wrap">
             <div className="intro__copy reveal">
-              <div className="kicker mono">plinius</div>
+              <div className="kicker mono"></div>
               <h1 className="intro__h1">
-                Private credit, <span className="muted">sin caos.</span>
+                Plinius <span className="muted"></span>
               </h1>
               <p className="intro__lead">
-                Una plataforma para <b>estructurar</b>, <b>medir</b> y <b>monitorear</b> deuda como software:
-                comparables, covenants, vencimientos y trazabilidad.
+                Una plataforma para <b>estructurar</b>, <b>medir</b> y <b>monitorear</b> deuda de tu Empresa.
               </p>
 
               <div className="intro__cta">
