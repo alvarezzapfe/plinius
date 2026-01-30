@@ -158,16 +158,7 @@ const Navbar = () => {
               )}
             </li>
 
-            <li role="none">
-              <Link
-                to="/simulador"
-                role="menuitem"
-                className={`snav2__link ${isActive("/simulador") ? "active" : ""}`}
-                onClick={() => setMobileOpen(false)}
-              >
-                Simulador
-              </Link>
-            </li>
+            
 
             <li role="none">
               <Link

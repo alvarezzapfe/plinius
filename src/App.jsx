@@ -12,8 +12,7 @@ function useReveal() {
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => e.isIntersecting && e.target.classList.add("in")),
+      (entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add("in")),
       { threshold: 0.12, rootMargin: "0px 0px -10% 0px" }
     );
     els.forEach((el) => io.observe(el));
@@ -33,7 +32,7 @@ function useHashScroll() {
 }
 
 /* =========================
-   MiniDash (simple, 5 metrics)
+   MiniDash (simple)
 ========================= */
 function MiniDashSimple({ metrics }) {
   return (
@@ -41,7 +40,6 @@ function MiniDashSimple({ metrics }) {
       <div className="miniDash__head">
         <div className="miniDash__kicker mono">Plinius</div>
         <div className="miniDash__title">Administrador de Riesgo</div>
-        <div className="miniDash__sub"></div>
 
         <div className="miniDash__live" aria-label="Estado: funcionando">
           <span className="liveDot" aria-hidden="true" />
@@ -60,81 +58,266 @@ function MiniDashSimple({ metrics }) {
       </div>
 
       <div className="miniDash__foot">
-        <div className="monoNote">
-          Panel de Empresa
-        </div>
-        <div className="monoNote"></div>
+        <div className="monoNote">Panel de Empresa</div>
+        <div className="monoNote" />
       </div>
     </section>
   );
 }
 
 /* =========================
-   Interactive cards
+   Section 2 — Requisitos (BOX centrado)
 ========================= */
-function FeatureCards({ title, sub, items, anchor }) {
-  const [active, setActive] = useState(items?.[0]?.k || null);
-
-  const activeItem = useMemo(
-    () => items.find((x) => x.k === active) || items[0],
-    [active, items]
+function RequirementsBox() {
+  const reqs = useMemo(
+    () => [
+      {
+        k: "01",
+        t: "Identidad y constitución",
+        d: "Acta constitutiva, poderes, RFC y estructura accionaria (si aplica).",
+      },
+      {
+        k: "02",
+        t: "Flujo y estados financieros",
+        d: "Estados financieros recientes + estacionalidad del negocio.",
+      },
+      {
+        k: "03",
+        t: "Historial y disciplina de pago",
+        d: "Señales: comportamiento, líneas vigentes y consistencia en pagos.",
+      },
+      {
+        k: "04",
+        t: "Fuente de pago / garantías",
+        d: "Claridad de la fuente (contratos / cobros) y colateral (si aplica).",
+      },
+    ],
+    []
   );
 
   return (
-    <section className="section section--cards" id={anchor}>
+    <section className="section section--req" id="requisitos" aria-label="Requisitos">
       <div className="wrap">
         <div className="sectionHead reveal">
-          <div className="sectionHead__kicker mono">modules</div>
-          <h2 className="sectionHead__title">{title}</h2>
-          <p className="sectionHead__sub">{sub}</p>
+          <div className="sectionHead__kicker mono">requisitos</div>
+          <h2 className="sectionHead__title">Lo mínimo para iniciar</h2>
+          <p className="sectionHead__sub">
+            Sin fricción. Solo lo que mueve decisión y velocidad.
+          </p>
         </div>
 
-        <div className="cardsLayout">
-          <div className="cardsGrid reveal" role="list">
-            {items.map((f) => (
-              <button
-                key={f.k}
-                type="button"
-                role="listitem"
-                className={`iCard ${active === f.k ? "is-active" : ""}`}
-                onClick={() => setActive(f.k)}
-              >
-                <div className="iCard__top">
-                  <div className="iCard__k mono">{f.k}</div>
-                  <div className="iCard__tag mono">{f.tag}</div>
+        <div className="reqBox reveal" role="region" aria-label="Caja de requisitos">
+          <div className="reqBox__glow" aria-hidden="true" />
+
+          <div className="reqBox__grid">
+            {reqs.map((r) => (
+              <div className="reqItem" key={r.k}>
+                <div className="reqItem__k mono">{r.k}</div>
+                <div className="reqItem__body">
+                  <div className="reqItem__t">{r.t}</div>
+                  <div className="reqItem__d">{r.d}</div>
                 </div>
-                <div className="iCard__t">{f.t}</div>
-                <div className="iCard__d">{f.d}</div>
-                <div className="iCard__hint mono">Click para ver detalle</div>
-              </button>
+              </div>
             ))}
           </div>
 
-          <aside className="cardsDetail reveal" aria-label="Detalle del módulo seleccionado">
-            <div className="cardsDetail__panel">
-              <div className="cardsDetail__k mono">{activeItem.k}</div>
-              <div className="cardsDetail__t">{activeItem.t}</div>
-              <p className="cardsDetail__p">{activeItem.detail}</p>
+          <div className="reqBox__cta">
+            <Link to="/solicitud" className="btn btn--primary">
+              Iniciar solicitud
+            </Link>
+            <Link to="/simulador" className="btn btn--secondary">
+              Probar simulador
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-              <div className="cardsDetail__bullets">
-                {activeItem.bullets.map((b) => (
-                  <div className="bullet" key={b}>
-                    <span className="bullet__dot" aria-hidden="true" />
-                    <span>{b}</span>
+/* =========================
+   Section 3 — FAQ (ACORDEÓN)
+========================= */
+function FAQ() {
+  const items = useMemo(
+    () => [
+      {
+        q: "¿Qué tan rápido puedo tener una respuesta inicial?",
+        a: "Si la información está completa, una lectura inicial puede salir en 24–48h hábiles (varía por caso).",
+      },
+      {
+        q: "¿Qué monto mínimo / máximo manejan?",
+        a: "Depende de perfil y fuente de pago. Tú ingresa objetivo y te diremos si conviene ajustar plazo, estructura o garantías.",
+      },
+      {
+        q: "¿Puedo aplicar sin estados financieros perfectos?",
+        a: "Sí. Nos importa consistencia y explicación. Estacionalidad o eventos puntuales se documentan y se modelan.",
+      },
+      {
+        q: "¿Manejan estructuras con fideicomiso/SPV?",
+        a: "Sí. Si la fuente de pago lo amerita, proponemos estructura simple y verificable con triggers y reporting.",
+      },
+      {
+        q: "¿Qué información NO debo mandar al inicio?",
+        a: "Evita mandar dumps de PDFs sin orden. Te pedimos lo mínimo y te damos checklist claro para avanzar rápido.",
+      },
+    ],
+    []
+  );
+
+  const [open, setOpen] = useState(items[0]?.q || null);
+
+  return (
+    <section className="section section--faq" id="faq" aria-label="FAQ">
+      <div className="wrap">
+        <div className="sectionHead reveal">
+          <div className="sectionHead__kicker mono">faq</div>
+          <h2 className="sectionHead__title">Preguntas frecuentes</h2>
+          <p className="sectionHead__sub">Inventadas por ahora. Luego tú ajustas copy.</p>
+        </div>
+
+        <div className="faqBox reveal" role="region" aria-label="Acordeón FAQ">
+          <div className="faqBox__glow" aria-hidden="true" />
+
+          {items.map((it) => {
+            const isOpen = open === it.q;
+            return (
+              <button
+                key={it.q}
+                type="button"
+                className={`faqItem ${isOpen ? "is-open" : ""}`}
+                onClick={() => setOpen(isOpen ? null : it.q)}
+                aria-expanded={isOpen}
+              >
+                <div className="faqItem__row">
+                  <div className="faqItem__q">{it.q}</div>
+                  <div className="faqItem__icon mono" aria-hidden="true">
+                    {isOpen ? "–" : "+"}
                   </div>
-                ))}
-              </div>
+                </div>
 
-              <div className="cardsDetail__cta">
-                <Link to={activeItem.ctaHref} className="btn btn--primary">
-                  {activeItem.ctaText}
-                </Link>
-                <Link to="/simulador" className="btn btn--secondary">
-                  Ver simulador
-                </Link>
+                <div className="faqItem__aWrap" aria-hidden={!isOpen}>
+                  <div className="faqItem__a">{it.a}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================
+   Section 4 — Contacto (BOX centrado)
+========================= */
+function ContactCenter() {
+  const [form, setForm] = useState({
+    nombre: "",
+    empresa: "",
+    email: "",
+    telefono: "",
+    mensaje: "",
+  });
+
+  const [status, setStatus] = useState({ type: "idle", msg: "" });
+
+  const onChange = (k) => (e) => setForm((s) => ({ ...s, [k]: e.target.value }));
+
+  const validate = () => {
+    if (!form.nombre.trim()) return "Escribe tu nombre.";
+    if (!form.empresa.trim()) return "Escribe tu empresa.";
+    if (!form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email.trim())) return "Escribe un email válido.";
+    if (!form.telefono.trim()) return "Escribe un teléfono.";
+    return null;
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ type: "idle", msg: "" });
+
+    const err = validate();
+    if (err) return setStatus({ type: "error", msg: err });
+
+    // Placeholder — aquí conectamos resend después
+    setStatus({ type: "ok", msg: "Listo. Recibimos tus datos. Te contactamos en breve." });
+  };
+
+  return (
+    <section className="section section--contact" id="contacto" aria-label="Contacto">
+      <div className="wrap">
+        <div className="sectionHead reveal">
+          <div className="sectionHead__kicker mono">contacto</div>
+          <h2 className="sectionHead__title">Hablemos</h2>
+          <p className="sectionHead__sub">Déjanos tus datos y te mandamos la ruta más directa.</p>
+        </div>
+
+        <div className="contactCenter reveal" role="region" aria-label="Formulario de contacto">
+          <div className="contactCenter__glow" aria-hidden="true" />
+
+          <form className="contactForm" onSubmit={onSubmit}>
+            <div className="fieldRow">
+              <div className="field">
+                <label className="field__label">Nombre</label>
+                <input
+                  className="field__input"
+                  value={form.nombre}
+                  onChange={onChange("nombre")}
+                  placeholder="Tu nombre"
+                />
+              </div>
+              <div className="field">
+                <label className="field__label">Empresa</label>
+                <input
+                  className="field__input"
+                  value={form.empresa}
+                  onChange={onChange("empresa")}
+                  placeholder="Empresa"
+                />
               </div>
             </div>
-          </aside>
+
+            <div className="fieldRow">
+              <div className="field">
+                <label className="field__label">Email</label>
+                <input
+                  className="field__input"
+                  value={form.email}
+                  onChange={onChange("email")}
+                  placeholder="correo@empresa.com"
+                />
+              </div>
+              <div className="field">
+                <label className="field__label">Teléfono</label>
+                <input
+                  className="field__input"
+                  value={form.telefono}
+                  onChange={onChange("telefono")}
+                  placeholder="+52 55 0000 0000"
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="field__label">Mensaje</label>
+              <textarea
+                className="field__input field__textarea"
+                value={form.mensaje}
+                onChange={onChange("mensaje")}
+                placeholder="Uso del crédito, plazo, fuente de pago."
+              />
+            </div>
+
+            <button type="submit" className="btn btn--primary btn--full">
+              Enviar
+            </button>
+
+            {status.type !== "idle" && (
+              <div className={`formMsg ${status.type === "ok" ? "formMsg--ok" : "formMsg--err"}`}>
+                {status.msg}
+              </div>
+            )}
+          </form>
         </div>
       </div>
     </section>
@@ -159,153 +342,19 @@ export default function App() {
     []
   );
 
-  const modulesA = useMemo(
-    () => [
-      {
-        k: "Intake",
-        tag: "funnel",
-        t: "Solicitud sin fricción",
-        d: "Validaciones, checklist y evidencia desde el inicio.",
-        detail:
-          "Un intake que se siente como software: menos campos inútiles, más señales accionables. Ideal para escalar originación sin perder control.",
-        bullets: [
-          "Campos inteligentes + validación en vivo",
-          "Documentos / KYC listos para comité",
-          "Estructura sugerida por perfil de riesgo",
-        ],
-        ctaText: "Iniciar solicitud",
-        ctaHref: "/solicitud",
-      },
-      {
-        k: "Comparables",
-        tag: "terms",
-        t: "Términos comparables",
-        d: "Misma métrica, mismos supuestos. Comparas de verdad.",
-        detail:
-          "Comparables limpios: costo total, covenants, amortización, comisiones y ventanas de riesgo. Sin ruido, sin ‘marketing terms’.",
-        bullets: [
-          "Costo total (all-in) y sensibilidad",
-          "Estructura: bullet / amort / revolvente",
-          "Bandas de covenants y triggers",
-        ],
-        ctaText: "Ver productos",
-        ctaHref: "/productos",
-      },
-      {
-        k: "Covenants",
-        tag: "monitor",
-        t: "Calendar + alertas",
-        d: "Antes del breach window, ya lo viste venir.",
-        detail:
-          "Monitoreo operativo: covenants, vencimientos, DSCR, concentración y alertas. Diseñado para no sorprenderte en el peor momento.",
-        bullets: [
-          "Calendario de covenants y reportes",
-          "Alertas por umbral y tendencia",
-          "Bitácora auditable por periodo",
-        ],
-        ctaText: "Entrar al dashboard",
-        ctaHref: "/dashboard",
-      },
-      {
-        k: "Audit trail",
-        tag: "compliance",
-        t: "Decisión trazable",
-        d: "De input → lógica → recomendación, todo queda.",
-        detail:
-          "Lo que se decide, se puede explicar. Trazabilidad para comité, compliance y terceros. El sistema registra supuestos, fuentes y cambios.",
-        bullets: [
-          "Historial de cambios y supuestos",
-          "Evidencia por fuente de pago",
-          "Listo para auditoría / comité",
-        ],
-        ctaText: "Ver plataforma",
-        ctaHref: "/#plataforma",
-      },
-    ],
-    []
-  );
-
-  const modulesB = useMemo(
-    () => [
-      {
-        k: "Structure",
-        tag: "spv",
-        t: "SPV / fideicomiso",
-        d: "Estructuras por fuente de pago y derechos de cobro.",
-        detail:
-          "Estructuración pragmática: defines fuente de pago, garantías, waterfall y controles. Lo importante: que se ejecute bien.",
-        bullets: [
-          "Waterfall simple y verificable",
-          "Triggers y reservas (si aplica)",
-          "Reporting estándar para inversionista",
-        ],
-        ctaText: "Ver productos",
-        ctaHref: "/productos",
-      },
-      {
-        k: "Risk ops",
-        tag: "signals",
-        t: "Señales útiles",
-        d: "Cobranza, estacionalidad, concentración: señales reales.",
-        detail:
-          "Menos ‘score bonito’, más señales que mueven el resultado: comportamiento de flujo, concentración de clientes, rezagos y ciclos.",
-        bullets: [
-          "Señales de stress temprano",
-          "Concentración y estacionalidad",
-          "Revisión mensual con trazabilidad",
-        ],
-        ctaText: "Simular",
-        ctaHref: "/simulador",
-      },
-      {
-        k: "Pipeline",
-        tag: "speed",
-        t: "Velocidad con control",
-        d: "Intake → análisis → estructura → decisión.",
-        detail:
-          "Estandarizas el flujo y reduces fricción: checklist, validaciones y outputs repetibles. Operación sólida sin improvisación.",
-        bullets: [
-          "SLA operable por etapas",
-          "Checklist y validaciones por rol",
-          "Outputs: yes/no/structure + razones",
-        ],
-        ctaText: "Iniciar",
-        ctaHref: "/ingresar",
-      },
-      {
-        k: "Governance",
-        tag: "committee",
-        t: "Listo para comité",
-        d: "Material claro, consistente y defendible.",
-        detail:
-          "La gobernanza deja de ser PDFs dispersos: todo vive en el sistema. El comité ve el mismo lenguaje, las mismas métricas, y el mismo audit trail.",
-        bullets: [
-          "Paquetes por operación",
-          "Métricas consistentes",
-          "Evidencia ordenada y rápida",
-        ],
-        ctaText: "Entrar",
-        ctaHref: "/dashboard",
-      },
-    ],
-    []
-  );
-
   return (
     <div className="app">
       <Navbar />
 
       <main className="page">
-        {/* =========================
-            SECTION 1 — INTRO + MINIDASH
-        ========================= */}
-        <section className="intro" id="top" aria-label="Intro">
+        {/* SECTION 1 — HERO */}
+        <section className="intro intro--full" id="top" aria-label="Intro">
+          <div className="intro__bg" aria-hidden="true" />
           <div className="wrap intro__wrap">
             <div className="intro__copy reveal">
-              <div className="kicker mono"></div>
-              <h1 className="intro__h1">
-                Plinius <span className="muted"></span>
-              </h1>
+              <div className="kicker mono" />
+              <h1 className="intro__h1">Plinius <span className="muted" /></h1>
+
               <p className="intro__lead">
                 Una plataforma para <b>estructurar</b>, <b>medir</b> y <b>monitorear</b> deuda de tu Empresa.
               </p>
@@ -314,8 +363,8 @@ export default function App() {
                 <Link to="/solicitud" className="btn btn--primary">
                   Iniciar solicitud
                 </Link>
-                <Link to="/#modulos" className="btn btn--secondary">
-                  Ver módulos
+                <Link to="/#requisitos" className="btn btn--secondary">
+                  Ver requisitos
                 </Link>
               </div>
 
@@ -341,43 +390,14 @@ export default function App() {
           </div>
         </section>
 
-        {/* =========================
-            SECTION 2 — INFO (cards interactivas)
-        ========================= */}
-        <FeatureCards
-          anchor="modulos"
-          title="Módulos que sí mueven el resultado"
-          sub="Menos pantalla por pantalla. Más señales útiles, control operativo y trazabilidad."
-          items={modulesA}
-        />
+        {/* SECTION 2 */}
+        <RequirementsBox />
 
-        {/* =========================
-            SECTION 3 — INFO (cards interactivas)
-        ========================= */}
-        <FeatureCards
-          anchor="gobernanza"
-          title="Estructura + operación + gobernanza"
-          sub="Estructuras por fuente de pago, monitoreo y comité: todo bajo un mismo lenguaje."
-          items={modulesB}
-        />
+        {/* SECTION 3 */}
+        <FAQ />
 
-        {/* Footer CTA */}
-        <section className="endCta">
-          <div className="wrap reveal">
-            <div className="endCta__box">
-              <div className="endCta__copy">
-                <div className="endCta__t">Listo para data real</div>
-                <div className="endCta__d">
-                  Conecta requests, ledger, covenants y fuentes de pago y se vuelve production-grade.
-                </div>
-              </div>
-              <div className="endCta__btns">
-                <Link to="/ingresar" className="btn btn--primary">Entrar</Link>
-                <Link to="/simulador" className="btn btn--secondary">Simular</Link>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* SECTION 4 */}
+        <ContactCenter />
       </main>
 
       <Footer />

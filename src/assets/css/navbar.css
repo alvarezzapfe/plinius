@@ -25,6 +25,8 @@
   top: 0;
   z-index: var(--z);
   isolation: isolate;
+  --hover: #c9ff2f;          /* amarillo-verdoso */
+  --hoverSoft: rgba(201,255,47,.22);
 }
 
 .snav2::before{
@@ -103,10 +105,10 @@
   cursor:pointer;
 
   position: relative;
-  transition: color .14s ease, transform .14s ease;
+  transition: color .14s ease, transform .14s ease, text-shadow .14s ease;
 }
 
-/* minimal underline */
+/* underline minimal */
 .snav2__link::after{
   content:"";
   position:absolute;
@@ -118,7 +120,30 @@
   opacity: 0;
   transform: scaleX(.75);
   transform-origin: left;
-  transition: opacity .14s ease, transform .16s ease;
+  transition: opacity .14s ease, transform .16s ease, background .14s ease, box-shadow .14s ease;
+}
+
+/* hover amarillo-verdoso */
+.snav2__link:hover{
+  color: var(--hover);
+  transform: translateY(-1px);
+  text-shadow: 0 0 18px rgba(201,255,47,.18);
+}
+.snav2__link:hover::after{
+  opacity: 1;
+  transform: scaleX(1);
+  background: var(--hover);
+  box-shadow: 0 0 18px rgba(201,255,47,.22);
+}
+
+/* activo */
+.snav2__link.active{
+  color: var(--text);
+}
+.snav2__link.active::after{
+  opacity: 1;
+  transform: scaleX(1);
+  background: rgba(255,255,255,.42);
 }
 
 .snav2__link:hover{
