@@ -1,6 +1,7 @@
 // src/components/Finanzas360.jsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import "../assets/css/finanzas360.css";
 
 // ---------- helpers ----------
 const pesos = (x) =>
@@ -18,8 +19,17 @@ const pct = (x) =>
 
 const fmtDT = (d) => (d ? new Date(d).toLocaleString("es-MX") : "—");
 
+// permite números con signo y un solo punto
 const cleanNumStr = (s) => {
-  const x = String(s ?? "").replace(/,/g, "").replace(/[^\d.]/g, "");
+  const raw = String(s ?? "").replace(/,/g, "").trim();
+  if (!raw) return "";
+  // deja solo dígitos, punto y signo
+  let x = raw.replace(/[^\d.\-]/g, "");
+
+  // solo un signo "-" al inicio
+  x = x.replace(/(?!^)-/g, "");
+
+  // solo un punto decimal
   const parts = x.split(".");
   if (parts.length <= 2) return x;
   return parts[0] + "." + parts.slice(1).join("");
@@ -38,12 +48,12 @@ function makeEmptyYearBlock(years) {
 
   const income = {};
   const balance = {};
-  years.forEach((y) => {
+  (years || []).forEach((y) => {
     income[y] = { ...blankIS };
     balance[y] = { ...blankBS };
   });
 
-  return { years, income, balance };
+  return { years: years || [], income, balance };
 }
 
 function downloadTextFile(filename, text, mime = "text/plain") {
@@ -66,18 +76,32 @@ function makeCSVRow(arr) {
     .join(",");
 }
 
+function normalizeYears(years) {
+  // asegura orden desc (último año primero)
+  const ys = (years || []).map((y) => Number(y)).filter((y) => Number.isFinite(y));
+  ys.sort((a, b) => b - a);
+  return ys;
+}
+
 export default function Finanzas360({ user, years, finKey }) {
+  const normYears = useMemo(() => normalizeYears(years), [years]);
+  const lastY = useMemo(() => (normYears.length ? Math.max(...normYears) : new Date().getFullYear() - 1), [normYears]);
+
   const [finStep, setFinStep] = useState("is"); // is | bs | sim | resumen
-  const [fin, setFin] = useState(() => makeEmptyYearBlock(years));
+  const [fin, setFin] = useState(() => makeEmptyYearBlock(normYears));
   const [finMsg, setFinMsg] = useState("");
   const [savingFin, setSavingFin] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
 
   const [sim, setSim] = useState({
-    year: years?.[0] ?? new Date().getFullYear() - 1,
+    year: String(lastY),
     addDebt: "2000000",
     rate: "0.18",
     tenor: "3",
   });
+
+  // autosave (local) con debounce
+  const autosaveRef = useRef(null);
 
   // -------- local storage ----------
   const loadFinFromLocal = useCallback(() => {
@@ -88,16 +112,19 @@ export default function Finanzas360({ user, years, finKey }) {
       if (!obj?.years?.length) return false;
 
       setFin((prev) => ({
-        years,
+        years: normYears,
         income: { ...prev.income, ...(obj.income || {}) },
         balance: { ...prev.balance, ...(obj.balance || {}) },
       }));
-      if (obj?.sim) setSim((s) => ({ ...s, ...obj.sim }));
+
+      if (obj?.sim) setSim((s) => ({ ...s, ...obj.sim, year: String(obj.sim.year ?? lastY) }));
+      if (obj?.updated_at) setLastSavedAt(obj.updated_at);
+
       return true;
     } catch {
       return false;
     }
-  }, [finKey, years]);
+  }, [finKey, normYears, lastY]);
 
   const saveFinToLocal = useCallback(
     (payload) => {
@@ -112,42 +139,83 @@ export default function Finanzas360({ user, years, finKey }) {
   );
 
   useEffect(() => {
+    // si cambian years, re-sincroniza estructura sin perder datos
+    setFin((prev) => ({
+      years: normYears,
+      income: { ...makeEmptyYearBlock(normYears).income, ...(prev.income || {}) },
+      balance: { ...makeEmptyYearBlock(normYears).balance, ...(prev.balance || {}) },
+    }));
+    setSim((s) => ({ ...s, year: String(s.year || lastY) }));
+  }, [normYears, lastY]);
+
+  useEffect(() => {
     if (!user?.id) return;
     loadFinFromLocal(); // no bloquea
   }, [user?.id, loadFinFromLocal]);
 
+  // autosave local cada vez que cambie fin/sim/step (solo local)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    if (autosaveRef.current) clearTimeout(autosaveRef.current);
+    autosaveRef.current = setTimeout(() => {
+      const payload = {
+        version: 3,
+        updated_at: new Date().toISOString(),
+        years: normYears,
+        income: fin.income,
+        balance: fin.balance,
+        sim,
+      };
+      const ok = saveFinToLocal(payload);
+      if (ok) setLastSavedAt(payload.updated_at);
+    }, 650);
+
+    return () => {
+      if (autosaveRef.current) clearTimeout(autosaveRef.current);
+    };
+  }, [fin.income, fin.balance, sim, user?.id, normYears, saveFinToLocal]);
+
   const resetFin = () => {
-    setFin(makeEmptyYearBlock(years));
+    setFin(makeEmptyYearBlock(normYears));
     setFinStep("is");
-    setSim({ year: years?.[0] ?? years?.[0], addDebt: "2000000", rate: "0.18", tenor: "3" });
+    setSim({ year: String(lastY), addDebt: "2000000", rate: "0.18", tenor: "3" });
     setFinMsg("✅ Listo. Puedes volver a capturar desde cero.");
     setTimeout(() => setFinMsg(""), 2600);
   };
 
+  // =========================
+  // Save (local + nube opcional)
+  // =========================
   const saveFin = async () => {
     if (!user?.id || savingFin) return;
     setSavingFin(true);
     setFinMsg("");
 
     const payload = {
-      version: 2,
+      version: 3,
       updated_at: new Date().toISOString(),
-      years,
+      years: normYears,
       income: fin.income,
       balance: fin.balance,
       sim,
     };
 
     const okLocal = saveFinToLocal(payload);
+    if (okLocal) setLastSavedAt(payload.updated_at);
 
+    // Nube: si quieres HISTORIAL, deja insert.
+    // Si quieres 1 por usuario, usa upsert y crea unique index en user_id.
     try {
-      await supabase.from("financial_snapshots").insert({
+      const { error } = await supabase.from("financial_snapshots").insert({
         user_id: user.id,
         payload,
       });
+      if (error) throw error;
+
       setFinMsg(okLocal ? "✅ Guardado (local + nube)." : "✅ Guardado (nube).");
-    } catch {
-      setFinMsg(okLocal ? "✅ Guardado local (nube aún no habilitada)." : "No se pudo guardar.");
+    } catch (e) {
+      setFinMsg(okLocal ? "✅ Guardado local (no pude guardar nube)." : `No se pudo guardar: ${e?.message || "error"}`);
     } finally {
       setSavingFin(false);
       setTimeout(() => setFinMsg(""), 3200);
@@ -171,11 +239,12 @@ export default function Finanzas360({ user, years, finKey }) {
       if (!error && data?.payload) {
         const p = data.payload;
         setFin((prev) => ({
-          years,
+          years: normYears,
           income: { ...prev.income, ...(p.income || {}) },
           balance: { ...prev.balance, ...(p.balance || {}) },
         }));
-        if (p?.sim) setSim((s) => ({ ...s, ...p.sim }));
+        if (p?.sim) setSim((s) => ({ ...s, ...p.sim, year: String(p.sim.year ?? lastY) }));
+        setLastSavedAt(p?.updated_at || data.created_at);
         setFinMsg(`✅ Cargado desde nube (${fmtDT(data.created_at)})`);
         setTimeout(() => setFinMsg(""), 2800);
         return;
@@ -208,7 +277,7 @@ export default function Finanzas360({ user, years, finKey }) {
   // -------- derived ----------
   const finDerived = useMemo(() => {
     const out = {};
-    years.forEach((y) => {
+    normYears.forEach((y) => {
       const is = fin.income[y] || {};
       const bs = fin.balance[y] || {};
 
@@ -237,7 +306,7 @@ export default function Finanzas360({ user, years, finKey }) {
       const equity_implied = assets - liab;
       const equity_delta = eq - equity_implied;
 
-      const debt = liab; // proxy
+      const debt = liab; // proxy simple (pasivo total)
       const debt_to_ebitda = safeRatio(debt, ebitda);
       const debt_to_equity = safeRatio(debt, eq);
 
@@ -268,10 +337,10 @@ export default function Finanzas360({ user, years, finKey }) {
       };
     });
     return out;
-  }, [fin, years]);
+  }, [fin, normYears]);
 
   const simDerived = useMemo(() => {
-    const y = Number(sim.year) || years[0];
+    const y = Number(sim.year) || lastY;
     const base = finDerived[y] || {};
     const addDebt = toNum(sim.addDebt);
     const rate = Number(sim.rate);
@@ -282,16 +351,19 @@ export default function Finanzas360({ user, years, finKey }) {
     const baseDebt = base.debt || 0;
 
     const newDebt = baseDebt + addDebt;
-    const interestYear = addDebt * (Number.isFinite(rate) ? rate : 0);
+    const r = Number.isFinite(rate) ? rate : 0;
+    const t = Number.isFinite(tenor) ? tenor : 0;
+
+    const interestYear = addDebt * r;
     const debtToEbitda = safeRatio(newDebt, ebitda);
     const debtToEquity = safeRatio(newDebt, equity);
-    const totalInterest = interestYear * (Number.isFinite(tenor) ? tenor : 0);
+    const totalInterest = interestYear * t;
 
     return {
       year: y,
       addDebt,
-      rate,
-      tenor,
+      rate: r,
+      tenor: t,
       baseDebt,
       newDebt,
       interestYear,
@@ -299,22 +371,18 @@ export default function Finanzas360({ user, years, finKey }) {
       debtToEbitda,
       debtToEquity,
     };
-  }, [sim, years, finDerived]);
+  }, [sim, lastY, finDerived]);
 
-  // -------- value-add: bankability score + todo list ----------
+  // -------- bankability ----------
   const bankability = useMemo(() => {
-    // score = 0..100
-    // 1) completitud (50 pts)
-    // 2) consistencia (30 pts)
-    // 3) señales rápidas (20 pts)
     let score = 0;
     const todos = [];
 
-    // completitud
+    // completitud (50)
     let filled = 0;
     let total = 0;
 
-    years.forEach((y) => {
+    normYears.forEach((y) => {
       const is = fin.income[y] || {};
       const bs = fin.balance[y] || {};
       const isFields = ["net_sales", "cogs", "sga", "ebitda", "net_income"];
@@ -333,34 +401,29 @@ export default function Finanzas360({ user, years, finKey }) {
     const completeness = total ? filled / total : 0;
     score += Math.round(50 * completeness);
 
-    if (completeness < 0.9) {
-      todos.push("Completa los campos faltantes (ideal: 3 años completos).");
-    }
+    if (completeness < 0.9) todos.push("Completa los campos faltantes (ideal: 3 años completos).");
 
-    // consistencia
+    // consistencia (30) — tolerancia: 1 peso
     let okEBITDA = 0;
     let okEQ = 0;
 
-    years.forEach((y) => {
+    normYears.forEach((y) => {
       const d = finDerived[y] || {};
       if (Math.abs(d.ebitda_delta || 0) <= 1) okEBITDA += 1;
       if (Math.abs(d.equity_delta || 0) <= 1) okEQ += 1;
     });
 
-    const consistency = (okEBITDA + okEQ) / (2 * years.length || 1);
+    const consistency = (okEBITDA + okEQ) / (2 * (normYears.length || 1));
     score += Math.round(30 * consistency);
 
-    if (okEBITDA < years.length) todos.push("Revisa consistencia de EBITDA (Ventas - COGS - SG&A).");
-    if (okEQ < years.length) todos.push("Revisa ecuación contable (Activos = Pasivos + Capital).");
+    if (okEBITDA < normYears.length) todos.push("Revisa consistencia de EBITDA (Ventas - COGS - SG&A).");
+    if (okEQ < normYears.length) todos.push("Revisa ecuación contable (Activos = Pasivos + Capital).");
 
-    // señales rápidas
-    // usamos el año más reciente (years[0]) como “último año”
-    const lastY = years[0];
+    // señales rápidas (20) — año más reciente real
     const d = finDerived[lastY] || {};
     const ebitdaMargin = d.ebitda_margin || 0;
     const leverage = d.debt_to_ebitda || 0;
 
-    // EBITDA margin
     if (ebitdaMargin >= 0.12) score += 10;
     else if (ebitdaMargin >= 0.06) score += 6;
     else {
@@ -368,7 +431,6 @@ export default function Finanzas360({ user, years, finKey }) {
       todos.push("Mejora margen EBITDA o revisa clasificación COGS/SG&A.");
     }
 
-    // leverage proxy
     if (leverage > 0 && leverage <= 3) score += 10;
     else if (leverage > 0 && leverage <= 5) score += 6;
     else {
@@ -377,15 +439,11 @@ export default function Finanzas360({ user, years, finKey }) {
     }
 
     score = Math.max(0, Math.min(100, score));
-
-    const badge =
-      score >= 80 ? "ok" : score >= 60 ? "warn" : "bad";
-
-    const label =
-      score >= 80 ? "LISTO PARA BANCO" : score >= 60 ? "CASI LISTO" : "FALTA INFO";
+    const badge = score >= 80 ? "ok" : score >= 60 ? "warn" : "bad";
+    const label = score >= 80 ? "LISTO PARA BANCO" : score >= 60 ? "CASI LISTO" : "FALTA INFO";
 
     return { score, badge, label, todos: Array.from(new Set(todos)).slice(0, 5), lastY };
-  }, [fin, finDerived, years]);
+  }, [fin, finDerived, normYears, lastY]);
 
   // -------- export CSV ----------
   const exportCSV = useCallback(() => {
@@ -414,7 +472,7 @@ export default function Finanzas360({ user, years, finKey }) {
 
     const rows = [makeCSVRow(header)];
 
-    years.forEach((y) => {
+    normYears.forEach((y) => {
       const is = fin.income[y] || {};
       const bs = fin.balance[y] || {};
       const d = finDerived[y] || {};
@@ -447,7 +505,7 @@ export default function Finanzas360({ user, years, finKey }) {
     downloadTextFile(`plinius_fin360_${user?.id || "anon"}.csv`, rows.join("\n"), "text/csv;charset=utf-8");
     setFinMsg("✅ Exportado CSV.");
     setTimeout(() => setFinMsg(""), 2200);
-  }, [fin, finDerived, years, user?.id]);
+  }, [fin, finDerived, normYears, user?.id]);
 
   // -------- UI ----------
   return (
@@ -456,9 +514,7 @@ export default function Finanzas360({ user, years, finKey }) {
         <div className="fin360-top">
           <div className="fin360-titleWrap">
             <div className="dash-panelTitle">Finanzas 360</div>
-            <div className="fin360-sub">
-              Captura 3 años · Validación automática · Simulador · Insights accionables
-            </div>
+            <div className="fin360-sub">Captura · Validación · Simulador · Insights accionables</div>
           </div>
 
           <div className="fin360-score">
@@ -469,7 +525,6 @@ export default function Finanzas360({ user, years, finKey }) {
           </div>
         </div>
 
-        {/* sticky actions */}
         <div className="fin360-actions">
           <div className="fin360-actionsLeft">
             <button className="dash-btn dash-btnSoft" onClick={loadFin}>
@@ -481,6 +536,10 @@ export default function Finanzas360({ user, years, finKey }) {
             <button className="dash-btn dash-btnSoft" onClick={exportCSV}>
               Export CSV
             </button>
+
+            <div className="fin360-savedAt" title={lastSavedAt ? `Último autosave: ${fmtDT(lastSavedAt)}` : ""}>
+              {lastSavedAt ? `Auto-save: ${fmtDT(lastSavedAt)}` : "Auto-save: —"}
+            </div>
           </div>
 
           <div className="fin360-actionsRight">
@@ -491,7 +550,6 @@ export default function Finanzas360({ user, years, finKey }) {
           </div>
         </div>
 
-        {/* stepper (bigger) */}
         <div className="fin360-stepper">
           <button className={`fin360-step ${finStep === "is" ? "is-active" : ""}`} onClick={() => setFinStep("is")}>
             1) Resultados
@@ -502,12 +560,14 @@ export default function Finanzas360({ user, years, finKey }) {
           <button className={`fin360-step ${finStep === "sim" ? "is-active" : ""}`} onClick={() => setFinStep("sim")}>
             3) Simulador
           </button>
-          <button className={`fin360-step ${finStep === "resumen" ? "is-active" : ""}`} onClick={() => setFinStep("resumen")}>
+          <button
+            className={`fin360-step ${finStep === "resumen" ? "is-active" : ""}`}
+            onClick={() => setFinStep("resumen")}
+          >
             4) Resumen
           </button>
         </div>
 
-        {/* value-add insights */}
         <div className="fin360-insights">
           <div className="fin360-insCard">
             <div className="fin360-insTitle">Qué te falta para “aprobar”</div>
@@ -545,69 +605,55 @@ export default function Finanzas360({ user, years, finKey }) {
         {finStep === "is" && (
           <>
             <div className="fin360-hint">
-              Captura 3 años. Tip: si ya tienes EBITDA, úsalo tal cual. Te validamos vs EBITDA implícito (Ventas - COGS - SG&A).
+              Captura 3 años. Si ya tienes EBITDA, úsalo tal cual. Validación: EBITDA implícito = Ventas − COGS − SG&A.
             </div>
 
             <div className="fin360-grid">
-              <div className="fin360-gridHead">
-                <div className="fin360-cell fin360-label">Concepto</div>
-                {years.map((y) => (
-                  <div key={y} className="fin360-cell fin360-year">
-                    {y}
-                  </div>
-                ))}
-              </div>
-
-              <FinRowBig label="Ventas netas" years={years}>
-                {(y) => (
-                  <BigInput
-                    value={fin.income[y]?.net_sales ?? ""}
-                    onChange={(v) => setIS(y, "net_sales", v)}
-                    placeholder="0"
-                  />
-                )}
-              </FinRowBig>
-
-              <FinRowBig label="COGS" years={years}>
-                {(y) => (
-                  <BigInput value={fin.income[y]?.cogs ?? ""} onChange={(v) => setIS(y, "cogs", v)} placeholder="0" />
-                )}
-              </FinRowBig>
-
-              <FinRowBig label="SG&A" years={years}>
-                {(y) => (
-                  <BigInput value={fin.income[y]?.sga ?? ""} onChange={(v) => setIS(y, "sga", v)} placeholder="0" />
-                )}
-              </FinRowBig>
-
-              <FinRowBig label="EBITDA" years={years} meta="(captura directo)">
-                {(y) => {
-                  const delta = finDerived[y]?.ebitda_delta || 0;
-                  const ok = Math.abs(delta) <= 1;
-                  return (
-                    <div className="fin360-stack">
-                      <BigInput
-                        value={fin.income[y]?.ebitda ?? ""}
-                        onChange={(v) => setIS(y, "ebitda", v)}
-                        placeholder="0"
-                      />
-                      <div className={`fin360-check ${ok ? "ok" : "warn"}`}>
-                        Δ vs implícito: <strong>{pesos(delta)}</strong>
+              <div className="fin360-gridScroll">
+                <div className="fin360-gridInner" style={{ ["--fin-cols"]: normYears.length }}>
+                  <div className="fin360-gridHead">
+                    <div className="fin360-cell fin360-label">Concepto</div>
+                    {normYears.map((y) => (
+                      <div key={y} className="fin360-cell fin360-year">
+                        {y}
                       </div>
-                    </div>
-                  );
-                }}
-              </FinRowBig>
+                    ))}
+                  </div>
 
-              <FinRowBig label="Net income" years={years}>
-                {(y) => (
-                  <BigInput
-                    value={fin.income[y]?.net_income ?? ""}
-                    onChange={(v) => setIS(y, "net_income", v)}
-                    placeholder="0"
-                  />
-                )}
-              </FinRowBig>
+                  <FinRowBig label="Ventas netas" years={normYears}>
+                    {(y) => (
+                      <BigInput value={fin.income[y]?.net_sales ?? ""} onChange={(v) => setIS(y, "net_sales", v)} placeholder="0" />
+                    )}
+                  </FinRowBig>
+
+                  <FinRowBig label="COGS" years={normYears}>
+                    {(y) => <BigInput value={fin.income[y]?.cogs ?? ""} onChange={(v) => setIS(y, "cogs", v)} placeholder="0" />}
+                  </FinRowBig>
+
+                  <FinRowBig label="SG&A" years={normYears}>
+                    {(y) => <BigInput value={fin.income[y]?.sga ?? ""} onChange={(v) => setIS(y, "sga", v)} placeholder="0" />}
+                  </FinRowBig>
+
+                  <FinRowBig label="EBITDA" years={normYears} meta="(captura directo)">
+                    {(y) => {
+                      const delta = finDerived[y]?.ebitda_delta || 0;
+                      const ok = Math.abs(delta) <= 1;
+                      return (
+                        <div className="fin360-stack">
+                          <BigInput value={fin.income[y]?.ebitda ?? ""} onChange={(v) => setIS(y, "ebitda", v)} placeholder="0" />
+                          <div className={`fin360-check ${ok ? "ok" : "warn"}`}>
+                            Δ vs implícito: <strong>{pesos(delta)}</strong>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </FinRowBig>
+
+                  <FinRowBig label="Net income" years={normYears}>
+                    {(y) => <BigInput value={fin.income[y]?.net_income ?? ""} onChange={(v) => setIS(y, "net_income", v)} placeholder="0" />}
+                  </FinRowBig>
+                </div>
+              </div>
             </div>
 
             <div className="fin360-navBtns">
@@ -629,73 +675,53 @@ export default function Finanzas360({ user, years, finKey }) {
             </div>
 
             <div className="fin360-grid">
-              <div className="fin360-gridHead">
-                <div className="fin360-cell fin360-label">Concepto</div>
-                {years.map((y) => (
-                  <div key={y} className="fin360-cell fin360-year">
-                    {y}
-                  </div>
-                ))}
-              </div>
-
-              <FinRowBig label="Activo circulante" years={years}>
-                {(y) => (
-                  <BigInput
-                    value={fin.balance[y]?.current_assets ?? ""}
-                    onChange={(v) => setBS(y, "current_assets", v)}
-                    placeholder="0"
-                  />
-                )}
-              </FinRowBig>
-
-              <FinRowBig label="Activo fijo" years={years}>
-                {(y) => (
-                  <BigInput
-                    value={fin.balance[y]?.fixed_assets ?? ""}
-                    onChange={(v) => setBS(y, "fixed_assets", v)}
-                    placeholder="0"
-                  />
-                )}
-              </FinRowBig>
-
-              <FinRowBig label="Pasivo corto plazo" years={years}>
-                {(y) => (
-                  <BigInput
-                    value={fin.balance[y]?.short_liab ?? ""}
-                    onChange={(v) => setBS(y, "short_liab", v)}
-                    placeholder="0"
-                  />
-                )}
-              </FinRowBig>
-
-              <FinRowBig label="Pasivo largo plazo" years={years}>
-                {(y) => (
-                  <BigInput
-                    value={fin.balance[y]?.long_liab ?? ""}
-                    onChange={(v) => setBS(y, "long_liab", v)}
-                    placeholder="0"
-                  />
-                )}
-              </FinRowBig>
-
-              <FinRowBig label="Capital contable" years={years} meta="(input)">
-                {(y) => {
-                  const delta = finDerived[y]?.equity_delta || 0;
-                  const ok = Math.abs(delta) <= 1;
-                  return (
-                    <div className="fin360-stack">
-                      <BigInput
-                        value={fin.balance[y]?.equity ?? ""}
-                        onChange={(v) => setBS(y, "equity", v)}
-                        placeholder="0"
-                      />
-                      <div className={`fin360-check ${ok ? "ok" : "warn"}`}>
-                        Δ ecuación: <strong>{pesos(delta)}</strong>
+              <div className="fin360-gridScroll">
+                <div className="fin360-gridInner" style={{ ["--fin-cols"]: normYears.length }}>
+                  <div className="fin360-gridHead">
+                    <div className="fin360-cell fin360-label">Concepto</div>
+                    {normYears.map((y) => (
+                      <div key={y} className="fin360-cell fin360-year">
+                        {y}
                       </div>
-                    </div>
-                  );
-                }}
-              </FinRowBig>
+                    ))}
+                  </div>
+
+                  <FinRowBig label="Activo circulante" years={normYears}>
+                    {(y) => (
+                      <BigInput value={fin.balance[y]?.current_assets ?? ""} onChange={(v) => setBS(y, "current_assets", v)} placeholder="0" />
+                    )}
+                  </FinRowBig>
+
+                  <FinRowBig label="Activo fijo" years={normYears}>
+                    {(y) => (
+                      <BigInput value={fin.balance[y]?.fixed_assets ?? ""} onChange={(v) => setBS(y, "fixed_assets", v)} placeholder="0" />
+                    )}
+                  </FinRowBig>
+
+                  <FinRowBig label="Pasivo corto plazo" years={normYears}>
+                    {(y) => <BigInput value={fin.balance[y]?.short_liab ?? ""} onChange={(v) => setBS(y, "short_liab", v)} placeholder="0" />}
+                  </FinRowBig>
+
+                  <FinRowBig label="Pasivo largo plazo" years={normYears}>
+                    {(y) => <BigInput value={fin.balance[y]?.long_liab ?? ""} onChange={(v) => setBS(y, "long_liab", v)} placeholder="0" />}
+                  </FinRowBig>
+
+                  <FinRowBig label="Capital contable" years={normYears} meta="(input)">
+                    {(y) => {
+                      const delta = finDerived[y]?.equity_delta || 0;
+                      const ok = Math.abs(delta) <= 1;
+                      return (
+                        <div className="fin360-stack">
+                          <BigInput value={fin.balance[y]?.equity ?? ""} onChange={(v) => setBS(y, "equity", v)} placeholder="0" />
+                          <div className={`fin360-check ${ok ? "ok" : "warn"}`}>
+                            Δ ecuación: <strong>{pesos(delta)}</strong>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </FinRowBig>
+                </div>
+              </div>
             </div>
 
             <div className="fin360-navBtns">
@@ -718,14 +744,14 @@ export default function Finanzas360({ user, years, finKey }) {
             <div className="fin360-sim">
               <div className="fin360-simLeft">
                 <div className="fin360-blockTitle">Simulador de deuda</div>
-                <div className="fin360-hint" style={{ marginTop: 6 }}>
-                  Año base + deuda adicional → impacto en apalancamiento. (Aún sin amortización; roadmap: schedule + covenants + DSCR).
+                <div className="fin360-hint" style={{ marginTop: 10 }}>
+                  Año base + deuda adicional → impacto en apalancamiento. Roadmap: amortización, DSCR, covenants, schedule.
                 </div>
 
                 <div className="fin360-simGrid">
                   <FieldBig label="Año base">
                     <select value={String(sim.year)} onChange={(e) => setSim((s) => ({ ...s, year: e.target.value }))}>
-                      {years.map((y) => (
+                      {normYears.map((y) => (
                         <option key={y} value={String(y)}>
                           {y}
                         </option>
@@ -788,7 +814,7 @@ export default function Finanzas360({ user, years, finKey }) {
                 <MetricBig
                   label="Interés anual (aprox.)"
                   value={pesos(simDerived.interestYear)}
-                  sub={`${pct(Number.isFinite(simDerived.rate) ? simDerived.rate : 0)} anual · ${simDerived.tenor || "—"} años`}
+                  sub={`${pct(simDerived.rate)} anual · ${simDerived.tenor || "—"} años`}
                 />
                 <MetricBig label="Deuda / EBITDA (proforma)" value={`${(simDerived.debtToEbitda || 0).toFixed(2)}x`} />
                 <MetricBig label="Deuda / Capital (proforma)" value={`${(simDerived.debtToEquity || 0).toFixed(2)}x`} />
@@ -810,7 +836,7 @@ export default function Finanzas360({ user, years, finKey }) {
         {finStep === "resumen" && (
           <>
             <div className="fin360-summary">
-              {years.map((y) => {
+              {normYears.map((y) => {
                 const d = finDerived[y] || {};
                 const okEBITDA = Math.abs(d.ebitda_delta || 0) <= 1;
                 const okEq = Math.abs(d.equity_delta || 0) <= 1;
@@ -869,10 +895,18 @@ export default function Finanzas360({ user, years, finKey }) {
           <div className="dash-chip">Roadmap</div>
         </div>
         <ul className="dash-modList">
-          <li><strong>DSCR + amortización real</strong> (schedule, intereses, principal, covenants).</li>
-          <li><strong>“Readiness pack”</strong>: export PDF/ZIP para banco (EF + ratios + checklist docs).</li>
-          <li><strong>Import</strong> desde Excel/CSV + mapeo automático de cuentas.</li>
-          <li><strong>Motor de insights</strong>: detectar outliers, márgenes raros, crecimiento, estacionalidad.</li>
+          <li>
+            <strong>DSCR + amortización real</strong> (schedule, intereses, principal, covenants).
+          </li>
+          <li>
+            <strong>“Readiness pack”</strong>: export PDF/ZIP para banco (EF + ratios + checklist docs).
+          </li>
+          <li>
+            <strong>Import</strong> desde Excel/CSV + mapeo automático de cuentas.
+          </li>
+          <li>
+            <strong>Motor de insights</strong>: detectar outliers, márgenes raros, crecimiento, estacionalidad.
+          </li>
         </ul>
       </div>
     </div>

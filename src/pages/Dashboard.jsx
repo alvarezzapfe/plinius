@@ -5,6 +5,8 @@ import { supabase } from "../lib/supabaseClient";
 import "../assets/css/dashboard.css";
 import Finanzas360 from "../components/Finanzas360";
 
+
+
 /* =======================
    Helpers
 ======================= */
