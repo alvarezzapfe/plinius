@@ -124,7 +124,7 @@ function PcHealthScreen() {
           </div>
 
           <div className="pcTitle mono">
-            FIN HEALTH <span className="pcTitle__dim">/ {tab}</span>
+            FINSCORE <span className="pcTitle__dim">/ {tab}</span>
           </div>
 
           <div className="pcTabs" role="tablist" aria-label="Horizonte">
