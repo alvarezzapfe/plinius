@@ -1,0 +1,378 @@
+/* =====================================================
+   FINANZAS 360 (UX grande y pro)
+   - scope: .fin360 (no afecta otras secciones)
+   ===================================================== */
+
+.fin360 .dash-panel{ overflow: visible; }
+
+.fin360-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148,163,184,0.14);
+}
+
+.fin360-titleWrap{ min-width:0; }
+.fin360-sub{
+  margin-top:6px;
+  font-size: 14px;
+  color: rgba(148,163,184,0.95);
+  font-weight: 800;
+}
+
+.fin360-scoreBadge{
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.28);
+  background: rgba(255,255,255,0.06);
+  padding: 10px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space: nowrap;
+}
+.fin360-scoreBadge.ok{ border-color: rgba(34,197,94,0.45); background: rgba(34,197,94,0.10); }
+.fin360-scoreBadge.warn{ border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.10); }
+.fin360-scoreBadge.bad{ border-color: rgba(251,113,133,0.45); background: rgba(251,113,133,0.10); }
+
+.fin360-scoreNum{
+  font-size: 18px;
+  font-weight: 950;
+}
+.fin360-scoreTxt{
+  font-size: 12.5px;
+  font-weight: 950;
+  letter-spacing: .08em;
+}
+
+/* sticky action bar */
+.fin360-actions{
+  position: sticky;
+  top: 10px;
+  z-index: 3;
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.22);
+  background: rgba(2,6,23,0.40);
+  backdrop-filter: blur(10px);
+  padding: 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.fin360-actionsLeft,
+.fin360-actionsRight{
+  display:flex;
+  gap:10px;
+  flex-wrap: wrap;
+  align-items:center;
+}
+
+/* stepper bigger */
+.fin360-stepper{
+  margin-top: 12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.fin360-step{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.26);
+  background: rgba(255,255,255,0.06);
+  color: rgba(226,232,240,0.92);
+  font-weight: 950;
+  cursor:pointer;
+  font-size: 13px;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.fin360-step:hover{ transform: translateY(-1px); }
+.fin360-step.is-active{
+  border-color: rgba(34,197,94,0.55);
+  box-shadow: 0 0 0 4px rgba(34,197,94,0.10);
+  background: rgba(34,197,94,0.08);
+}
+
+/* insights */
+.fin360-insights{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+}
+.fin360-insCard{
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.18);
+  background: rgba(255,255,255,0.05);
+  padding: 12px;
+}
+.fin360-insTitle{
+  font-weight: 950;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.fin360-insOk{ color: rgba(226,232,240,0.92); font-weight: 850; }
+.fin360-insList{
+  margin:0;
+  padding-left: 18px;
+  color: rgba(226,232,240,0.92);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.fin360-kpis{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.fin360-kpi{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-radius: 14px;
+  border: 1px solid rgba(148,163,184,0.18);
+  background: rgba(2,6,23,0.16);
+  padding: 10px 12px;
+}
+.fin360-kpi span{ color: rgba(148,163,184,0.95); font-weight: 850; }
+.fin360-kpi strong{ color: rgba(226,232,240,0.95); font-weight: 950; }
+
+/* hint */
+.fin360-hint{
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(226,232,240,0.92);
+  opacity: .92;
+}
+
+/* grid */
+.fin360-grid{
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.16);
+  overflow: hidden;
+}
+.fin360-gridHead,
+.fin360-row{
+  display:grid;
+  grid-template-columns: 240px repeat(3, minmax(0,1fr));
+}
+.fin360-cell{
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(148,163,184,0.10);
+  background: rgba(255,255,255,0.04);
+  min-width:0;
+}
+.fin360-gridHead .fin360-cell{
+  background: rgba(2,6,23,0.55);
+  border-bottom: 1px solid rgba(148,163,184,0.18);
+}
+.fin360-label{ font-weight: 950; }
+.fin360-labelMain{ font-size: 13.5px; }
+.fin360-labelMeta{ margin-top: 3px; font-size: 12px; color: rgba(148,163,184,0.95); font-weight: 850; }
+.fin360-year{
+  text-align:right;
+  font-weight: 950;
+  letter-spacing: .10em;
+}
+
+/* bigger input */
+.fin360-input{
+  width: 100%;
+  border: 1px solid rgba(148,163,184,0.42);
+  border-radius: 14px;
+  background: rgba(2,6,23,0.18);
+  padding: 10px 12px;
+  outline:none;
+  color: rgba(226,232,240,0.95);
+  font-weight: 900;
+  font-size: 14px;
+}
+.fin360-input:focus{
+  border-color: rgba(34,197,94,0.55);
+  box-shadow: 0 0 0 4px rgba(34,197,94,0.10);
+}
+
+.fin360-stack{ display:grid; gap:8px; }
+
+.fin360-check{
+  font-size: 12px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid rgba(148,163,184,0.22);
+  background: rgba(255,255,255,0.06);
+  color: rgba(226,232,240,0.92);
+}
+.fin360-check.ok{ border-color: rgba(34,197,94,0.40); background: rgba(34,197,94,0.10); }
+.fin360-check.warn{ border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.12); }
+
+.fin360-navBtns{
+  margin-top: 14px;
+  display:flex;
+  gap: 10px;
+  flex-wrap:wrap;
+}
+
+/* sim */
+.fin360-sim{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 12px;
+}
+.fin360-simLeft{
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(255,255,255,0.04);
+  padding: 12px;
+}
+.fin360-blockTitle{
+  font-weight: 950;
+  font-size: 16px;
+}
+
+.fin360-simGrid{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+}
+
+.fin360-field{ display:grid; gap:6px; }
+.fin360-fieldLabel{
+  font-size: 12.5px;
+  font-weight: 950;
+  color: rgba(148,163,184,0.95);
+}
+.fin360-fieldInput{
+  border-radius: 14px;
+  border: 1px solid rgba(148,163,184,0.40);
+  background: rgba(255,255,255,0.06);
+  padding: 10px 12px;
+}
+.fin360-fieldInput input,
+.fin360-fieldInput select{
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: rgba(226,232,240,0.95);
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.fin360-slider{
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(2,6,23,0.18);
+  padding: 12px;
+}
+.fin360-sliderTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight: 950;
+}
+.fin360-range{ width: 100%; margin-top: 10px; }
+.fin360-sliderBot{
+  margin-top: 6px;
+  display:flex;
+  justify-content:space-between;
+  font-size: 12px;
+  color: rgba(148,163,184,0.95);
+  font-weight: 850;
+}
+
+.fin360-simRight{ display:grid; gap:10px; }
+.fin360-metric{
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(255,255,255,0.06);
+  padding: 12px;
+}
+.fin360-metricLabel{ font-size: 12.5px; color: rgba(148,163,184,0.95); font-weight: 900; }
+.fin360-metricValue{ margin-top: 6px; font-size: 20px; font-weight: 950; }
+.fin360-metricSub{ margin-top: 4px; font-size: 12px; color: rgba(148,163,184,0.95); font-weight: 850; }
+
+/* summary */
+.fin360-summary{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
+}
+.fin360-sumCard{
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(255,255,255,0.05);
+  padding: 12px;
+}
+.fin360-sumHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.fin360-sumYear{
+  font-weight: 950;
+  letter-spacing: .12em;
+  font-size: 14px;
+}
+.fin360-badges{ display:flex; gap:8px; }
+.fin360-badge{
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 950;
+  border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(255,255,255,0.06);
+  display:inline-flex;
+  align-items:center;
+}
+.fin360-badge.ok{ border-color: rgba(34,197,94,0.40); background: rgba(34,197,94,0.10); }
+.fin360-badge.warn{ border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.12); }
+
+.fin360-sumGrid{
+  margin-top: 10px;
+  display:grid;
+  gap: 10px;
+}
+.fin360-sumRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size: 13px;
+}
+.fin360-sumRow span{ color: rgba(148,163,184,0.95); font-weight: 850; }
+.fin360-sumRow strong{ font-weight: 950; }
+
+.fin360-warn{
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  border-radius: 14px;
+  padding: 10px;
+  border: 1px solid rgba(251,191,36,0.38);
+  background: rgba(251,191,36,0.10);
+}
+
+/* responsive */
+@media (max-width: 980px){
+  .fin360-insights{ grid-template-columns: 1fr; }
+  .fin360-summary{ grid-template-columns: 1fr; }
+  .fin360-sim{ grid-template-columns: 1fr; }
+  .fin360-gridHead,
+  .fin360-row{ grid-template-columns: 200px repeat(3, minmax(0,1fr)); }
+}
+@media (max-width: 560px){
+  .fin360-grid{ overflow:auto; }
+  .fin360-gridHead,
+  .fin360-row{ min-width: 820px; }
+}

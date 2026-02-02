@@ -32,73 +32,62 @@ const Footer = () => {
       incident: "Incidente",
     }[status.overall] || "—";
 
-  // Build string (agnóstico al bundler)
-  const build =
-    (typeof import.meta !== "undefined" &&
-      import.meta.env &&
-      import.meta.env.VITE_APP_BUILD) ||
-    (typeof process !== "undefined" &&
-      process.env &&
-      process.env.REACT_APP_BUILD) ||
-    (typeof window !== "undefined" && window.__APP_BUILD__) ||
-    "v1.0.0";
-
   // Scroll a top “inteligente”
   const toTopHref = location?.pathname === "/" ? "#top" : "/#top";
 
   const onNewsletterSubmit = (e) => {
     e.preventDefault();
-    // UI-only por ahora. Cuando conectes backend, aquí haces fetch a tu endpoint.
-    // Mantengo el “toque premium”: feedback visual por CSS (ver footer.css).
     e.currentTarget.classList.add("sent");
     setTimeout(() => e.currentTarget.classList.remove("sent"), 1800);
   };
 
   return (
     <footer className="footer">
-      {/* accent line */}
       <div className="footer-accent" aria-hidden />
 
-      {/* aurora subtle (extra touch) */}
-      <div className="footer-aurora" aria-hidden />
-
       <div className="footer-wrap">
-        {/* Toolbar: Status + Build */}
-        <div className="f-toolbar" role="toolbar" aria-label="Controles">
-          <button
-            type="button"
-            className={`status-pill ${status.overall}`}
-            onClick={() => setStatusOpen((v) => !v)}
-            aria-expanded={statusOpen}
-            aria-controls="status-drawer"
-            title="Estado de la plataforma"
-          >
-            <span className="dot" aria-hidden />
-            <span className="txt">Status: {statusLabel}</span>
-          </button>
-
-          <span className="build-pill" title="Build actual">
-            <span className="build-dot" aria-hidden />
-            Build <strong className="build-val">{build}</strong>
-          </span>
-        </div>
-
-        {/* Marca */}
+        {/* BRAND (centrado) */}
         <div className="f-brand">
           <img src={logo} alt="Plinius" className="f-logo" />
           <p className="f-tagline">
-            Infraestructura en Finanzas AI, S.A.P.I. de C.V. —{" "}
-            <strong>Plinius</strong>
+            Infraestructura en Finanzas AI, S.A.P.I. de C.V. — <strong>Plinius</strong>
           </p>
 
-          <div className="f-chips">
-            <span className="chip">Crédito simple</span>
-            <span className="chip">Arrendamiento puro</span>
-            <span className="chip">Capital</span>
-            <span className="chip">Estructura</span>
+          {/* Toolbar compacta: Status + Simulador */}
+          <div className="f-toolbar" role="toolbar" aria-label="Controles del footer">
+            <button
+              type="button"
+              className={`status-pill ${status.overall}`}
+              onClick={() => setStatusOpen((v) => !v)}
+              aria-expanded={statusOpen}
+              aria-controls="status-drawer"
+              title="Estado de la plataforma"
+            >
+              <span className="dot" aria-hidden />
+              <span className="txt">Status: {statusLabel}</span>
+            </button>
+
+            <Link to="/simulador" className="sim-cta" aria-label="Ir al simulador">
+              <span className="sim-ic" aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M7 7h10M7 12h10M7 17h6"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                  />
+                </svg>
+              </span>
+              Simulador
+            </Link>
           </div>
 
-          {/* Newsletter mini (extra touch) */}
+          {/* Newsletter mini */}
           <form className="f-news" onSubmit={onNewsletterSubmit}>
             <div className="f-newsRow">
               <span className="f-newsKicker">
@@ -243,11 +232,6 @@ const Footer = () => {
               <li>
                 <a href="/#enfoque" className="f-link">
                   Enfoque
-                </a>
-              </li>
-              <li>
-                <a href="/#tailor" className="f-link">
-                  Tailor-made
                 </a>
               </li>
               <li>
