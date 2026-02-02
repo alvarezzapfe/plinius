@@ -32,34 +32,296 @@ function useHashScroll() {
 }
 
 /* =========================
-   MiniDash (simple)
+   PC Screen — Financial Health (Interactive Donut)
 ========================= */
-function MiniDashSimple({ metrics }) {
-  return (
-    <section className="miniDash reveal" aria-label="Mini dashboard (5 métricas)">
-      <div className="miniDash__head">
-        <div className="miniDash__kicker mono">Plinius</div>
-        <div className="miniDash__title">Administrador de Riesgo</div>
+function PcHealthScreen() {
+  const presets = useMemo(
+    () => ({
+      "12M": {
+        score: 86,
+        ring: [
+          { k: "Liquidez", v: 36, sub: "Caja / ciclo", tone: "blue" },
+          { k: "Cobertura", v: 34, sub: "DSCR / ICR", tone: "purple" },
+          { k: "Apalancamiento", v: 30, sub: "Net debt", tone: "blue2" },
+        ],
+        badges: [
+          { k: "DSCR", v: "1.34×" },
+          { k: "Costo", v: "18.2%" },
+          { k: "Peak", v: "6–12M" },
+        ],
+      },
+      "6M": {
+        score: 79,
+        ring: [
+          { k: "Liquidez", v: 32, sub: "Caja / ciclo", tone: "blue" },
+          { k: "Cobertura", v: 28, sub: "DSCR / ICR", tone: "purple" },
+          { k: "Apalancamiento", v: 40, sub: "Net debt", tone: "blue2" },
+        ],
+        badges: [
+          { k: "DSCR", v: "1.26×" },
+          { k: "Costo", v: "18.6%" },
+          { k: "Peak", v: "3–9M" },
+        ],
+      },
+      "3M": {
+        score: 72,
+        ring: [
+          { k: "Liquidez", v: 28, sub: "Caja / ciclo", tone: "blue" },
+          { k: "Cobertura", v: 24, sub: "DSCR / ICR", tone: "purple" },
+          { k: "Apalancamiento", v: 48, sub: "Net debt", tone: "blue2" },
+        ],
+        badges: [
+          { k: "DSCR", v: "1.18×" },
+          { k: "Costo", v: "19.1%" },
+          { k: "Peak", v: "0–6M" },
+        ],
+      },
+    }),
+    []
+  );
 
-        <div className="miniDash__live" aria-label="Estado: funcionando">
-          <span className="liveDot" aria-hidden="true" />
-          <span className="mono liveText">app funcionando</span>
+  const tabs = useMemo(() => ["12M", "6M", "3M"], []);
+  const [tab, setTab] = useState("12M");
+  const data = presets[tab];
+
+  const [active, setActive] = useState(data.ring[0].k);
+  useEffect(() => setActive(presets[tab].ring[0].k), [tab, presets]);
+
+  // subtle “alive” pulse
+  const [pulse, setPulse] = useState(false);
+  useEffect(() => {
+    const t = setInterval(() => setPulse((p) => !p), 1200);
+    return () => clearInterval(t);
+  }, []);
+
+  // Donut math
+  const r = 54;
+  const c = 2 * Math.PI * r;
+
+  const segs = data.ring.map((s) => ({
+    ...s,
+    pct: Math.max(0, Math.min(100, s.v)),
+  }));
+
+  let acc = 0;
+  const circles = segs.map((s) => {
+    const dash = (s.pct / 100) * c;
+    const offset = (acc / 100) * c;
+    acc += s.pct;
+    return { ...s, dash, offset };
+  });
+
+  const activeSeg = segs.find((s) => s.k === active) || segs[0];
+
+  return (
+    <section className="pcScreen reveal" aria-label="Pantalla de PC con salud financiera">
+      <div className="pcScreen__bezel">
+        <div className="pcScreen__topbar">
+          <div className="pcLights" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+
+          <div className="pcTitle mono">
+            FIN HEALTH <span className="pcTitle__dim">/ {tab}</span>
+          </div>
+
+          <div className="pcTabs" role="tablist" aria-label="Horizonte">
+            {tabs.map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                className={`pcTab ${tab === t ? "is-active" : ""}`}
+                onClick={() => setTab(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="pcScreen__body">
+          <div className="pcLeft">
+            <div className="pcScore">
+              <div className="pcScore__k mono">health score</div>
+              <div className="pcScore__v">
+                <span className={`pcScore__num ${pulse ? "is-pulse" : ""}`}>{data.score}</span>
+                <span className="pcScore__den mono">/100</span>
+              </div>
+              <div className="pcScore__hint">Señal agregada de liquidez, cobertura y apalancamiento.</div>
+            </div>
+
+            <div className="pcBadges" aria-label="Indicadores rápidos">
+              {data.badges.map((b) => (
+                <div className="pcBadge" key={b.k}>
+                  <div className="pcBadge__k mono">{b.k}</div>
+                  <div className="pcBadge__v mono">{b.v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pcLegend" aria-label="Leyenda">
+              {segs.map((s) => (
+                <button
+                  type="button"
+                  key={s.k}
+                  className={`pcLegend__row ${active === s.k ? "is-active" : ""}`}
+                  onMouseEnter={() => setActive(s.k)}
+                  onFocus={() => setActive(s.k)}
+                  onClick={() => setActive(s.k)}
+                >
+                  <span className={`pcDot pcDot--${s.tone}`} aria-hidden="true" />
+                  <span className="pcLegend__name">{s.k}</span>
+                  <span className="pcLegend__val mono">{s.v}%</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pcRight" aria-label="Gráfica de pie">
+            <div className="donutWrap">
+              <svg
+                className="donut"
+                viewBox="0 0 140 140"
+                role="img"
+                aria-label="Diagrama de pie de salud financiera"
+              >
+                <defs>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="2.2" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {/* track */}
+                <circle
+                  cx="70"
+                  cy="70"
+                  r={r}
+                  fill="none"
+                  stroke="rgba(170,190,235,.14)"
+                  strokeWidth="16"
+                />
+
+                {/* segments */}
+                {circles.map((s) => (
+                  <circle
+                    key={s.k}
+                    cx="70"
+                    cy="70"
+                    r={r}
+                    fill="none"
+                    strokeWidth="16"
+                    strokeLinecap="round"
+                    className={`donutSeg donutSeg--${s.tone} ${active === s.k ? "is-active" : ""}`}
+                    strokeDasharray={`${s.dash} ${c}`}
+                    strokeDashoffset={-s.offset}
+                    transform="rotate(-90 70 70)"
+                    onMouseEnter={() => setActive(s.k)}
+                    onMouseLeave={() => null}
+                    onFocus={() => setActive(s.k)}
+                    tabIndex={0}
+                    style={{ filter: "url(#glow)" }}
+                  />
+                ))}
+
+                {/* center */}
+                <circle cx="70" cy="70" r="40" fill="rgba(7,10,18,.88)" />
+
+                <text x="70" y="66" textAnchor="middle" className="donutTextK mono">
+                  {activeSeg.k}
+                </text>
+                <text x="70" y="90" textAnchor="middle" className="donutTextV mono">
+                  {activeSeg.v}%
+                </text>
+              </svg>
+
+              <div className="donutTip" role="note">
+                <div className="donutTip__k">{activeSeg.k}</div>
+                <div className="donutTip__sub">{activeSeg.sub}</div>
+                <div className="donutTip__row mono">
+                  señal: <span className="donutTip__num">{activeSeg.v}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pcFooterNote mono">
+              interactivo • hover/click para ver componente • {tab}
+            </div>
+          </div>
         </div>
       </div>
+    </section>
+  );
+}
 
-      <div className="miniDash__grid">
-        {metrics.map((m) => (
-          <div className={`mCard ${m.tone ? `mCard--${m.tone}` : ""}`} key={m.k}>
-            <div className="mCard__k mono">{m.k}</div>
-            <div className="mCard__v mono">{m.v}</div>
-            <div className="mCard__sub">{m.sub}</div>
+/* =========================
+   Section — About (Sobre Plinius)
+========================= */
+function AboutPlinius() {
+  const bullets = useMemo(
+    () => [
+      { t: "Estructura", d: "Define fuente de pago, covenants y triggers (sin complicarte).", tone: "blue" },
+      { t: "Medición", d: "KPIs y score por riesgo: liquidez, cobertura, apalancamiento, calendario.", tone: "purple" },
+      { t: "Monitoreo", d: "Alertas y reporting; lo mínimo que mueve decisiones.", tone: "blue2" },
+      { t: "Gobernanza", d: "Checklist, evidencia y trazabilidad para comité / inversionista.", tone: "purple" },
+    ],
+    []
+  );
+
+  return (
+    <section className="section section--about" id="sobre-plinius" aria-label="Sobre Plinius">
+      <div className="wrap">
+        <div className="sectionHead reveal">
+          <div className="sectionHead__kicker mono">sobre plinius</div>
+          <h2 className="sectionHead__title">Riesgo y deuda empresarial, sin fricción</h2>
+          <p className="sectionHead__sub">
+            Plinius convierte tu solicitud en estructura: datos → lectura → decisión. Sin PDFs tirados y sin
+            “mándame todo y vemos”.
+          </p>
+        </div>
+
+        <div className="aboutGrid reveal" role="region" aria-label="About">
+          <div className="aboutCard">
+            <div className="aboutCard__kicker mono">qué hacemos</div>
+            <div className="aboutCard__title">Una ruta directa</div>
+            <p className="aboutCard__p">
+              Integramos información, ordenamos evidencia y te damos outputs accionables:
+              <b> yes/no</b>, <b>estructura</b>, <b>covenants</b>, <b>plazo</b> y <b>monitoreo</b>.
+            </p>
+
+            <div className="aboutChips">
+              <span className="aboutChip mono">fuente de pago</span>
+              <span className="aboutChip mono">SPV / fideicomiso</span>
+              <span className="aboutChip mono">triggers</span>
+              <span className="aboutChip mono">reporting</span>
+            </div>
+
+            <div className="aboutCTA">
+              <Link to="/solicitud" className="btn btn--primary">
+                Iniciar solicitud
+              </Link>
+              <Link to="/#requisitos" className="btn btn--secondary">
+                Ver requisitos
+              </Link>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="miniDash__foot">
-        <div className="monoNote">Panel de Empresa</div>
-        <div className="monoNote" />
+          <div className="aboutPillars" id="enfoque" aria-label="Enfoque">
+            {bullets.map((b) => (
+              <div className={`pillar pillar--${b.tone}`} key={b.t}>
+                <div className="pillar__t">{b.t}</div>
+                <div className="pillar__d">{b.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -101,9 +363,7 @@ function RequirementsBox() {
         <div className="sectionHead reveal">
           <div className="sectionHead__kicker mono">requisitos</div>
           <h2 className="sectionHead__title">Lo mínimo para iniciar</h2>
-          <p className="sectionHead__sub">
-            Sin fricción. Solo lo que mueve decisión y velocidad.
-          </p>
+          <p className="sectionHead__sub">Sin fricción. Solo lo que mueve decisión y velocidad.</p>
         </div>
 
         <div className="reqBox reveal" role="region" aria-label="Caja de requisitos">
@@ -259,21 +519,11 @@ function ContactCenter() {
             <div className="fieldRow">
               <div className="field">
                 <label className="field__label">Nombre</label>
-                <input
-                  className="field__input"
-                  value={form.nombre}
-                  onChange={onChange("nombre")}
-                  placeholder="Tu nombre"
-                />
+                <input className="field__input" value={form.nombre} onChange={onChange("nombre")} placeholder="Tu nombre" />
               </div>
               <div className="field">
                 <label className="field__label">Empresa</label>
-                <input
-                  className="field__input"
-                  value={form.empresa}
-                  onChange={onChange("empresa")}
-                  placeholder="Empresa"
-                />
+                <input className="field__input" value={form.empresa} onChange={onChange("empresa")} placeholder="Empresa" />
               </div>
             </div>
 
@@ -313,9 +563,7 @@ function ContactCenter() {
             </button>
 
             {status.type !== "idle" && (
-              <div className={`formMsg ${status.type === "ok" ? "formMsg--ok" : "formMsg--err"}`}>
-                {status.msg}
-              </div>
+              <div className={`formMsg ${status.type === "ok" ? "formMsg--ok" : "formMsg--err"}`}>{status.msg}</div>
             )}
           </form>
         </div>
@@ -331,17 +579,6 @@ export default function App() {
   useReveal();
   useHashScroll();
 
-  const metrics = useMemo(
-    () => [
-      { k: "Costo de la Deuda", v: "18.2%", sub: "costo promedio", tone: "good" },
-      { k: "DSCR", v: "1.34×", sub: "mín 1.25×", tone: "warn" },
-      { k: "Headroom", v: "+0.09×", sub: "buffer covenant", tone: "warn" },
-      { k: "Deuda a Corto Plazo", v: "$12.4m", sub: "saldo total", tone: "neutral" },
-      { k: "Peak maturity", v: "6–12M", sub: "ventana de riesgo", tone: "warn" },
-    ],
-    []
-  );
-
   return (
     <div className="app">
       <Navbar />
@@ -352,11 +589,15 @@ export default function App() {
           <div className="intro__bg" aria-hidden="true" />
           <div className="wrap intro__wrap">
             <div className="intro__copy reveal">
-              <div className="kicker mono" />
-              <h1 className="intro__h1">Plinius <span className="muted" /></h1>
+              <div className="kicker mono">Plataforma de riesgo</div>
+              <h1 className="intro__h1">
+                Plinius <span className="muted">para deuda empresarial</span>
+              </h1>
 
               <p className="intro__lead">
                 Una plataforma para <b>estructurar</b>, <b>medir</b> y <b>monitorear</b> deuda de tu Empresa.
+                <br />
+                <span className="muted">Outputs: decisión, estructura y plan de monitoreo.</span>
               </p>
 
               <div className="intro__cta">
@@ -385,18 +626,21 @@ export default function App() {
             </div>
 
             <div className="intro__dash">
-              <MiniDashSimple metrics={metrics} />
+              <PcHealthScreen />
             </div>
           </div>
         </section>
 
-        {/* SECTION 2 */}
+        {/* ABOUT */}
+        <AboutPlinius />
+
+        {/* REQUISITOS */}
         <RequirementsBox />
 
-        {/* SECTION 3 */}
+        {/* FAQ */}
         <FAQ />
 
-        {/* SECTION 4 */}
+        {/* CONTACTO */}
         <ContactCenter />
       </main>
 
