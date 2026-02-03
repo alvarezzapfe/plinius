@@ -360,6 +360,3 @@
   outline: 2px solid rgba(255,255,255,.22);
   outline-offset: 2px;
 }
-
-/* DEBUG: si esto NO se ve, tu CSS no está aplicando */
-.snav2 { outline: 3px solid magenta !important; }

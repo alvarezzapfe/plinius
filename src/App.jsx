@@ -1,13 +1,17 @@
 // src/App.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import "./assets/css/theme.css";
 
-/* =========================
-   Helpers
-========================= */
+// Assets
+import soporteImg from "./assets/images/soporte.jpg";
+import pliniusLogo from "./assets/images/plinius-logo.png";
+
+/* =========================================================
+   0) HOOKS
+========================================================= */
 function useReveal() {
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
@@ -27,367 +31,312 @@ function useHashScroll() {
     const id = location.hash.replace("#", "");
     const el = document.getElementById(id);
     if (!el) return;
-    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   }, [location.hash]);
 }
 
-/* =========================
-   PC Screen — Financial Health (Interactive Donut)
-========================= */
-function PcHealthScreen() {
-  const presets = useMemo(
-    () => ({
-      "12M": {
-        score: 86,
-        ring: [
-          { k: "Liquidez", v: 36, sub: "Caja / ciclo", tone: "blue" },
-          { k: "Cobertura", v: 34, sub: "DSCR / ICR", tone: "purple" },
-          { k: "Apalancamiento", v: 30, sub: "Net debt", tone: "blue2" },
-        ],
-        badges: [
-          { k: "DSCR", v: "1.34×" },
-          { k: "Costo", v: "18.2%" },
-          { k: "Peak", v: "6–12M" },
-        ],
-      },
-      "6M": {
-        score: 79,
-        ring: [
-          { k: "Liquidez", v: 32, sub: "Caja / ciclo", tone: "blue" },
-          { k: "Cobertura", v: 28, sub: "DSCR / ICR", tone: "purple" },
-          { k: "Apalancamiento", v: 40, sub: "Net debt", tone: "blue2" },
-        ],
-        badges: [
-          { k: "DSCR", v: "1.26×" },
-          { k: "Costo", v: "18.6%" },
-          { k: "Peak", v: "3–9M" },
-        ],
-      },
-      "3M": {
-        score: 72,
-        ring: [
-          { k: "Liquidez", v: 28, sub: "Caja / ciclo", tone: "blue" },
-          { k: "Cobertura", v: 24, sub: "DSCR / ICR", tone: "purple" },
-          { k: "Apalancamiento", v: 48, sub: "Net debt", tone: "blue2" },
-        ],
-        badges: [
-          { k: "DSCR", v: "1.18×" },
-          { k: "Costo", v: "19.1%" },
-          { k: "Peak", v: "0–6M" },
-        ],
-      },
-    }),
-    []
-  );
-
-  const tabs = useMemo(() => ["12M", "6M", "3M"], []);
-  const [tab, setTab] = useState("12M");
-  const data = presets[tab];
-
-  const [active, setActive] = useState(data.ring[0].k);
-  useEffect(() => setActive(presets[tab].ring[0].k), [tab, presets]);
-
-  // subtle “alive” pulse
-  const [pulse, setPulse] = useState(false);
-  useEffect(() => {
-    const t = setInterval(() => setPulse((p) => !p), 1200);
-    return () => clearInterval(t);
-  }, []);
-
-  // Donut math
-  const r = 54;
-  const c = 2 * Math.PI * r;
-
-  const segs = data.ring.map((s) => ({
-    ...s,
-    pct: Math.max(0, Math.min(100, s.v)),
-  }));
-
-  let acc = 0;
-  const circles = segs.map((s) => {
-    const dash = (s.pct / 100) * c;
-    const offset = (acc / 100) * c;
-    acc += s.pct;
-    return { ...s, dash, offset };
-  });
-
-  const activeSeg = segs.find((s) => s.k === active) || segs[0];
-
+/* =========================================================
+   1) HERO
+========================================================= */
+function Hero() {
   return (
-    <section className="pcScreen reveal" aria-label="Pantalla de PC con salud financiera">
-      <div className="pcScreen__bezel">
-        <div className="pcScreen__topbar">
-          <div className="pcLights" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
+    <section className="hero" id="top" aria-label="Hero">
+      <div className="heroBg" aria-hidden="true" />
 
-          <div className="pcTitle mono">
-            FINSCORE <span className="pcTitle__dim">/ {tab}</span>
-          </div>
+      <div className="wrap heroWrap">
+        <div className="heroCopy reveal">
+          <div className="kicker mono"></div>
 
-          <div className="pcTabs" role="tablist" aria-label="Horizonte">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="tab"
-                aria-selected={tab === t}
-                className={`pcTab ${tab === t ? "is-active" : ""}`}
-                onClick={() => setTab(t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
+          <h1 className="heroH1">
+            <span className="muted">Administra el servicio de la Deuda en una sola plataforma</span>
+          </h1>
 
-        <div className="pcScreen__body">
-          <div className="pcLeft">
-            <div className="pcScore">
-              <div className="pcScore__k mono">health score</div>
-              <div className="pcScore__v">
-                <span className={`pcScore__num ${pulse ? "is-pulse" : ""}`}>{data.score}</span>
-                <span className="pcScore__den mono">/100</span>
-              </div>
-              <div className="pcScore__hint">Señal agregada de liquidez, cobertura y apalancamiento.</div>
-            </div>
-
-            <div className="pcBadges" aria-label="Indicadores rápidos">
-              {data.badges.map((b) => (
-                <div className="pcBadge" key={b.k}>
-                  <div className="pcBadge__k mono">{b.k}</div>
-                  <div className="pcBadge__v mono">{b.v}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="pcLegend" aria-label="Leyenda">
-              {segs.map((s) => (
-                <button
-                  type="button"
-                  key={s.k}
-                  className={`pcLegend__row ${active === s.k ? "is-active" : ""}`}
-                  onMouseEnter={() => setActive(s.k)}
-                  onFocus={() => setActive(s.k)}
-                  onClick={() => setActive(s.k)}
-                >
-                  <span className={`pcDot pcDot--${s.tone}`} aria-hidden="true" />
-                  <span className="pcLegend__name">{s.k}</span>
-                  <span className="pcLegend__val mono">{s.v}%</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pcRight" aria-label="Gráfica de pie">
-            <div className="donutWrap">
-              <svg
-                className="donut"
-                viewBox="0 0 140 140"
-                role="img"
-                aria-label="Diagrama de pie de salud financiera"
-              >
-                <defs>
-                  <filter id="glow">
-                    <feGaussianBlur stdDeviation="2.2" result="coloredBlur" />
-                    <feMerge>
-                      <feMergeNode in="coloredBlur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-
-                {/* track */}
-                <circle
-                  cx="70"
-                  cy="70"
-                  r={r}
-                  fill="none"
-                  stroke="rgba(170,190,235,.14)"
-                  strokeWidth="16"
-                />
-
-                {/* segments */}
-                {circles.map((s) => (
-                  <circle
-                    key={s.k}
-                    cx="70"
-                    cy="70"
-                    r={r}
-                    fill="none"
-                    strokeWidth="16"
-                    strokeLinecap="round"
-                    className={`donutSeg donutSeg--${s.tone} ${active === s.k ? "is-active" : ""}`}
-                    strokeDasharray={`${s.dash} ${c}`}
-                    strokeDashoffset={-s.offset}
-                    transform="rotate(-90 70 70)"
-                    onMouseEnter={() => setActive(s.k)}
-                    onMouseLeave={() => null}
-                    onFocus={() => setActive(s.k)}
-                    tabIndex={0}
-                    style={{ filter: "url(#glow)" }}
-                  />
-                ))}
-
-                {/* center */}
-                <circle cx="70" cy="70" r="40" fill="rgba(7,10,18,.88)" />
-
-                <text x="70" y="66" textAnchor="middle" className="donutTextK mono">
-                  {activeSeg.k}
-                </text>
-                <text x="70" y="90" textAnchor="middle" className="donutTextV mono">
-                  {activeSeg.v}%
-                </text>
-              </svg>
-
-              <div className="donutTip" role="note">
-                <div className="donutTip__k">{activeSeg.k}</div>
-                <div className="donutTip__sub">{activeSeg.sub}</div>
-                <div className="donutTip__row mono">
-                  señal: <span className="donutTip__num">{activeSeg.v}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pcFooterNote mono">
-              interactivo • hover/click para ver componente • {tab}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* =========================
-   Section — About (Sobre Plinius)
-========================= */
-function AboutPlinius() {
-  const bullets = useMemo(
-    () => [
-      { t: "Estructura", d: "Define fuente de pago, covenants y triggers (sin complicarte).", tone: "blue" },
-      { t: "Medición", d: "KPIs y score por riesgo: liquidez, cobertura, apalancamiento, calendario.", tone: "purple" },
-      { t: "Monitoreo", d: "Alertas y reporting; lo mínimo que mueve decisiones.", tone: "blue2" },
-      { t: "Gobernanza", d: "Checklist, evidencia y trazabilidad para comité / inversionista.", tone: "purple" },
-    ],
-    []
-  );
-
-  return (
-    <section className="section section--about" id="sobre-plinius" aria-label="Sobre Plinius">
-      <div className="wrap">
-        <div className="sectionHead reveal">
-          <div className="sectionHead__kicker mono">sobre plinius</div>
-          <h2 className="sectionHead__title">Riesgo y deuda empresarial, sin fricción</h2>
-          <p className="sectionHead__sub">
-            Plinius convierte tu solicitud en estructura: datos → lectura → decisión. Sin PDFs tirados y sin
-            “mándame todo y vemos”.
+          <p className="heroLead">
+            Plinius ayuda a <b>gestionar derechos de cobro</b>, operar{" "}
+            <b>fideicomisos de administración y garantía</b>, monitorear <b>riesgos/triggers</b> y generar{" "}
+            <b>reporteo</b>.
+            <br />
+            <span className="muted">
+              Servicing y ejecución diaria: <b>Soporte Impulsa (SOFOM)</b>.
+            </span>
           </p>
-        </div>
 
-        <div className="aboutGrid reveal" role="region" aria-label="About">
-          <div className="aboutCard">
-            <div className="aboutCard__kicker mono">qué hacemos</div>
-            <div className="aboutCard__title">Una ruta directa</div>
-            <p className="aboutCard__p">
-              Integramos información, ordenamos evidencia y te damos outputs accionables:
-              <b> yes/no</b>, <b>estructura</b>, <b>covenants</b>, <b>plazo</b> y <b>monitoreo</b>.
-            </p>
-
-            <div className="aboutChips">
-              <span className="aboutChip mono">fuente de pago</span>
-              <span className="aboutChip mono">SPV / fideicomiso</span>
-              <span className="aboutChip mono">triggers</span>
-              <span className="aboutChip mono">reporting</span>
-            </div>
-
-            <div className="aboutCTA">
-              <Link to="/solicitud" className="btn btn--primary">
-                Iniciar solicitud
-              </Link>
-              <Link to="/#requisitos" className="btn btn--secondary">
-                Ver requisitos
-              </Link>
-            </div>
-          </div>
-
-          <div className="aboutPillars" id="enfoque" aria-label="Enfoque">
-            {bullets.map((b) => (
-              <div className={`pillar pillar--${b.tone}`} key={b.t}>
-                <div className="pillar__t">{b.t}</div>
-                <div className="pillar__d">{b.d}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* =========================
-   Section 2 — Requisitos (BOX centrado)
-========================= */
-function RequirementsBox() {
-  const reqs = useMemo(
-    () => [
-      {
-        k: "01",
-        t: "Identidad y constitución",
-        d: "Acta constitutiva, poderes, RFC y estructura accionaria (si aplica).",
-      },
-      {
-        k: "02",
-        t: "Flujo y estados financieros",
-        d: "Estados financieros recientes + estacionalidad del negocio.",
-      },
-      {
-        k: "03",
-        t: "Historial y disciplina de pago",
-        d: "Señales: comportamiento, líneas vigentes y consistencia en pagos.",
-      },
-      {
-        k: "04",
-        t: "Fuente de pago / garantías",
-        d: "Claridad de la fuente (contratos / cobros) y colateral (si aplica).",
-      },
-    ],
-    []
-  );
-
-  return (
-    <section className="section section--req" id="requisitos" aria-label="Requisitos">
-      <div className="wrap">
-        <div className="sectionHead reveal">
-          <div className="sectionHead__kicker mono">requisitos</div>
-          <h2 className="sectionHead__title">Lo mínimo para iniciar</h2>
-          <p className="sectionHead__sub">Sin fricción. Solo lo que mueve decisión y velocidad.</p>
-        </div>
-
-        <div className="reqBox reveal" role="region" aria-label="Caja de requisitos">
-          <div className="reqBox__glow" aria-hidden="true" />
-
-          <div className="reqBox__grid">
-            {reqs.map((r) => (
-              <div className="reqItem" key={r.k}>
-                <div className="reqItem__k mono">{r.k}</div>
-                <div className="reqItem__body">
-                  <div className="reqItem__t">{r.t}</div>
-                  <div className="reqItem__d">{r.d}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="reqBox__cta">
+          <div className="heroCta">
             <Link to="/solicitud" className="btn btn--primary">
               Iniciar solicitud
             </Link>
-            <Link to="/simulador" className="btn btn--secondary">
-              Probar simulador
+            <Link to="/#flow-l" className="btn btn--secondary">
+              Ver diagrama
             </Link>
+          </div>
+        </div>
+
+        <div className="heroPanelWrap reveal" aria-label="Pantalla (dashboard) simulada">
+          <HeroScreen />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   2) HERO SCREEN — dashboard realista
+========================================================= */
+function HeroScreen() {
+  const kpis = useMemo(
+    () => [
+      { k: "Cobranza conciliada", v: "MXN 18.4m", s: "últimos 30 días", tone: "good" },
+      { k: "Mora temprana", v: "2.1%", s: "0–30 días", tone: "warn" },
+      { k: "Triggers activos", v: "1", s: "en vigilancia", tone: "warn" },
+      { k: "Waterfall", v: "OK", s: "dispersión en orden", tone: "good" },
+    ],
+    []
+  );
+
+  const recent = useMemo(
+    () => [
+      { ref: "CBR-2041", who: "Acreditado 019", amt: "48,250", st: "OK" },
+      { ref: "CBR-2042", who: "Acreditado 044", amt: "79,300", st: "OK" },
+      { ref: "CBR-2043", who: "Acreditado 112", amt: "15,300", st: "REV" },
+      { ref: "CBR-2044", who: "Acreditado 087", amt: "62,400", st: "OK" },
+    ],
+    []
+  );
+
+  return (
+    <section className="screen" aria-label="Pantalla de panel operativo">
+      <div className="screen__top">
+        <div>
+          <div className="mono screenK">PANEL OPERATIVO</div>
+          <div className="screenH">Cobranza • Calendario • Conciliación</div>
+        </div>
+
+        <div className="screenLive" aria-label="estado">
+          <span className="liveDot" aria-hidden="true" />
+          <span className="mono liveText">operando</span>
+        </div>
+      </div>
+
+      <div className="screen__grid">
+        <div className="screenCard screenCard--chart">
+          <div className="screenCard__hdr">
+            <div>
+              <div className="mono miniK">líneas de cobro</div>
+              <div className="miniH">Ingresos a cuenta (4 semanas)</div>
+            </div>
+            <span className="mono tagChip">live</span>
+          </div>
+
+          <div className="chartFake" aria-hidden="true">
+            <div className="chartLine chartLine--a" />
+            <div className="chartLine chartLine--b" />
+            <div className="chartAxis" />
+          </div>
+
+          <div className="kpiGrid">
+            {kpis.map((r) => (
+              <div key={r.k} className={`kpi kpi--${r.tone}`}>
+                <div className="mono kpiK">{r.k}</div>
+                <div className="mono kpiV">{r.v}</div>
+                <div className="kpiS">{r.s}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="screenCard">
+          <div className="screenCard__hdr">
+            <div>
+              <div className="mono miniK">calendario</div>
+              <div className="miniH">Fechas de cobro / reporte</div>
+            </div>
+            <span className="mono tagChip">mes</span>
+          </div>
+
+          <div className="calFake" aria-hidden="true">
+            {Array.from({ length: 28 }).map((_, i) => (
+              <div
+                key={i}
+                className={`calCell ${[2, 4, 7, 11, 17, 23].includes(i) ? "isPay" : ""} ${
+                  i === 9 ? "isReport" : ""
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="calLegend">
+            <span className="lg lg--blue" /> <span className="mono">pago</span>
+            <span className="lg lg--purple" /> <span className="mono">reporte</span>
+          </div>
+        </div>
+
+        <div className="screenCard screenCard--table">
+          <div className="screenCard__hdr">
+            <div>
+              <div className="mono miniK">cobros recientes</div>
+              <div className="miniH">Referencias y estatus</div>
+            </div>
+            <span className="mono tagChip">últimos</span>
+          </div>
+
+          <div className="t">
+            <div className="tRow tHead">
+              <div>Ref</div>
+              <div>Deudor</div>
+              <div className="tNum">Monto</div>
+              <div>Estatus</div>
+            </div>
+
+            {recent.map((r) => (
+              <div key={r.ref} className={`tRow ${r.st === "REV" ? "tRow--warn" : ""}`}>
+                <div className="mono tStrong">{r.ref}</div>
+                <div className="tMut">{r.who}</div>
+                <div className="mono tNum">MXN {r.amt}</div>
+                <div className={`mono pill ${r.st === "REV" ? "pill--warn" : "pill--ok"}`}>{r.st}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="screenFoot mono">Conciliación y evidencia • Servicing + gobierno en Plinius</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   3) FLOW-L DIAGRAM
+========================================================= */
+function FlowLDiagram({ soporteSrc, pliniusLogoSrc }) {
+  return (
+    <section className="flowL section" id="flow-l" aria-label="Diagrama L">
+      <div className="wrap">
+        <div className="sectionHead reveal">
+          <div className="sectionHead__kicker mono">estructura</div>
+          <h2 className="sectionHead__title">Todo el servicio de la Deuda en una sola estructura</h2>
+          <p className="sectionHead__sub">Administramos las garantias y gestionamos cobranza.</p>
+        </div>
+
+        <div className="flowLStage reveal" role="region" aria-label="Stage del diagrama">
+          <div className="flowLGrid">
+            {/* COL 1 — CAPITAL */}
+            <div className="flowCard flowCard--left flowLCol flowLCol--left">
+              <div className="flowCard__k mono">CAPITAL</div>
+              <div className="flowCard__t">Inversionistas / Acreedores</div>
+              <div className="flowCard__d"></div>
+
+              <div className="flowTags">
+                <span className="mono flowTag">mandato</span>
+                <span className="mono flowTag">rendimientos</span>
+                <span className="mono flowTag">reporteo</span>
+              </div>
+            </div>
+
+            {/* COL 2 — L CONNECTOR (solo una línea →) */}
+            <div className="flowLCol flowLCol--conn" aria-hidden="true">
+              <LConnector hDrop={18} />
+            </div>
+
+            {/* COL 3 — STACK */}
+            <div className="flowLCol flowLCol--center">
+              <div className="spvStack">
+                <div className="spvTriWrap">
+                  <div className="spvTri" aria-label="SPV">
+                    <div className="spvTri__label mono">SPV</div>
+                    <div className="spvTri__sub mono">fideicomiso de garantias</div>
+                  </div>
+                </div>
+
+                {/* ⇅ ahora se entiende ida/vuelta */}
+                <VConnector label="SPV ⇅ Soporte Impulsa" tone="green" bidir />
+
+                <div className="soporteBox" aria-label="Soporte Impulsa">
+                  <div className="soporteBox__in">
+                    <div className="soporteBox__k mono">SOPORTE IMPULSA</div>
+
+                    <div className="soporteBox__logo">
+                      <img src={soporteSrc} alt="Soporte Impulsa" />
+                      <div>
+                        <div className="soporteBox__t">SOFOM • Servicing</div>
+                        <div className="soporteBox__d">Cobranza, conciliación, evidencia</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ⇅ también */}
+                <VConnector label="Servicing ⇅ Empresas acreditadas" tone="blue" bidir />
+
+                <div className="flowCard flowCard--borrower flowBorrower" aria-label="Empresa Acreditada">
+                  <div className="flowCard__k mono">ACREDITADO</div>
+                  <div className="flowCard__t">Empresas acreditadas</div>
+                  <div className="flowCard__d">
+                    Reciben crédito y pagan por calendario. La cobranza se opera vía Soporte y se administra via Plinius.
+                  </div>
+
+                  <div className="flowTags"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* COL 4 — PLINIUS */}
+            <div className="adminCard flowLCol flowLCol--right" aria-label="Plinius administrador del crédito">
+              <div className="adminCard__top">
+                <div className="adminBrand">
+                  <div className="adminBrand__logo" aria-hidden="true">
+                    {pliniusLogoSrc ? <img src={pliniusLogoSrc} alt="" /> : <span className="mono">P</span>}
+                  </div>
+                  <div>
+                    <div className="adminBrand__k mono">PLINIUS</div>
+                    <div className="adminBrand__t">Administrador del Crédito</div>
+                  </div>
+                </div>
+
+                <div className="adminStatus" aria-label="estado operativo">
+                  <span className="adminDot" aria-hidden="true" />
+                  <span className="adminStatus__t mono">operando</span>
+                </div>
+              </div>
+
+              <div className="adminDesc">Gobierno, triggers, bitácora y reportes. Control del activo y del servicing.</div>
+
+              <div className="miniScreen" aria-label="Mini pantalla">
+                <div className="miniScreen__hdr">
+                  <div className="miniScreen__ttl mono">control & riesgos</div>
+                  <div className="miniScreen__chips">
+                    <span className="mono chip">covenants</span>
+                    <span className="mono chip">alerts</span>
+                  </div>
+                </div>
+
+                <div className="miniScreen__body">
+                  <div className="screenPulse" aria-hidden="true" />
+
+                  <div className="sparkRow">
+                    <div className="sparkLabel mono">Cobranza</div>
+                    <div className="sparkBar">
+                      <span className="sparkFill" />
+                    </div>
+                  </div>
+
+                  <div className="sparkRow">
+                    <div className="sparkLabel mono">Conciliación</div>
+                    <div className="sparkBar">
+                      <span className="sparkFill sparkFill--b" />
+                    </div>
+                  </div>
+
+                  <div className="sparkRow">
+                    <div className="sparkLabel mono">Riesgo</div>
+                    <div className="sparkBar">
+                      <span className="sparkFill sparkFill--c" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="miniScreen__ftr mono">servicing + gobierno</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -396,185 +345,91 @@ function RequirementsBox() {
 }
 
 /* =========================
-   Section 3 — FAQ (ACORDEÓN)
+   CONNECTORS (layout-anchored, no SVG)
 ========================= */
-function FAQ() {
-  const items = useMemo(
+
+/**
+ * LConnector:
+ * - ahora es SOLO un flujo (una línea) con flecha a la derecha
+ * - sin flecha arriba y sin “ida/vuelta”
+ * - hDrop baja el codo+horizontal sin romper la conexión
+ */
+function LConnector({ hDrop = 0 }) {
+  return (
+    <div className="LConn" style={{ "--LhDrop": `${hDrop}px` }} aria-hidden="true">
+      <div className="LConn__label mono">capital → spv</div>
+
+      {/* Vertical (sin flecha) */}
+      <div className="LConn__v" aria-hidden="true" />
+
+      {/* Joint */}
+      <div className="LConn__joint" aria-hidden="true" />
+
+      {/* Horizontal + flecha derecha */}
+      <div className="LConn__h" aria-hidden="true">
+        <span className="LConn__headRight" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * VConnector bidireccional (⇅):
+ * - una sola línea, flecha arriba y abajo
+ */
+function VConnector({ label, tone = "green", bidir = true }) {
+  return (
+    <div className={`VConn VConn--${tone}`} aria-hidden="true">
+      <div className="VConn__lbl mono">{label}</div>
+      <div className="VConn__line">
+        {bidir && <span className="VConn__headUp" />}
+        <span className="VConn__headDown" />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   4) ABOUT
+========================================================= */
+function About() {
+  const cards = useMemo(
     () => [
-      {
-        q: "¿Qué tan rápido puedo tener una respuesta inicial?",
-        a: "Si la información está completa, una lectura inicial puede salir en 24–48h hábiles (varía por caso).",
-      },
-      {
-        q: "¿Qué monto mínimo / máximo manejan?",
-        a: "Depende de perfil y fuente de pago. Tú ingresa objetivo y te diremos si conviene ajustar plazo, estructura o garantías.",
-      },
-      {
-        q: "¿Puedo aplicar sin estados financieros perfectos?",
-        a: "Sí. Nos importa consistencia y explicación. Estacionalidad o eventos puntuales se documentan y se modelan.",
-      },
-      {
-        q: "¿Manejan estructuras con fideicomiso/SPV?",
-        a: "Sí. Si la fuente de pago lo amerita, proponemos estructura simple y verificable con triggers y reporting.",
-      },
-      {
-        q: "¿Qué información NO debo mandar al inicio?",
-        a: "Evita mandar dumps de PDFs sin orden. Te pedimos lo mínimo y te damos checklist claro para avanzar rápido.",
-      },
+      { t: "Fideicomisos", d: "Administración y garantía: reglas claras, cuentas y reporteo continuo." },
+      { t: "Derechos de cobro", d: "Trazabilidad por contrato: calendario, evidencia y conciliación bancaria." },
+      { t: "Riesgo", d: "Triggers, covenants, alertas y bitácora para comité / inversionistas." },
+      { t: "Operación", d: "Servicing con Soporte Impulsa (SOFOM) y gobierno en Plinius." },
     ],
     []
   );
 
-  const [open, setOpen] = useState(items[0]?.q || null);
-
   return (
-    <section className="section section--faq" id="faq" aria-label="FAQ">
+    <section className="section" id="sobre-plinius" aria-label="Sobre Plinius">
       <div className="wrap">
         <div className="sectionHead reveal">
-          <div className="sectionHead__kicker mono">faq</div>
-          <h2 className="sectionHead__title">Preguntas frecuentes</h2>
-          <p className="sectionHead__sub">Inventadas por ahora. Luego tú ajustas copy.</p>
+          <div className="sectionHead__kicker mono">sobre plinius</div>
+          <h2 className="sectionHead__title">Administra deuda, cobros y garantías con gobierno real</h2>
+          <p className="sectionHead__sub">
+            Modular y operativo. Diseñado para deuda privada, estructuras con servicing y reporteo a inversionistas.
+          </p>
         </div>
 
-        <div className="faqBox reveal" role="region" aria-label="Acordeón FAQ">
-          <div className="faqBox__glow" aria-hidden="true" />
-
-          {items.map((it) => {
-            const isOpen = open === it.q;
-            return (
-              <button
-                key={it.q}
-                type="button"
-                className={`faqItem ${isOpen ? "is-open" : ""}`}
-                onClick={() => setOpen(isOpen ? null : it.q)}
-                aria-expanded={isOpen}
-              >
-                <div className="faqItem__row">
-                  <div className="faqItem__q">{it.q}</div>
-                  <div className="faqItem__icon mono" aria-hidden="true">
-                    {isOpen ? "–" : "+"}
-                  </div>
-                </div>
-
-                <div className="faqItem__aWrap" aria-hidden={!isOpen}>
-                  <div className="faqItem__a">{it.a}</div>
-                </div>
-              </button>
-            );
-          })}
+        <div className="aboutGrid reveal">
+          {cards.map((c) => (
+            <div key={c.t} className="aboutCard">
+              <div className="aboutT">{c.t}</div>
+              <div className="aboutD">{c.d}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-/* =========================
-   Section 4 — Contacto (BOX centrado)
-========================= */
-function ContactCenter() {
-  const [form, setForm] = useState({
-    nombre: "",
-    empresa: "",
-    email: "",
-    telefono: "",
-    mensaje: "",
-  });
-
-  const [status, setStatus] = useState({ type: "idle", msg: "" });
-
-  const onChange = (k) => (e) => setForm((s) => ({ ...s, [k]: e.target.value }));
-
-  const validate = () => {
-    if (!form.nombre.trim()) return "Escribe tu nombre.";
-    if (!form.empresa.trim()) return "Escribe tu empresa.";
-    if (!form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email.trim())) return "Escribe un email válido.";
-    if (!form.telefono.trim()) return "Escribe un teléfono.";
-    return null;
-  };
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setStatus({ type: "idle", msg: "" });
-
-    const err = validate();
-    if (err) return setStatus({ type: "error", msg: err });
-
-    // Placeholder — aquí conectamos resend después
-    setStatus({ type: "ok", msg: "Listo. Recibimos tus datos. Te contactamos en breve." });
-  };
-
-  return (
-    <section className="section section--contact" id="contacto" aria-label="Contacto">
-      <div className="wrap">
-        <div className="sectionHead reveal">
-          <div className="sectionHead__kicker mono">contacto</div>
-          <h2 className="sectionHead__title">Hablemos</h2>
-          <p className="sectionHead__sub">Déjanos tus datos y te mandamos la ruta más directa.</p>
-        </div>
-
-        <div className="contactCenter reveal" role="region" aria-label="Formulario de contacto">
-          <div className="contactCenter__glow" aria-hidden="true" />
-
-          <form className="contactForm" onSubmit={onSubmit}>
-            <div className="fieldRow">
-              <div className="field">
-                <label className="field__label">Nombre</label>
-                <input className="field__input" value={form.nombre} onChange={onChange("nombre")} placeholder="Tu nombre" />
-              </div>
-              <div className="field">
-                <label className="field__label">Empresa</label>
-                <input className="field__input" value={form.empresa} onChange={onChange("empresa")} placeholder="Empresa" />
-              </div>
-            </div>
-
-            <div className="fieldRow">
-              <div className="field">
-                <label className="field__label">Email</label>
-                <input
-                  className="field__input"
-                  value={form.email}
-                  onChange={onChange("email")}
-                  placeholder="correo@empresa.com"
-                />
-              </div>
-              <div className="field">
-                <label className="field__label">Teléfono</label>
-                <input
-                  className="field__input"
-                  value={form.telefono}
-                  onChange={onChange("telefono")}
-                  placeholder="+52 55 0000 0000"
-                />
-              </div>
-            </div>
-
-            <div className="field">
-              <label className="field__label">Mensaje</label>
-              <textarea
-                className="field__input field__textarea"
-                value={form.mensaje}
-                onChange={onChange("mensaje")}
-                placeholder="Uso del crédito, plazo, fuente de pago."
-              />
-            </div>
-
-            <button type="submit" className="btn btn--primary btn--full">
-              Enviar
-            </button>
-
-            {status.type !== "idle" && (
-              <div className={`formMsg ${status.type === "ok" ? "formMsg--ok" : "formMsg--err"}`}>{status.msg}</div>
-            )}
-          </form>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* =========================
-   Page
-========================= */
+/* =========================================================
+   5) PAGE
+========================================================= */
 export default function App() {
   useReveal();
   useHashScroll();
@@ -584,64 +439,9 @@ export default function App() {
       <Navbar />
 
       <main className="page">
-        {/* SECTION 1 — HERO */}
-        <section className="intro intro--full" id="top" aria-label="Intro">
-          <div className="intro__bg" aria-hidden="true" />
-          <div className="wrap intro__wrap">
-            <div className="intro__copy reveal">
-              <div className="kicker mono">Plataforma de riesgo</div>
-              <h1 className="intro__h1">
-                Plinius <span className="muted">para deuda empresarial</span>
-              </h1>
-
-              <p className="intro__lead">
-                Una plataforma para <b>estructurar</b>, <b>medir</b> y <b>monitorear</b> deuda de tu Empresa.
-                <br />
-                <span className="muted">Outputs: decisión, estructura y plan de monitoreo.</span>
-              </p>
-
-              <div className="intro__cta">
-                <Link to="/solicitud" className="btn btn--primary">
-                  Iniciar solicitud
-                </Link>
-                <Link to="/#requisitos" className="btn btn--secondary">
-                  Ver requisitos
-                </Link>
-              </div>
-
-              <div className="intro__proof">
-                <div className="proofChip">
-                  <span className="proofChip__k mono">SLA</span>
-                  <span className="proofChip__v mono">48h</span>
-                </div>
-                <div className="proofChip">
-                  <span className="proofChip__k mono">Outputs</span>
-                  <span className="proofChip__v mono">yes/no/structure</span>
-                </div>
-                <div className="proofChip">
-                  <span className="proofChip__k mono">Governance</span>
-                  <span className="proofChip__v mono">on</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="intro__dash">
-              <PcHealthScreen />
-            </div>
-          </div>
-        </section>
-
-        {/* ABOUT */}
-        <AboutPlinius />
-
-        {/* REQUISITOS */}
-        <RequirementsBox />
-
-        {/* FAQ */}
-        <FAQ />
-
-        {/* CONTACTO */}
-        <ContactCenter />
+        <Hero />
+        <FlowLDiagram soporteSrc={soporteImg} pliniusLogoSrc={pliniusLogo} />
+        <About />
       </main>
 
       <Footer />
