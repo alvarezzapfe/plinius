@@ -52,41 +52,24 @@ export default function Ingresar() {
             <span className="ingLeft-wordmark">Plinius</span>
           </div>
 
-          <h1 className="ingLeft-title">
-            Plataforma de crédito empresarial
-            <span className="ingLeft-accent"> comienza a gestionar tus decisiones de forma rápida</span>.
-          </h1>
+          {/* ✅ CAMBIO: texto izquierda */}
+          <h1 className="ingLeft-title">Portal de acceso a inversionistas del fondo</h1>
 
+          {/* ✅ CAMBIO: subtítulo izquierda */}
           <p className="ingLeft-sub">
-            Una plataforma 360° para gestionar los creditos de tu empresa.
+            
           </p>
 
-          <div className="ingLeft-kpis" aria-hidden="true">
-            <div className="ingLeft-kpi">
-              <div className="kpiNum">48h</div>
-              <div className="kpiLbl">SLA objetivo</div>
-            </div>
-            <div className="ingLeft-kpi">
-              <div className="kpiNum">1</div>
-              <div className="kpiLbl">panel único</div>
-            </div>
-            <div className="ingLeft-kpi">
-              <div className="kpiNum">360°</div>
-              <div className="kpiLbl">visión completa</div>
-            </div>
-          </div>
+          
+          
 
           <ul className="ingLeft-points">
-            <li>Onboarding senscillo.</li>
-            <li>Recibe assesment sobre perfil de pasivos de tu negocio.</li>
-            <li>Términos comparables: estructura clara, sin letra chiquita.</li>
+            <li>Acceso a metricas y razones financieras</li>
+            <li>Revisa avance del Fondo</li>
+            <li>Monitorea cartera</li>
           </ul>
 
-          <div className="ingLeft-foot" aria-hidden="true">
-            <span className="ingLeft-pill">Security-first</span>
-            <span className="ingLeft-pill">Cashflow-first</span>
-            <span className="ingLeft-pill">Operational clarity</span>
-          </div>
+          
         </div>
       </section>
 
@@ -104,18 +87,18 @@ export default function Ingresar() {
         <div className="ing-shell">
           <section className="ing-card ing-card--light">
             <header className="ing-head">
-
-
-              <Link to="/" className="ing-backHome" aria-label="Regresar a Home">
-                <span className="ing-backIcon" aria-hidden="true">←</span>
+              <Link to="/" className="ing-backHome" aria-label="Regresar a Inicio">
+                <span className="ing-backIcon" aria-hidden="true">
+                  ←
+                </span>
                 Regresar a Home
               </Link>
-              
+
               <div className="ing-pill">Plinius · Acceso</div>
               <h2 className="ing-title">
                 {modo === "ingreso" ? "Ingresar a tu panel" : "Crear cuenta empresarial"}
               </h2>
-              <p className="ing-sub">Administra tus créditos y arrendamientos desde un solo lugar.</p>
+              <p className="ing-sub"></p>
             </header>
 
             <nav className="ing-tabs ing-tabs--soft" role="tablist" aria-label="Cambiar modo">
@@ -438,7 +421,14 @@ function SignupForm({ onSuccess }) {
       </Field>
 
       <Field label="Contraseña">
-        <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={8} required maxLength={128} />
+        <input
+          type="password"
+          value={pass}
+          onChange={(e) => setPass(e.target.value)}
+          minLength={8}
+          required
+          maxLength={128}
+        />
       </Field>
 
       {!rfcOk(rfc) && <p className="ing-error">RFC inválido (deja vacío si no lo tienes).</p>}

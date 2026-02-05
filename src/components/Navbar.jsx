@@ -95,9 +95,10 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Right links (pegados) */}
+        {/* Right links */}
         <div className="snav2__right">
           <ul className={`snav2__links ${mobileOpen ? "open" : ""}`} id="navLinks" role="menubar">
+            {/* INICIO */}
             <li role="none">
               <Link
                 to="/"
@@ -109,6 +110,7 @@ const Navbar = () => {
               </Link>
             </li>
 
+            {/* NOSOTROS (dropdown) */}
             <li
               className={`snav2__dd ${openMenu === "nosotros" ? "open" : ""}`}
               role="none"
@@ -140,26 +142,45 @@ const Navbar = () => {
                   onMouseEnter={cancelClose}
                   onMouseLeave={closeByHover}
                 >
-                  <Link to="/#sobre-plinius" role="menuitem" className="snav2__menuItem" onClick={() => setMobileOpen(false)}>
+                  <Link
+                    to="/sobre-plinius"
+                    role="menuitem"
+                    className="snav2__menuItem"
+                    onClick={() => setMobileOpen(false)}
+                  >
                     Sobre Plinius
-                    <span className="snav2__menuSub">Visión, misión y equipo</span>
+                    <span className="snav2__menuSub">Visión, misión y estructura</span>
                   </Link>
 
-                  <Link to="/productos" role="menuitem" className="snav2__menuItem" onClick={() => setMobileOpen(false)}>
-                    Productos
-                    <span className="snav2__menuSub">Crédito simple, revolvente, arrendamiento</span>
-                  </Link>
+                  
 
-                  <Link to="/#enfoque" role="menuitem" className="snav2__menuItem" onClick={() => setMobileOpen(false)}>
-                    Enfoque
-                    <span className="snav2__menuSub">Underwriting y monitoreo</span>
+                  <Link
+                    to="/equipo"
+                    role="menuitem"
+                    className="snav2__menuItem"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Equipo
+                    <span className="snav2__menuSub">Experiencia, gobierno y roles</span>
                   </Link>
                 </div>
               )}
             </li>
 
-            
+            {/* TRACK RECORD 
+            <li role="none">
+              <Link
+                to="/track-record"
+                role="menuitem"
+                className={`snav2__link ${isActive("/track-record") ? "active" : ""}`}
+                onClick={() => setMobileOpen(false)}
+              >
+                Track Record
+              </Link>
+            </li>
+            */}
 
+            {/* SOLICITUD 
             <li role="none">
               <Link
                 to="/solicitud"
@@ -171,6 +192,9 @@ const Navbar = () => {
               </Link>
             </li>
 
+            */}
+
+            {/* AUTH CTA */}
             <li role="none">
               <button
                 type="button"
@@ -190,6 +214,7 @@ const Navbar = () => {
               </button>
             </li>
 
+            {/* SIGN OUT */}
             {isAuthed && (
               <li role="none">
                 <button type="button" role="menuitem" className="snav2__link snav2__danger" onClick={signOut}>
@@ -199,6 +224,7 @@ const Navbar = () => {
             )}
           </ul>
 
+          {/* BURGER */}
           <button
             className={`snav2__burger ${mobileOpen ? "is-active" : ""}`}
             aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
@@ -213,6 +239,7 @@ const Navbar = () => {
         </div>
       </div>
 
+      {/* BACKDROP */}
       <button
         type="button"
         className={`snav2__backdrop ${mobileOpen ? "open" : ""}`}

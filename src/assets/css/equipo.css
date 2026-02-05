@@ -1,0 +1,316 @@
+/* src/assets/css/equipo.css
+   One-screen layout (no scroll) for Fund Manager + Partnerships.
+   Works with your theme.css tokens + .wrap + .mono.
+*/
+
+.fmPage{
+  /* Full viewport minus navbar and footer */
+  min-height: calc(100svh - var(--nav-h));
+  display:flex;
+  align-items: stretch;
+}
+
+.fmWrap{
+  width: 100%;
+  display:flex;
+  align-items: stretch;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.fmGrid{
+  width: 100%;
+  display:grid;
+  grid-template-columns: minmax(0,1.25fr) minmax(0,.75fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* =========================
+   FUND MANAGER CARD (compact CV)
+========================= */
+.fmCard{
+  border-radius: 20px;
+  border: 1px solid rgba(226,232,240,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  position: relative;
+  display:flex;
+  flex-direction: column;
+}
+
+.fmCard::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  pointer-events:none;
+  background:
+    radial-gradient(980px 340px at 14% 10%, rgba(74,209,255,.10), transparent 60%),
+    radial-gradient(860px 320px at 86% 0%, rgba(183,255,42,.06), transparent 62%);
+  opacity: .8;
+  filter: blur(10px);
+}
+
+.fmTop{
+  position: relative;
+  z-index: 1;
+  display:flex;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid rgba(226,232,240,.10);
+  background: rgba(0,0,0,.12);
+}
+
+.fmPhoto{
+  width: 92px;
+  height: 92px;
+  border-radius: 16px;
+  border: 1px solid rgba(226,232,240,.12);
+  overflow:hidden;
+  background: rgba(255,255,255,.02);
+  flex: 0 0 auto;
+}
+.fmPhoto img{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+  filter: contrast(1.06) saturate(1.02);
+}
+
+.fmHead{ min-width:0; }
+.fmK{
+  color: rgba(226,232,240,.62);
+  font-weight: 950;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.fmName{
+  margin-top: 6px;
+  color: rgba(248,250,252,.96);
+  font-weight: 1150;
+  letter-spacing: -0.03em;
+  font-size: 20px;
+  line-height: 1.1;
+}
+.fmTitle{
+  margin-top: 6px;
+  color: rgba(226,232,240,.72);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.fmPills{
+  margin-top: 10px;
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fmPill{
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(226,232,240,.12);
+  background: rgba(255,255,255,.02);
+  color: rgba(226,232,240,.76);
+  font-weight: 950;
+  font-size: 9.8px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.fmBody{
+  position: relative;
+  z-index: 1;
+  display:grid;
+  grid-template-columns: minmax(0,1fr) minmax(0, 210px);
+  gap: 12px;
+  padding: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.fmBullets{
+  border-radius: 16px;
+  border: 1px solid rgba(226,232,240,.10);
+  background: rgba(255,255,255,.02);
+  padding: 10px 10px;
+  min-height: 0;
+}
+.fmBulletsK{
+  color: rgba(226,232,240,.58);
+  font-weight: 950;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.fmBullets ul{
+  list-style:none;
+  margin: 10px 0 0;
+  padding: 0;
+  display:grid;
+  gap: 8px;
+}
+.fmBullets li{
+  display:grid;
+  grid-template-columns: 10px 1fr;
+  gap: 10px;
+  align-items:start;
+  color: rgba(226,232,240,.74);
+  font-weight: 760;
+  font-size: 13.2px;
+  line-height: 1.45;
+}
+.fmBullets .dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  margin-top: 5px;
+  background: rgba(74,209,255,.75);
+  box-shadow: 0 0 18px rgba(74,209,255,.10);
+}
+
+.fmMetrics{
+  border-radius: 16px;
+  border: 1px solid rgba(226,232,240,.10);
+  background: rgba(0,0,0,.12);
+  padding: 10px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.fmMetric{
+  border-radius: 14px;
+  border: 1px solid rgba(226,232,240,.10);
+  background: rgba(255,255,255,.02);
+  padding: 10px;
+}
+.fmMetricK{
+  color: rgba(226,232,240,.56);
+  font-weight: 950;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.fmMetricV{
+  margin-top: 8px;
+  color: rgba(248,250,252,.94);
+  font-weight: 1150;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+/* =========================
+   PARTNERSHIPS (compact)
+========================= */
+.pWrap{
+  border-radius: 20px;
+  border: 1px solid rgba(226,232,240,.12);
+  background: rgba(255,255,255,.02);
+  box-shadow: var(--shadow2);
+  overflow:hidden;
+  display:flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pHead{
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(226,232,240,.10);
+  background: rgba(0,0,0,.12);
+}
+.pK{
+  color: rgba(226,232,240,.62);
+  font-weight: 950;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.pH{
+  margin-top: 6px;
+  color: rgba(248,250,252,.94);
+  font-weight: 1100;
+  letter-spacing: -0.02em;
+  font-size: 16px;
+}
+
+.pGrid{
+  padding: 12px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.pCard{
+  border-radius: 16px;
+  border: 1px solid rgba(226,232,240,.10);
+  background: rgba(0,0,0,.10);
+  padding: 10px;
+  display:grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px;
+  align-items:center;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.pCard:hover{
+  transform: translateY(-1px);
+  border-color: rgba(183,255,42,.16);
+  background: rgba(255,255,255,.03);
+}
+
+.pLogo{
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid rgba(226,232,240,.10);
+  background: rgba(255,255,255,.02);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.pLogo img{
+  width: 78%;
+  height: auto;
+  display:block;
+  filter: drop-shadow(0 12px 22px rgba(0,0,0,.45));
+}
+
+.pName{
+  color: rgba(248,250,252,.94);
+  font-weight: 1050;
+  letter-spacing: -0.01em;
+  font-size: 14.5px;
+}
+.pDesc{
+  margin-top: 6px;
+  color: rgba(226,232,240,.70);
+  font-weight: 760;
+  font-size: 12.8px;
+  line-height: 1.35;
+}
+
+.pFoot{
+  padding: 10px 12px;
+  border-top: 1px solid rgba(226,232,240,.10);
+  color: rgba(226,232,240,.56);
+  font-weight: 950;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 1050px){
+  .fmGrid{ grid-template-columns: 1fr; }
+  .fmBody{ grid-template-columns: 1fr; }
+  .fmPhoto{ width: 86px; height: 86px; }
+}
+@media (max-width: 520px){
+  .fmName{ font-size: 18px; }
+  .fmBullets li{ font-size: 13px; }
+}

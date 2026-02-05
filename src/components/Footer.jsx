@@ -67,24 +67,7 @@ const Footer = () => {
               <span className="txt">Status: {statusLabel}</span>
             </button>
 
-            <Link to="/simulador" className="sim-cta" aria-label="Ir al simulador">
-              <span className="sim-ic" aria-hidden>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M7 7h10M7 12h10M7 17h6"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2Z"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                  />
-                </svg>
-              </span>
-              Simulador
-            </Link>
+            
           </div>
 
           {/* Newsletter mini */}
@@ -239,16 +222,7 @@ const Footer = () => {
                   Productos
                 </Link>
               </li>
-              <li>
-                <Link to="/simulador" className="f-link">
-                  Simulador
-                </Link>
-              </li>
-              <li>
-                <Link to="/solicitud" className="f-link">
-                  Solicitud
-                </Link>
-              </li>
+              
               <li>
                 <Link to="/ingresar?registro=0" className="f-link">
                   Ingresar
